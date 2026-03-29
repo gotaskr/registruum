@@ -1,0 +1,27 @@
+export type Profile = Readonly<{
+  id: string;
+  userTag: string;
+  canManagePassword: boolean;
+  themePreference: "light" | "dark";
+  defaultLandingPage: "last_space" | "dashboard";
+  timezone: "America/Edmonton" | "America/New_York" | "UTC";
+  dateFormat: "YYYY-MM-DD" | "MM/DD/YYYY" | "DD/MM/YYYY";
+  inAppNotificationsEnabled: boolean;
+  emailNotificationsEnabled: boolean;
+  mentionsOnlyMode: boolean;
+  fullName: string;
+  email: string;
+  emailVerifiedAt: string | null;
+  displayName: string | null;
+  additionalEmails: string[];
+  contactInfo: string | null;
+  avatarPath: string | null;
+  avatarFileName: string | null;
+  avatarUrl: string | null;
+  representsCompany: boolean;
+  companyName: string | null;
+  companyEmail: string | null;
+  companyAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}>;

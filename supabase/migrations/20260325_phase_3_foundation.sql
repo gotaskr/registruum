@@ -1,0 +1,8 @@
+-- Deprecated Phase 3 monolith.
+-- Phase 4 replaces this file with the split migration set in:
+--   20260325120000_extensions_and_enums.sql
+--   through
+--   20260325121800_policies.sql
+--
+-- Keep this file empty so older editor tabs do not block local resets with
+-- duplicate schema creation while the project transitions to the split flow.
