@@ -1,6 +1,7 @@
 import "server-only";
 
 import { notFound } from "next/navigation";
+import { getArchiveFolderOptions } from "@/features/archive/api/archive";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import { parseLogDetails } from "@/features/logs/lib/log-details";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -41,6 +42,7 @@ type WorkOrderRolePermissionRow = Database["public"]["Tables"]["work_order_role_
 export type WorkOrderActorContext = Readonly<{
   supabase: Awaited<ReturnType<typeof requireAuthenticatedAppUser>>["supabase"];
   user: Awaited<ReturnType<typeof requireAuthenticatedAppUser>>["user"];
+  profile: Awaited<ReturnType<typeof requireAuthenticatedAppUser>>["profile"];
   workOrder: WorkOrder;
   spaceRole: SpaceMembershipRow["role"];
   workOrderRole: WorkOrderMembershipRow["role"] | null;
@@ -252,6 +254,7 @@ async function resolveWorkOrderActorContext(
   return {
     supabase: authenticated.supabase,
     user: authenticated.user,
+    profile: authenticated.profile,
     workOrder,
     spaceRole: membership.role,
     workOrderRole: assignment?.role ?? null,
@@ -291,6 +294,7 @@ export async function getWorkOrdersForSpace(spaceId: string) {
       .from("work_orders")
       .select("*")
       .eq("space_id", spaceId)
+      .neq("status", "archived")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -330,6 +334,7 @@ export async function getWorkOrdersForSpace(spaceId: string) {
     .select("*")
     .eq("space_id", spaceId)
     .in("id", visibleWorkOrderIds)
+    .neq("status", "archived")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -555,6 +560,7 @@ export async function getWorkOrderSettingsData(
   workOrderId: string,
 ): Promise<WorkOrderSettingsData> {
   const context = await getWorkOrderActorContext(spaceId, workOrderId);
+  const archiveFolderOptions = await getArchiveFolderOptions();
   const adminSupabase = createSupabaseAdminClient();
   const { data: membershipRows, error: membershipError } = await context.supabase
     .from("work_order_memberships")
@@ -593,5 +599,7 @@ export async function getWorkOrderSettingsData(
   return {
     ownerOptions,
     permissionMatrix: context.permissionMatrix,
+    archiveFolders: archiveFolderOptions.folders,
+    defaultArchiveFolderId: archiveFolderOptions.defaultFolderId,
   };
 }

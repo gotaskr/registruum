@@ -47,12 +47,13 @@ export function WorkOrderPermissionsPanel({
     () => matrix[selectedRole],
     [matrix, selectedRole],
   );
+  const isAdminRoleSelected = selectedRole === "admin";
 
   const handleTogglePermission = (
     role: EditableWorkOrderRole,
     permissionKey: WorkOrderPermissionKey,
   ) => {
-    if (!canManagePermissions) {
+    if (!canManagePermissions || role === "admin") {
       return;
     }
 
@@ -103,7 +104,7 @@ export function WorkOrderPermissionsPanel({
               Admin is the full-control role
             </p>
             <p className="mt-1 text-sm text-muted">
-              Owner and admin are treated the same here. Use the Admin tab for full work order control.
+              Owner and admin are treated the same here. Admin permissions are fixed at full control and are not editable.
             </p>
           </div>
         </div>
@@ -127,6 +128,11 @@ export function WorkOrderPermissionsPanel({
         </div>
 
         <div className="space-y-4">
+          {isAdminRoleSelected ? (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
+              Admin always keeps full work order control, including lifecycle, settings, members, records, and permissions.
+            </div>
+          ) : null}
           {workOrderPermissionGroups.map((group) => (
             <section
               key={group.key}
@@ -153,7 +159,7 @@ export function WorkOrderPermissionsPanel({
                         onChange={() =>
                           handleTogglePermission(selectedRole, permission.key)
                         }
-                        disabled={!canManagePermissions || isPending}
+                        disabled={!canManagePermissions || isPending || isAdminRoleSelected}
                         className="mt-1 h-4 w-4 rounded-md"
                       />
                       <div className="min-w-0">

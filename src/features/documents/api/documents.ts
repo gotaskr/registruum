@@ -60,23 +60,29 @@ export async function getWorkOrderDocuments(
     }
   }
 
-  const storagePaths = documents
+  const storagePaths = [...new Set(
+    documents
     .map((document) => document.storage_path)
-    .filter((value): value is string => value !== null);
+    .filter((value): value is string => value !== null),
+  )];
   const signedUrlByPath = new Map<string, string>();
 
   if (storagePaths.length > 0) {
     const signedUrlResults = await Promise.all(
       storagePaths.map(async (storagePath) => {
-        const { data, error } = await context.supabase.storage
-          .from(registruumFilesBucket)
-          .createSignedUrl(storagePath, 60 * 60);
+        try {
+          const { data, error } = await context.supabase.storage
+            .from(registruumFilesBucket)
+            .createSignedUrl(storagePath, 60 * 60);
 
-        if (error || !data?.signedUrl) {
+          if (error || !data?.signedUrl) {
+            return null;
+          }
+
+          return [storagePath, data.signedUrl] as const;
+        } catch {
           return null;
         }
-
-        return [storagePath, data.signedUrl] as const;
       }),
     );
 

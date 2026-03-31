@@ -64,6 +64,7 @@ export default async function WorkOrderModulePage({
       workOrder={context.workOrder}
       actorRole={context.actorRole}
       actorUserId={context.user.id}
+      actorName={context.profile.fullName}
       permissions={context.permissions}
       chatMemberCount={chatMemberCount}
       messages={messages}

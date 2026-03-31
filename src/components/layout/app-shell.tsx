@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { GlobalRail } from "@/components/layout/global-rail";
 import { WorkOrderSidebar } from "@/components/layout/work-order-sidebar";
+import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 import type { Profile } from "@/types/profile";
 import type { Space } from "@/types/space";
 import type { WorkOrder } from "@/types/work-order";
@@ -10,6 +11,8 @@ type AppShellProps = Readonly<{
   profile: Profile;
   space: Space;
   workOrders: WorkOrder[];
+  archiveFolders: ArchiveFolderOption[];
+  defaultArchiveFolderId: string;
   children: ReactNode;
 }>;
 
@@ -18,6 +21,8 @@ export function AppShell({
   profile,
   space,
   workOrders,
+  archiveFolders,
+  defaultArchiveFolderId,
   children,
 }: AppShellProps) {
   return (
@@ -29,7 +34,13 @@ export function AppShell({
           spaces={spaces}
           profile={profile}
         />
-        <WorkOrderSidebar space={space} workOrders={workOrders} profile={profile} />
+        <WorkOrderSidebar
+          space={space}
+          workOrders={workOrders}
+          profile={profile}
+          archiveFolders={archiveFolders}
+          defaultArchiveFolderId={defaultArchiveFolderId}
+        />
         <div className="min-h-0 min-w-0 overflow-hidden border-t border-border bg-panel lg:border-t-0 lg:border-l">
           {children}
         </div>

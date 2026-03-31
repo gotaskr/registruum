@@ -1,6 +1,13 @@
 import "server-only";
 
 import { parseLogDetails } from "@/features/logs/lib/log-details";
+import {
+  mapAttachmentRow,
+  mapMessageRow,
+  type AttachmentRow,
+  type MessageRow,
+  type ProfileRow,
+} from "@/features/chat/lib/message-mappers";
 import { getWorkOrderActorContext } from "@/features/work-orders/api/work-orders";
 import { formatDateTimeLabel } from "@/lib/utils";
 import { registruumFilesBucket } from "@/lib/supabase/storage";
@@ -8,18 +15,7 @@ import type { Database } from "@/types/database";
 import type { LogEntry } from "@/types/log";
 import type { Message, MessageAttachment } from "@/types/message";
 
-type MessageRow = Database["public"]["Tables"]["work_order_messages"]["Row"];
-type AttachmentRow =
-  Database["public"]["Tables"]["work_order_message_attachments"]["Row"];
 type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"];
-type ProfileRow = Pick<
-  Database["public"]["Tables"]["profiles"]["Row"],
-  "id" | "full_name"
->;
-
-function isImageMimeType(value: string | null) {
-  return Boolean(value && value.startsWith("image/"));
-}
 
 function buildSystemMessageBody(log: LogEntry) {
   switch (log.action) {
@@ -38,45 +34,6 @@ function buildSystemMessageBody(log: LogEntry) {
     default:
       return log.action;
   }
-}
-
-async function mapAttachmentRow(
-  row: AttachmentRow,
-  signedUrlByPath: Map<string, string>,
-): Promise<MessageAttachment> {
-  const signedUrl = signedUrlByPath.get(row.storage_path) ?? null;
-
-  return {
-    id: row.id,
-    documentId: row.document_id,
-    fileName: row.file_name,
-    fileSizeBytes: row.file_size_bytes,
-    mimeType: row.mime_type,
-    storagePath: row.storage_path,
-    isImage: isImageMimeType(row.mime_type),
-    previewUrl: isImageMimeType(row.mime_type) ? signedUrl : null,
-    downloadUrl: signedUrl,
-  };
-}
-
-function mapMessageRow(
-  row: MessageRow,
-  profileById: Map<string, ProfileRow>,
-  attachmentMap: Map<string, MessageAttachment[]>,
-  currentUserId: string,
-): Message {
-  return {
-    id: row.id,
-    kind: "user",
-    workOrderId: row.work_order_id,
-    senderUserId: row.sender_user_id,
-    senderName:
-      profileById.get(row.sender_user_id)?.full_name ?? "Unknown User",
-    body: row.body,
-    createdAt: formatDateTimeLabel(row.created_at),
-    isCurrentUser: row.sender_user_id === currentUserId,
-    attachments: attachmentMap.get(row.id) ?? [],
-  };
 }
 
 function mapSystemLogRow(
@@ -113,6 +70,7 @@ function mapSystemLogRow(
     senderName: "System",
     body: buildSystemMessageBody(logEntry),
     createdAt: logEntry.createdAt,
+    rawCreatedAt: row.created_at,
     isCurrentUser: false,
     attachments: [],
   };
@@ -236,8 +194,8 @@ export async function getWorkOrderMessages(spaceId: string, workOrderId: string)
 
   const attachmentMap = new Map<string, MessageAttachment[]>();
 
-  const mappedAttachments = await Promise.all(
-    attachments.map((attachment) => mapAttachmentRow(attachment, signedUrlByPath)),
+  const mappedAttachments = attachments.map((attachment) =>
+    mapAttachmentRow(attachment, signedUrlByPath),
   );
 
   for (let index = 0; index < attachments.length; index += 1) {

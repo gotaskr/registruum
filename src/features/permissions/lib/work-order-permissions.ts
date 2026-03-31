@@ -52,7 +52,7 @@ function getResolvedRolePermissions(
   matrix: WorkOrderPermissionMatrix,
 ): WorkOrderRolePermissionValues {
   if (role === "admin") {
-    return matrix.admin;
+    return createDefaultWorkOrderPermissionMatrix().admin;
   }
 
   if (role === "manager") {
@@ -85,7 +85,6 @@ function resolvePermissionMatrix(
   return {
     admin: createPermissionValues({
       ...defaults.admin,
-      ...input.admin,
     }),
     manager: createPermissionValues({
       ...defaults.manager,
@@ -114,8 +113,8 @@ export function canEditWorkOrder(
   role: SpaceMembershipRole | null,
   status: WorkOrderStatus,
 ) {
-  if (status === "archived") {
-    return role === "admin";
+  if (status === "completed" || status === "archived") {
+    return false;
   }
 
   return role === "admin" || role === "manager";
@@ -125,7 +124,7 @@ export function canDeleteWorkOrder(
   role: SpaceMembershipRole | null,
   status: WorkOrderStatus,
 ) {
-  return role === "admin" && status !== "archived";
+  return role === "admin" && status !== "completed" && status !== "archived";
 }
 
 export function canAccessWorkOrder(role: SpaceMembershipRole | null) {
@@ -141,11 +140,15 @@ export function canChangeWorkOrderStatusTo(
     return false;
   }
 
+  if (currentStatus === "archived") {
+    return false;
+  }
+
   if (nextStatus === "archived") {
     return permissions.canArchiveWorkOrder;
   }
 
-  if (currentStatus === "archived" || currentStatus === "completed") {
+  if (currentStatus === "completed") {
     return permissions.canReopenWorkOrder;
   }
 
@@ -177,16 +180,18 @@ export function getWorkOrderPermissionSet(
     !documentsLocked &&
     (context.status !== "in_progress" ||
       context.documentRules?.allowDocumentDeletionInProgress !== false);
-  const canInvitePeople = resolvedRolePermissions.invite_people && !isArchived;
-  const canRemovePeople = resolvedRolePermissions.remove_people && !isArchived;
+  const canInvitePeople =
+    resolvedRolePermissions.invite_people && !isArchived && !isCompleted;
+  const canRemovePeople =
+    resolvedRolePermissions.remove_people && !isArchived && !isCompleted;
   const canChangeMemberRoles =
-    resolvedRolePermissions.change_member_roles && !isArchived;
+    resolvedRolePermissions.change_member_roles && !isArchived && !isCompleted;
 
   return {
     canView: canAccessWorkOrder(context.role),
     canCreateWorkOrder: canCreateWorkOrder(context.role),
     canEditSettings:
-      resolvedRolePermissions.manage_work_order_settings && !isArchived,
+      resolvedRolePermissions.manage_work_order_settings && !isArchived && !isCompleted,
     canDeleteWorkOrder:
       resolvedRolePermissions.delete_work_order && !isArchived,
     canChangeLifecycleStatus:
@@ -213,11 +218,11 @@ export function getWorkOrderPermissionSet(
     canRemovePeople,
     canChangeMemberRoles,
     canManagePermissions:
-      resolvedRolePermissions.manage_permissions && !isArchived,
+      resolvedRolePermissions.manage_permissions && !isArchived && !isCompleted,
     canViewLogs: resolvedRolePermissions.view_logs,
     canArchiveWorkOrder:
       resolvedRolePermissions.archive_work_order && !isArchived,
-    canReopenWorkOrder: resolvedRolePermissions.reopen_work_order,
+    canReopenWorkOrder: resolvedRolePermissions.reopen_work_order && !isArchived,
     isCompleted,
     isArchived,
     isLocked: isArchived,
@@ -228,11 +233,11 @@ export function getWorkOrderPermissionSet(
 
 export function getLockedWorkOrderMessage(status: WorkOrderStatus) {
   if (status === "archived") {
-    return "This work order is archived and read-only except for authorized lifecycle actions.";
+    return "This archived record is immutable and can only be reorganized from the Archive vault.";
   }
 
   if (status === "completed") {
-    return "This work order is completed and protected. Authorized changes require a reason.";
+    return "This work order is completed and locked. Reopen it before making changes.";
   }
 
   return undefined;

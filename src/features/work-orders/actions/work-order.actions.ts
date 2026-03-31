@@ -41,6 +41,10 @@ function readBoolean(formData: FormData, key: string) {
   return value === "on" || value === "true";
 }
 
+function getSafeReturnTo(returnTo: string, fallback: string) {
+  return returnTo.startsWith("/") ? returnTo : fallback;
+}
+
 function formatStatusLabel(value: "open" | "in_progress" | "on_hold" | "completed" | "archived") {
   if (value === "open") {
     return "Draft";
@@ -263,6 +267,7 @@ export async function updateWorkOrder(
 
   const returnTo = readText(formData, "returnTo");
   const adminSupabase = createSupabaseAdminClient();
+  const actorSupabase = context.supabase;
   const settingsChanged =
     parsed.data.title !== context.workOrder.title ||
     parsed.data.subjectType !== context.workOrder.subjectType ||
@@ -291,6 +296,21 @@ export async function updateWorkOrder(
       error:
         getLockedWorkOrderMessage(context.workOrder.status) ??
         "You cannot edit this work order.",
+    };
+  }
+
+  if (context.workOrder.status === "completed" && settingsChanged) {
+    return {
+      error: "Completed work orders are locked. Reopen the work order before editing it.",
+    };
+  }
+
+  if (
+    statusChanged &&
+    parsed.data.status === "archived"
+  ) {
+    return {
+      error: "Use the Archive Work Order flow to finalize this record into Archive.",
     };
   }
 
@@ -347,7 +367,7 @@ export async function updateWorkOrder(
   let updateError: { message: string } | null = null;
 
   {
-    const result = await adminSupabase
+    const result = await actorSupabase
       .from("work_orders")
       .update({
         ...baseUpdatePayload,
@@ -360,7 +380,7 @@ export async function updateWorkOrder(
   }
 
   if (updateError && isMissingWorkOrderSettingsColumnError(updateError.message)) {
-    const fallbackResult = await adminSupabase
+    const fallbackResult = await actorSupabase
       .from("work_orders")
       .update(baseUpdatePayload)
       .eq("id", parsed.data.workOrderId)
@@ -444,6 +464,86 @@ export async function updateWorkOrder(
   redirect(`/space/${parsed.data.spaceId}/work-order/${parsed.data.workOrderId}/settings`);
 }
 
+export async function completeWorkOrder(
+  previousState: WorkOrderActionState = initialWorkOrderActionState,
+  formData: FormData,
+): Promise<WorkOrderActionState> {
+  void previousState;
+  const workOrderId = readText(formData, "workOrderId");
+  const spaceId = readText(formData, "spaceId");
+  const returnTo = readText(formData, "returnTo");
+
+  const context = await getWorkOrderActorContextForAction(spaceId, workOrderId);
+
+  if (!context) {
+    return {
+      error: "You do not have access to this work order.",
+    };
+  }
+
+  if (context.workOrder.status === "completed") {
+    redirect(getSafeReturnTo(returnTo, `/space/${spaceId}`));
+  }
+
+  if (context.workOrder.status === "archived") {
+    return {
+      error: "Archived work orders cannot be completed again.",
+    };
+  }
+
+  if (
+    !canChangeWorkOrderStatusTo(
+      context.permissions,
+      context.workOrder.status,
+      "completed",
+    )
+  ) {
+    return {
+      error: "You do not have permission to complete this work order.",
+    };
+  }
+
+  const { error } = await context.supabase
+    .from("work_orders")
+    .update({
+      status: "completed",
+    })
+    .eq("id", workOrderId)
+    .eq("space_id", spaceId);
+
+  if (error) {
+    return {
+      error: error.message,
+    };
+  }
+
+  const adminSupabase = createSupabaseAdminClient();
+  await createActivityLog({
+    supabase: adminSupabase,
+    action: "Completed work order",
+    actorUserId: context.user.id,
+    spaceId,
+    workOrderId,
+    entityType: "work_order",
+    entityId: workOrderId,
+    details: {
+      summary: context.workOrder.title,
+      before: formatStatusLabel(context.workOrder.status),
+      after: "Completed",
+    },
+  });
+
+  revalidatePath(`/space/${spaceId}`);
+  revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/overview`);
+  revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/chat`);
+  revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/documents`);
+  revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/members`);
+  revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/logs`);
+  revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/settings`);
+
+  redirect(getSafeReturnTo(returnTo, `/space/${spaceId}`));
+}
+
 export async function deleteWorkOrder(
   previousState: WorkOrderActionState = initialWorkOrderActionState,
   formData: FormData,
@@ -522,7 +622,9 @@ export async function saveWorkOrderPermissions(
 
   const nextMatrix = buildPermissionMatrixFromFormData(formData);
   const adminSupabase = createSupabaseAdminClient();
-  const rows = editableWorkOrderRoles.flatMap((role) =>
+  const rows = editableWorkOrderRoles
+    .filter((role) => role !== "admin")
+    .flatMap((role) =>
     allWorkOrderPermissionKeys.map((permissionKey) => ({
       work_order_id: workOrderId,
       role,
@@ -552,7 +654,7 @@ export async function saveWorkOrderPermissions(
     entityType: "work_order",
     entityId: workOrderId,
     details: {
-      summary: "Saved role permission changes for admin, manager, and member.",
+      summary: "Saved role permission changes for manager and member. Admin remains full control.",
     },
   });
 

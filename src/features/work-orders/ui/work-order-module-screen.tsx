@@ -34,6 +34,7 @@ type WorkOrderModuleScreenProps = Readonly<{
   workOrder: WorkOrder;
   actorRole: SpaceMembershipRole;
   actorUserId: string;
+  actorName: string;
   permissions: WorkOrderPermissionSet;
   chatMemberCount?: number;
   messages?: Message[];
@@ -51,6 +52,7 @@ export function WorkOrderModuleScreen({
   workOrder,
   actorRole,
   actorUserId,
+  actorName,
   permissions,
   chatMemberCount = 0,
   messages = [],
@@ -98,6 +100,8 @@ export function WorkOrderModuleScreen({
           messages={messages}
           spaceId={workOrder.spaceId}
           workOrderId={workOrder.id}
+          actorUserId={actorUserId}
+          actorName={actorName}
           canSendMessage={permissions.canSendMessage}
           lockedMessage={lockedMessage}
         />

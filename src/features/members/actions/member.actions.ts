@@ -36,6 +36,15 @@ function normalizeUserCode(value: string) {
   return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
 }
 
+type ProfileLookupResult = Readonly<{
+  id: string;
+  full_name: string;
+  email: string | null;
+  user_tag: string;
+  avatar_path: string | null;
+  email_verified_at: string | null;
+}>;
+
 function buildInviteToken() {
   return crypto.randomUUID().replace(/-/g, "");
 }
@@ -145,6 +154,27 @@ async function ensureNotAlreadyAssigned(input: {
   if (data) {
     throw new Error("That user is already assigned to this work order.");
   }
+}
+
+async function findProfileByUserCode(input: {
+  supabase: Awaited<NonNullable<Awaited<ReturnType<typeof getWorkOrderActorContextForAction>>>>["supabase"];
+  userCode: string;
+}) {
+  const normalizedCode = normalizeUserCode(input.userCode);
+  const { data, error } = await input.supabase.rpc("find_profile_by_user_tag", {
+    input_user_tag: normalizedCode,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const profile = ((data ?? []) as ProfileLookupResult[])[0] ?? null;
+
+  return {
+    normalizedCode,
+    profile,
+  };
 }
 
 export async function assignWorkOrderMember(
@@ -379,17 +409,20 @@ export async function previewWorkOrderMemberByCode(
     };
   }
 
-  const normalizedCode = normalizeUserCode(parsed.data.userCode);
-  const { data: profile, error: profileError } = await managed.context.supabase
-    .from("profiles")
-    .select("id, full_name, email, user_tag, email_verified_at")
-    .eq("user_tag", normalizedCode)
-    .maybeSingle();
+  let normalizedCode: string;
+  let profile: ProfileLookupResult | null;
 
-  if (profileError) {
+  try {
+    const result = await findProfileByUserCode({
+      supabase: managed.context.supabase,
+      userCode: parsed.data.userCode,
+    });
+    normalizedCode = result.normalizedCode;
+    profile = result.profile;
+  } catch (error) {
     return {
       ...previousState,
-      error: profileError.message,
+      error: error instanceof Error ? error.message : "Unable to preview member.",
     };
   }
 
@@ -455,16 +488,17 @@ export async function addWorkOrderMemberByCode(
 
   const { context } = managed;
   const adminSupabase = createSupabaseAdminClient();
-  const normalizedCode = normalizeUserCode(parsed.data.userCode);
-  const { data: profile, error: profileError } = await context.supabase
-    .from("profiles")
-    .select("id, full_name, email, user_tag")
-    .eq("user_tag", normalizedCode)
-    .maybeSingle();
+  let profile: ProfileLookupResult | null;
 
-  if (profileError) {
+  try {
+    const result = await findProfileByUserCode({
+      supabase: context.supabase,
+      userCode: parsed.data.userCode,
+    });
+    profile = result.profile;
+  } catch (error) {
     return {
-      error: profileError.message,
+      error: error instanceof Error ? error.message : "Unable to add member.",
     };
   }
 
@@ -625,6 +659,14 @@ export async function removeWorkOrderMember(formData: FormData) {
     .maybeSingle();
 
   if (membershipError || !membership) {
+    return;
+  }
+
+  if (membership.user_id === context.user.id) {
+    return;
+  }
+
+  if (membership.role === "admin" && context.spaceRole !== "admin") {
     return;
   }
 

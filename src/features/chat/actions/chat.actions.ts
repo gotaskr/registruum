@@ -13,6 +13,7 @@ import {
   initialChatActionState,
   type ChatActionState,
 } from "@/features/chat/types/chat-action-state";
+import { attachmentsOnlyMessageBody } from "@/features/chat/lib/message-body";
 import {
   getWorkOrderActorContextForAction,
   getWorkOrderMemberCount,
@@ -80,6 +81,8 @@ export async function createWorkOrderMessage(
     };
   }
 
+  const storedBody =
+    parsed.data.body || (files.length > 0 ? attachmentsOnlyMessageBody : "");
   const messageId = crypto.randomUUID();
   const { data: messageRow, error: insertError } = await context.supabase
     .from("work_order_messages")
@@ -87,7 +90,7 @@ export async function createWorkOrderMessage(
       id: messageId,
       work_order_id: context.workOrder.id,
       sender_user_id: context.user.id,
-      body: parsed.data.body,
+      body: storedBody,
     })
     .select("id")
     .single();

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useActionState, useMemo, useState } from "react";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { FileUploadField } from "@/components/ui/file-upload-field";
+import { ArchiveWorkOrderModal } from "@/features/archive/ui/archive-work-order-modal";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import { splitWorkOrderDescription } from "@/features/work-orders/lib/work-order-description";
 import {
@@ -128,6 +129,10 @@ export function WorkOrderSettingsPanel({
     permissions.canChangeLifecycleStatus ||
     permissions.canArchiveWorkOrder ||
     permissions.canReopenWorkOrder;
+  const canArchiveRecord =
+    permissions.canArchiveWorkOrder &&
+    workOrder.status !== "archived" &&
+    Boolean(settingsData);
   const canSubmitSettings = canEditStructuredSettings || canManageLifecycle;
   const showProtectedEditReason =
     workOrder.status === "completed" || workOrder.status === "archived";
@@ -136,7 +141,6 @@ export function WorkOrderSettingsPanel({
     { value: "in_progress", label: "In Progress" },
     { value: "on_hold", label: "On Hold" },
     { value: "completed", label: "Completed" },
-    { value: "archived", label: "Archived" },
   ];
   const sectionItems = [
     { key: "overview", label: "Overview" },
@@ -149,6 +153,7 @@ export function WorkOrderSettingsPanel({
   const [selectedSection, setSelectedSection] = useState<
     (typeof sectionItems)[number]["key"]
   >("overview");
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const showPrimarySave =
     selectedSection !== "permissions" && selectedSection !== "audit";
 
@@ -411,6 +416,22 @@ export function WorkOrderSettingsPanel({
             ) : (
               <input type="hidden" name="editReason" value="" />
             )}
+
+            {canArchiveRecord ? (
+              <div className="mt-5 rounded-2xl border border-border bg-panel-muted px-4 py-4">
+                <p className="text-sm font-medium text-foreground">Archive finalization</p>
+                <p className="mt-1 text-sm text-muted">
+                  Archive stores this work order as a permanent read-only record in the global vault. Folder placement only changes organization and can be updated later.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsArchiveModalOpen(true)}
+                  className="mt-4 inline-flex h-10 items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white"
+                >
+                  Archive Work Order
+                </button>
+              </div>
+            ) : null}
           </SettingsCard>
         </div>
 
@@ -574,6 +595,7 @@ export function WorkOrderSettingsPanel({
         <div className={showPrimarySave ? "flex items-center justify-end" : "hidden"}>
           <button
             type="submit"
+            suppressHydrationWarning
             disabled={!canSubmitSettings || isPending}
             className="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white disabled:opacity-60"
           >
@@ -587,6 +609,18 @@ export function WorkOrderSettingsPanel({
           workOrder={workOrder}
           permissionMatrix={settingsData.permissionMatrix}
           canManagePermissions={permissions.canManagePermissions}
+        />
+      ) : null}
+
+      {settingsData ? (
+        <ArchiveWorkOrderModal
+          open={isArchiveModalOpen}
+          onClose={() => setIsArchiveModalOpen(false)}
+          workOrderId={workOrder.id}
+          spaceId={workOrder.spaceId}
+          workOrderTitle={workOrder.title}
+          defaultFolderId={settingsData.defaultArchiveFolderId}
+          folders={settingsData.archiveFolders}
         />
       ) : null}
     </div>

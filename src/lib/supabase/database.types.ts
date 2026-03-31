@@ -67,6 +67,174 @@ export type Database = {
           },
         ]
       }
+      archive_activity_logs: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          archive_folder_id: string | null
+          archived_work_order_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          archive_folder_id?: string | null
+          archived_work_order_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          archive_folder_id?: string | null
+          archived_work_order_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_activity_logs_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_activity_logs_archive_folder_id_fkey"
+            columns: ["archive_folder_id"]
+            isOneToOne: false
+            referencedRelation: "archive_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_activity_logs_archived_work_order_id_fkey"
+            columns: ["archived_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "archived_work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      archive_folders: {
+        Row: {
+          created_at: string
+          created_by_user_id: string | null
+          id: string
+          is_system_default: boolean
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id?: string | null
+          id?: string
+          is_system_default?: boolean
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string | null
+          id?: string
+          is_system_default?: boolean
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_folders_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "archive_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      archived_work_orders: {
+        Row: {
+          archive_folder_id: string
+          archived_at: string
+          archived_by_user_id: string | null
+          created_at: string
+          id: string
+          immutable: boolean
+          original_work_order_id: string
+          space_id: string
+          status_snapshot: Database["public"]["Enums"]["work_order_status"]
+          title_snapshot: string
+          updated_at: string
+        }
+        Insert: {
+          archive_folder_id: string
+          archived_at?: string
+          archived_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          immutable?: boolean
+          original_work_order_id: string
+          space_id: string
+          status_snapshot: Database["public"]["Enums"]["work_order_status"]
+          title_snapshot: string
+          updated_at?: string
+        }
+        Update: {
+          archive_folder_id?: string
+          archived_at?: string
+          archived_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          immutable?: boolean
+          original_work_order_id?: string
+          space_id?: string
+          status_snapshot?: Database["public"]["Enums"]["work_order_status"]
+          title_snapshot?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archived_work_orders_archive_folder_id_fkey"
+            columns: ["archive_folder_id"]
+            isOneToOne: false
+            referencedRelation: "archive_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archived_work_orders_archived_by_user_id_fkey"
+            columns: ["archived_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archived_work_orders_original_work_order_id_fkey"
+            columns: ["original_work_order_id"]
+            isOneToOne: true
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archived_work_orders_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_folders: {
         Row: {
           created_at: string
@@ -870,8 +1038,8 @@ export type Database = {
           expiration_at: string | null
           id: string
           is_posted_to_job_market: boolean
-          lock_documents_on_completed: boolean
           location_label: string | null
+          lock_documents_on_completed: boolean
           owner_user_id: string
           priority: string
           space_id: string
@@ -894,9 +1062,9 @@ export type Database = {
           expiration_at?: string | null
           id?: string
           is_posted_to_job_market?: boolean
-          lock_documents_on_completed?: boolean
           location_label?: string | null
-          owner_user_id?: string
+          lock_documents_on_completed?: boolean
+          owner_user_id: string
           priority?: string
           space_id: string
           start_date?: string | null
@@ -918,8 +1086,8 @@ export type Database = {
           expiration_at?: string | null
           id?: string
           is_posted_to_job_market?: boolean
-          lock_documents_on_completed?: boolean
           location_label?: string | null
+          lock_documents_on_completed?: boolean
           owner_user_id?: string
           priority?: string
           space_id?: string
@@ -993,6 +1161,10 @@ export type Database = {
         Args: { target_work_order_id: string }
         Returns: boolean
       }
+      can_update_work_order: {
+        Args: { target_work_order_id: string }
+        Returns: boolean
+      }
       can_upload_work_order_document: {
         Args: { target_work_order_id: string }
         Returns: boolean
@@ -1039,6 +1211,10 @@ export type Database = {
           allowed_roles: Database["public"]["Enums"]["app_role"][]
           target_space_id: string
         }
+        Returns: boolean
+      }
+      has_work_order_permission: {
+        Args: { target_permission_key: string; target_work_order_id: string }
         Returns: boolean
       }
       is_space_member: { Args: { target_space_id: string }; Returns: boolean }
@@ -1097,9 +1273,9 @@ export type Database = {
       work_order_status:
         | "open"
         | "in_progress"
-        | "on_hold"
         | "completed"
         | "archived"
+        | "on_hold"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1254,10 +1430,11 @@ export const Constants = {
       work_order_status: [
         "open",
         "in_progress",
-        "on_hold",
         "completed",
         "archived",
+        "on_hold",
       ],
     },
   },
 } as const
+

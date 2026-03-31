@@ -21,5 +21,10 @@ export const renameSpaceSchema = z.object({
   name: spaceNameSchema,
 });
 
+export const deleteSpaceSchema = z.object({
+  spaceId: z.string().uuid("Invalid space id."),
+});
+
 export type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
 export type RenameSpaceInput = z.infer<typeof renameSpaceSchema>;
+export type DeleteSpaceInput = z.infer<typeof deleteSpaceSchema>;

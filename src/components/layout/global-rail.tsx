@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useCallback, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CreateSpaceModal } from "@/features/spaces/ui/create-space-modal";
-import { getDashboardHref, getSettingsHref, getSpaceEntryHref } from "@/lib/route-utils";
+import {
+  getArchiveHref,
+  getDashboardHref,
+  getSettingsHref,
+  getSpaceEntryHref,
+} from "@/lib/route-utils";
 import { cn, getInitials } from "@/lib/utils";
 import type { Profile } from "@/types/profile";
 import type { Space } from "@/types/space";
@@ -14,7 +19,7 @@ type GlobalRailProps = Readonly<{
   currentSpaceId?: string;
   spaces: Space[];
   profile: Profile;
-  activeView?: "spaces" | "jobMarket" | "settings";
+  activeView?: "spaces" | "archive" | "jobMarket" | "settings";
 }>;
 
 export function GlobalRail({
@@ -79,6 +84,7 @@ export function GlobalRail({
 
             <button
               type="button"
+              suppressHydrationWarning
               onClick={openCreateSpaceModal}
               className="flex h-11 w-11 items-center justify-center rounded-[10px] text-[#98a3b7] transition-colors hover:bg-[#252b37] hover:text-white"
               title="Create Space"
@@ -91,8 +97,13 @@ export function GlobalRail({
           <div className="hidden lg:block">
             <div className="space-y-2 border-t border-[#2a3040] pt-4">
               <Link
-                href={getDashboardHref()}
-                className="flex h-11 w-11 items-center justify-center rounded-[10px] text-[#98a3b7] transition-colors hover:bg-[#252b37] hover:text-white"
+                href={getArchiveHref()}
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-[10px] transition-colors",
+                  activeView === "archive"
+                    ? "bg-[#213658] text-[#6ea0ff]"
+                    : "text-[#98a3b7] hover:bg-[#252b37] hover:text-white",
+                )}
                 title="Archive"
               >
                 <Archive className="h-4 w-4" />

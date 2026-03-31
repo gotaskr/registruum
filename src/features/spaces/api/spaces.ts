@@ -127,7 +127,7 @@ export async function getSpacesForUser() {
   if (assignedWorkOrderIds.length > 0) {
     const { data: assignedWorkOrders, error: assignedWorkOrdersError } = await supabase
       .from("work_orders")
-      .select("id, space_id")
+      .select("id, space_id, status")
       .in("id", assignedWorkOrderIds);
 
     if (assignedWorkOrdersError) {
@@ -135,10 +135,12 @@ export async function getSpacesForUser() {
     }
 
     const workOrderSpaceIdById = new Map(
-      ((assignedWorkOrders ?? []) as Pick<WorkOrderRow, "id" | "space_id">[]).map((row) => [
-        row.id,
-        row.space_id,
-      ]),
+      ((assignedWorkOrders ?? []) as Pick<
+        WorkOrderRow,
+        "id" | "space_id" | "status"
+      >[])
+        .filter((row) => row.status !== "archived")
+        .map((row) => [row.id, row.space_id] as const),
     );
 
     for (const assignment of (assignmentRows ?? []) as Pick<

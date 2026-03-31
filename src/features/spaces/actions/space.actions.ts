@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import {
   createSpaceSchema,
+  deleteSpaceSchema,
   renameSpaceSchema,
 } from "@/features/spaces/schemas/space.schema";
 import type { Database } from "@/types/database";
@@ -111,4 +112,60 @@ export async function renameSpace(
 
   revalidatePath(`/space/${parsed.data.spaceId}`);
   redirect(`/space/${parsed.data.spaceId}`);
+}
+
+export async function deleteSpace(
+  previousState: SpaceActionState = initialSpaceActionState,
+  formData: FormData,
+): Promise<SpaceActionState> {
+  void previousState;
+  const parsed = deleteSpaceSchema.safeParse({
+    spaceId: readText(formData, "spaceId"),
+  });
+
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Unable to delete space.",
+    };
+  }
+
+  const { supabase, user } = await requireAuthenticatedAppUser();
+  const { data: membership, error: membershipError } = await supabase
+    .from("space_memberships")
+    .select("role")
+    .eq("space_id", parsed.data.spaceId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (membershipError || !membership || membership.role !== "admin") {
+    return {
+      error: "Only admins can delete this space.",
+    };
+  }
+
+  const { error: archivedDeleteError } = await supabase
+    .from("archived_work_orders")
+    .delete()
+    .eq("space_id", parsed.data.spaceId);
+
+  if (archivedDeleteError) {
+    return {
+      error: archivedDeleteError.message,
+    };
+  }
+
+  const { error: deleteError } = await supabase
+    .from("spaces")
+    .delete()
+    .eq("id", parsed.data.spaceId);
+
+  if (deleteError) {
+    return {
+      error: deleteError.message,
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/space/${parsed.data.spaceId}`);
+  redirect("/");
 }

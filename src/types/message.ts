@@ -10,6 +10,8 @@ export type MessageAttachment = Readonly<{
   downloadUrl: string | null;
 }>;
 
+export type MessageDeliveryStatus = "sending" | "sent" | "failed";
+
 export type Message = Readonly<{
   id: string;
   kind: "user" | "system";
@@ -18,6 +20,8 @@ export type Message = Readonly<{
   senderName: string;
   body: string;
   createdAt: string;
+  rawCreatedAt: string;
   isCurrentUser: boolean;
   attachments: MessageAttachment[];
+  status?: MessageDeliveryStatus;
 }>;

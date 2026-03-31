@@ -39,6 +39,7 @@ export function DocumentPanel({
 }: DocumentPanelProps) {
   const [selectedFolderKey, setSelectedFolderKey] =
     useState<SystemDocumentFolderKey>("photos");
+  const [selectedFileCount, setSelectedFileCount] = useState(0);
   const [uploadState, uploadFormAction] = useActionState(
     uploadWorkOrderDocuments,
     initialDocumentActionState,
@@ -72,11 +73,12 @@ export function DocumentPanel({
               helperText="Photos, videos, and files are sorted into system folders automatically."
               disabled={!canUploadDocuments}
               accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,.mp4,.mov,.webm,.avi,.mkv"
+              onFilesChange={setSelectedFileCount}
             />
             <button
               type="submit"
-              disabled={!canUploadDocuments}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2b6ef3] px-4 text-sm font-semibold text-white disabled:opacity-60"
+              disabled={!canUploadDocuments || selectedFileCount === 0}
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2b6ef3] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
             >
               <Upload className="mr-2 h-4 w-4" />
               Upload to Documents

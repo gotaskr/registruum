@@ -36,22 +36,18 @@ export function SpaceOverview({
     <MainShell
       title={space.name}
       description="Space overview"
-      actions={
-        <button
-          type="button"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm"
-        >
-          Create Work Order
-        </button>
-      }
     >
       <>
         <section className="space-y-8 px-6 py-8 lg:px-8">
           {workOrders.length === 0 ? (
             <SpaceEmptyHero onCreateWorkOrder={() => setIsCreateModalOpen(true)} />
           ) : (
-            <SpaceActiveHero spaceId={space.id} workOrders={workOrders} />
+            <SpaceActiveHero
+              spaceId={space.id}
+              spaceName={space.name}
+              showDeleteMenu={space.membershipRole === "admin"}
+              workOrders={workOrders}
+            />
           )}
 
           <div className="grid gap-4 md:grid-cols-3">

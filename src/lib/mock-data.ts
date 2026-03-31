@@ -17,6 +17,7 @@ export function getMessagesByWorkOrderId(workOrderId: string): Message[] {
       senderName: "Registruum Bot",
       body: "Chat remains mocked in Phase 3 while auth, spaces, memberships, and work orders are now live.",
       createdAt: "Now",
+      rawCreatedAt: new Date().toISOString(),
       isCurrentUser: false,
       attachments: [],
     },
@@ -28,8 +29,10 @@ export function getMessagesByWorkOrderId(workOrderId: string): Message[] {
       senderName: "You",
       body: "This module will be wired to real-time messaging in a later phase.",
       createdAt: "Now",
+      rawCreatedAt: new Date().toISOString(),
       isCurrentUser: true,
       attachments: [],
+      status: "sent",
     },
   ];
 }

@@ -6,7 +6,7 @@ import type { Space } from "@/types/space";
 type DashboardShellProps = Readonly<{
   spaces: Space[];
   profile: Profile;
-  activeView?: "jobMarket" | "settings";
+  activeView?: "archive" | "jobMarket" | "settings";
   sidebar: ReactNode;
   children: ReactNode;
 }>;

@@ -12,6 +12,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AccordionItem } from "@/components/ui/accordion-item";
 import { SidebarItem } from "@/components/ui/sidebar-item";
+import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 import { WORK_ORDER_MODULES } from "@/lib/constants";
 import {
   canAccessWorkOrderModule,
@@ -19,7 +20,9 @@ import {
   getWorkOrderPermissionSet,
 } from "@/features/permissions/lib/work-order-permissions";
 import { CreateWorkOrderModal } from "@/features/work-orders/ui/create-work-order-modal";
+import { WorkOrderSidebarArchiveAction } from "@/features/work-orders/ui/work-order-sidebar-archive-action";
 import { WorkOrderSidebarActions } from "@/features/work-orders/ui/work-order-sidebar-actions";
+import { WorkOrderSidebarCompleteAction } from "@/features/work-orders/ui/work-order-sidebar-complete-action";
 import { getRouteContext, getWorkOrderModuleHref } from "@/lib/route-utils";
 import { formatWorkOrderLocation } from "@/lib/utils";
 import type { Profile } from "@/types/profile";
@@ -38,12 +41,16 @@ const moduleIconMap: Record<WorkOrderModule, typeof MessageSquareText> = {
 type WorkOrderSidebarProps = Readonly<{
   space: Space;
   workOrders: WorkOrder[];
+  archiveFolders: ArchiveFolderOption[];
+  defaultArchiveFolderId: string;
   profile?: Profile;
 }>;
 
 type SidebarTreeProps = Readonly<{
   space: Space;
   workOrders: WorkOrder[];
+  archiveFolders: ArchiveFolderOption[];
+  defaultArchiveFolderId: string;
   activeWorkOrderId?: string;
   activeModule?: WorkOrderModule;
   initialOpenWorkOrderId: string | null;
@@ -53,6 +60,8 @@ type SidebarTreeProps = Readonly<{
 function SidebarTree({
   space,
   workOrders,
+  archiveFolders,
+  defaultArchiveFolderId,
   activeWorkOrderId,
   activeModule,
   initialOpenWorkOrderId,
@@ -65,54 +74,77 @@ function SidebarTree({
   return (
     <div className="min-h-0 overflow-hidden">
       {workOrders.map((workOrder) => (
-        <AccordionItem
-          key={workOrder.id}
-          href={getWorkOrderModuleHref(space.id, workOrder.id, "overview")}
-          title={workOrder.title}
-          subtitle={formatWorkOrderLocation(workOrder.locationLabel, workOrder.unitLabel)}
-          status={workOrder.status}
-          actions={
-            workOrder.actorRole ? (
-              <WorkOrderSidebarActions
-                workOrder={workOrder}
-                actorRole={workOrder.actorRole}
-                returnTo={pathname}
-              />
-            ) : undefined
-          }
-          isOpen={openWorkOrderId === workOrder.id}
-          isActive={activeWorkOrderId === workOrder.id}
-          onToggle={() =>
-            setOpenWorkOrderId((current) =>
-              current === workOrder.id ? null : workOrder.id,
-            )
-          }
-        >
-          <div className="space-y-1 border-l border-[#d9e2ef] pl-3">
-            {WORK_ORDER_MODULES.filter(
-              (module) =>
-                module.slug !== "settings" &&
-                canAccessWorkOrderModule(
-                  module.slug,
-                  getWorkOrderPermissionSet({
-                    role: workOrder.actorRole,
-                    status: workOrder.status,
-                  }),
-                ),
-            ).map((module) => (
-              <SidebarItem
-                key={module.slug}
-                label={module.label}
-                href={getWorkOrderModuleHref(space.id, workOrder.id, module.slug)}
-                icon={moduleIconMap[module.slug]}
-                isActive={
-                  activeWorkOrderId === workOrder.id && activeModule === module.slug
-                }
-                className="w-full rounded-lg py-2 text-[15px]"
-              />
-            ))}
-          </div>
-        </AccordionItem>
+        (() => {
+          const permissions = getWorkOrderPermissionSet({
+            role: workOrder.actorRole,
+            status: workOrder.status,
+          });
+
+          return (
+            <AccordionItem
+              key={workOrder.id}
+              href={getWorkOrderModuleHref(space.id, workOrder.id, "overview")}
+              title={workOrder.title}
+              subtitle={formatWorkOrderLocation(
+                workOrder.locationLabel,
+                workOrder.unitLabel,
+              )}
+              titleAccessory={
+                permissions.canChangeLifecycleStatus && !permissions.isCompleted && !permissions.isArchived ? (
+                  <WorkOrderSidebarCompleteAction
+                    workOrderId={workOrder.id}
+                    spaceId={space.id}
+                    workOrderTitle={workOrder.title}
+                    returnTo={pathname}
+                  />
+                ) : permissions.canArchiveWorkOrder && permissions.isCompleted ? (
+                  <WorkOrderSidebarArchiveAction
+                    workOrderId={workOrder.id}
+                    spaceId={space.id}
+                    workOrderTitle={workOrder.title}
+                    defaultArchiveFolderId={defaultArchiveFolderId}
+                    folders={archiveFolders}
+                  />
+                ) : undefined
+              }
+              actions={
+                workOrder.actorRole ? (
+                  <WorkOrderSidebarActions
+                    workOrder={workOrder}
+                    actorRole={workOrder.actorRole}
+                    returnTo={pathname}
+                  />
+                ) : undefined
+              }
+              isOpen={openWorkOrderId === workOrder.id}
+              isActive={activeWorkOrderId === workOrder.id}
+              onToggle={() =>
+                setOpenWorkOrderId((current) =>
+                  current === workOrder.id ? null : workOrder.id,
+                )
+              }
+            >
+              <div className="space-y-1 border-l border-[#d9e2ef] pl-3">
+                {WORK_ORDER_MODULES.filter(
+                  (module) =>
+                    module.slug !== "settings" &&
+                    canAccessWorkOrderModule(module.slug, permissions),
+                ).map((module) => (
+                  <SidebarItem
+                    key={module.slug}
+                    label={module.label}
+                    href={getWorkOrderModuleHref(space.id, workOrder.id, module.slug)}
+                    icon={moduleIconMap[module.slug]}
+                    isActive={
+                      activeWorkOrderId === workOrder.id && activeModule === module.slug
+                    }
+                    className="w-full rounded-lg py-2 text-[15px]"
+                  />
+                ))}
+              </div>
+            </AccordionItem>
+          );
+        })()
       ))}
     </div>
   );
@@ -121,6 +153,8 @@ function SidebarTree({
 export function WorkOrderSidebar({
   space,
   workOrders,
+  archiveFolders,
+  defaultArchiveFolderId,
   profile,
 }: WorkOrderSidebarProps) {
   const pathname = usePathname();
@@ -175,6 +209,8 @@ export function WorkOrderSidebar({
             key={pathname}
             space={space}
             workOrders={workOrders}
+            archiveFolders={archiveFolders}
+            defaultArchiveFolderId={defaultArchiveFolderId}
             activeWorkOrderId={route.workOrderId}
             activeModule={route.module}
             initialOpenWorkOrderId={initialOpenWorkOrderId}

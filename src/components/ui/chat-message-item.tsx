@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { MessageAttachmentList } from "@/components/ui/message-attachment-list";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/message";
@@ -6,7 +7,7 @@ type ChatMessageItemProps = Readonly<{
   message: Message;
 }>;
 
-export function ChatMessageItem({ message }: ChatMessageItemProps) {
+function ChatMessageItemComponent({ message }: ChatMessageItemProps) {
   if (message.kind === "system") {
     return (
       <div className="flex justify-center">
@@ -17,6 +18,13 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
       </div>
     );
   }
+
+  const deliveryLabel =
+    message.status === "sending"
+      ? "Sending..."
+      : message.status === "failed"
+        ? "Failed to send"
+        : null;
 
   return (
     <div
@@ -29,7 +37,9 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
         className={cn(
           "max-w-xl rounded-2xl border px-4 py-3",
           message.isCurrentUser
-            ? "border-slate-900 bg-slate-900 text-white"
+            ? message.status === "failed"
+              ? "border-rose-700 bg-rose-950 text-white"
+              : "border-slate-900 bg-slate-900 text-white"
             : "border-border bg-panel",
         )}
       >
@@ -38,6 +48,21 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
           <span className={message.isCurrentUser ? "text-slate-300" : "text-muted"}>
             {message.createdAt}
           </span>
+          {deliveryLabel ? (
+            <span
+              className={cn(
+                message.status === "failed"
+                  ? message.isCurrentUser
+                    ? "text-rose-200"
+                    : "text-rose-600"
+                  : message.isCurrentUser
+                    ? "text-slate-300"
+                    : "text-muted",
+              )}
+            >
+              {deliveryLabel}
+            </span>
+          ) : null}
         </div>
         {message.body ? <p className="mt-2 text-sm leading-6">{message.body}</p> : null}
         {message.attachments.length > 0 ? (
@@ -50,3 +75,5 @@ export function ChatMessageItem({ message }: ChatMessageItemProps) {
     </div>
   );
 }
+
+export const ChatMessageItem = memo(ChatMessageItemComponent);

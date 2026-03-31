@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Paperclip, type LucideIcon, X } from "lucide-react";
 
 type FileUploadFieldProps = Readonly<{
@@ -14,6 +14,7 @@ type FileUploadFieldProps = Readonly<{
   icon?: LucideIcon;
   iconOnly?: boolean;
   title?: string;
+  onFilesChange?: (count: number) => void;
 }>;
 
 type SelectedFile = Readonly<{
@@ -45,10 +46,16 @@ export function FileUploadField({
   icon: Icon = Paperclip,
   iconOnly = false,
   title,
+  onFilesChange,
 }: FileUploadFieldProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const onFilesChangeRef = useRef(onFilesChange);
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
+
+  useEffect(() => {
+    onFilesChangeRef.current = onFilesChange;
+  }, [onFilesChange]);
 
   const syncInputFiles = (files: File[]) => {
     const dataTransfer = new DataTransfer();
@@ -66,10 +73,32 @@ export function FileUploadField({
         size: file.size,
       })),
     );
+    onFilesChangeRef.current?.(files.length);
   };
 
   const getCurrentFiles = () =>
     inputRef.current?.files ? Array.from(inputRef.current.files) : [];
+
+  useEffect(() => {
+    const form = inputRef.current?.form;
+    if (!form) {
+      return;
+    }
+
+    const handleReset = () => {
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
+
+      setSelectedFiles([]);
+      onFilesChangeRef.current?.(0);
+    };
+
+    form.addEventListener("reset", handleReset);
+    return () => {
+      form.removeEventListener("reset", handleReset);
+    };
+  }, []);
 
   const handleChange = () => {
     const existingFiles = getCurrentFiles();

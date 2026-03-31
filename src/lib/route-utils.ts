@@ -42,6 +42,14 @@ export function getDashboardHref() {
   return "/";
 }
 
+export function getArchiveHref() {
+  return "/archive";
+}
+
+export function getArchiveRecordHref(archivedWorkOrderId: string) {
+  return `/archive/${archivedWorkOrderId}`;
+}
+
 export function getSettingsHref() {
   return "/settings";
 }

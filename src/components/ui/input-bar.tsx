@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { ImagePlus, Paperclip } from "lucide-react";
+import { ImagePlus, Paperclip, SendHorizontal } from "lucide-react";
 import { FileUploadField } from "@/components/ui/file-upload-field";
 
 type InputBarHiddenField = Readonly<{
@@ -10,7 +10,7 @@ type InputBarHiddenField = Readonly<{
 }>;
 
 type InputBarProps = Readonly<{
-  action: (payload: FormData) => void;
+  onSubmit: (payload: FormData) => boolean;
   hiddenFields: InputBarHiddenField[];
   inputName: string;
   placeholder: string;
@@ -20,7 +20,7 @@ type InputBarProps = Readonly<{
 }>;
 
 export function InputBar({
-  action,
+  onSubmit,
   hiddenFields,
   inputName,
   placeholder,
@@ -37,10 +37,24 @@ export function InputBar({
     }
   };
 
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const form = formRef.current;
+    if (!form || disabled) {
+      return;
+    }
+
+    const accepted = onSubmit(new FormData(form));
+    if (accepted) {
+      form.reset();
+    }
+  };
+
   return (
     <form
       ref={formRef}
-      action={action}
+      onSubmit={handleSubmit}
       className="space-y-3 border-t border-border bg-panel px-4 py-3"
     >
       {hiddenFields.map((field) => (
@@ -83,6 +97,15 @@ export function InputBar({
           onKeyDown={handleKeyDown}
           className="h-10 flex-1 resize-none rounded-lg border border-border bg-panel-muted px-4 py-2.5 text-sm text-foreground outline-none disabled:cursor-not-allowed disabled:opacity-60"
         />
+        <button
+          type="submit"
+          disabled={disabled}
+          title={disabled && disabledReason ? disabledReason : "Send message"}
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+        >
+          <SendHorizontal className="h-4 w-4" />
+          <span>Send</span>
+        </button>
       </div>
     </form>
   );

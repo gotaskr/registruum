@@ -152,6 +152,7 @@ function AssignedMemberRow({
   member,
   canManageMembers,
   canChangeRole,
+  actorRole,
   actorUserId,
   spaceId,
   workOrderId,
@@ -159,10 +160,16 @@ function AssignedMemberRow({
   member: WorkOrderMember;
   canManageMembers: boolean;
   canChangeRole: boolean;
+  actorRole: SpaceMembershipRole;
   actorUserId: string;
   spaceId: string;
   workOrderId: string;
 }>) {
+  const canRemoveMember =
+    canManageMembers &&
+    member.userId !== actorUserId &&
+    (actorRole === "admin" || member.role !== "admin");
+
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-panel-muted px-5 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.03)] transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.06)] lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 items-center gap-4">
@@ -206,7 +213,7 @@ function AssignedMemberRow({
           actorUserId={actorUserId}
           spaceId={spaceId}
           workOrderId={workOrderId}
-          canRemove={canManageMembers}
+          canRemove={canRemoveMember}
           canChangeRole={canChangeRole}
         />
       </div>
@@ -269,6 +276,7 @@ export function MemberList({
                   member={member}
                   canManageMembers={canManageMembers}
                   canChangeRole={actorRole === "admin"}
+                  actorRole={actorRole}
                   actorUserId={actorUserId}
                   spaceId={spaceId}
                   workOrderId={workOrderId}

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile } from "@/features/auth/api/profiles";
+import { getArchiveFolderOptions } from "@/features/archive/api/archive";
 import { getSpaceByIdForUser, getSpacesForUser } from "@/features/spaces/api/spaces";
 import { getWorkOrdersForSpace } from "@/features/work-orders/api/work-orders";
 
@@ -16,11 +17,12 @@ export default async function SpaceLayout({
   params,
 }: SpaceLayoutProps) {
   const { spaceId } = await params;
-  const [profile, spaces, space, workOrders] = await Promise.all([
+  const [profile, spaces, space, workOrders, archiveFolderData] = await Promise.all([
     getCurrentProfile(),
     getSpacesForUser(),
     getSpaceByIdForUser(spaceId),
     getWorkOrdersForSpace(spaceId),
+    getArchiveFolderOptions(),
   ]);
 
   return (
@@ -29,6 +31,8 @@ export default async function SpaceLayout({
       spaces={spaces}
       space={space}
       workOrders={workOrders}
+      archiveFolders={archiveFolderData.folders}
+      defaultArchiveFolderId={archiveFolderData.defaultFolderId}
     >
       {children}
     </AppShell>

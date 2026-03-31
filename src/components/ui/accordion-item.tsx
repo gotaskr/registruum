@@ -1,15 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
-import type { WorkOrderStatus } from "@/types/work-order";
 
 type AccordionItemProps = Readonly<{
   href: string;
   title: string;
   subtitle: string;
-  status: WorkOrderStatus;
+  titleAccessory?: ReactNode;
   actions?: ReactNode;
   isOpen: boolean;
   isActive: boolean;
@@ -21,7 +19,7 @@ export function AccordionItem({
   href,
   title,
   subtitle,
-  status,
+  titleAccessory,
   actions,
   isOpen,
   isActive,
@@ -49,13 +47,15 @@ export function AccordionItem({
             <ChevronRight className="h-4 w-4" />
           )}
         </button>
-        <Link href={href} className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-foreground">{title}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <StatusBadge status={status} />
-            <p className="text-sm text-muted">{subtitle}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            <Link href={href} className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-semibold text-foreground">{title}</p>
+              <p className="mt-2 text-sm text-muted">{subtitle}</p>
+            </Link>
+            {titleAccessory ? <div className="shrink-0 pt-0.5">{titleAccessory}</div> : null}
           </div>
-        </Link>
+        </div>
         {actions ? <div className="shrink-0">{actions}</div> : null}
       </div>
       {isOpen ? <div className="pl-11 pr-4 pt-2">{children}</div> : null}
