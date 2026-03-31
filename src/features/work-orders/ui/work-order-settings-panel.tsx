@@ -129,10 +129,14 @@ export function WorkOrderSettingsPanel({
     permissions.canChangeLifecycleStatus ||
     permissions.canArchiveWorkOrder ||
     permissions.canReopenWorkOrder;
+  const archiveFolders = settingsData?.archiveFolders ?? [];
+  const defaultArchiveFolderId = settingsData?.defaultArchiveFolderId ?? "";
   const canArchiveRecord =
     permissions.canArchiveWorkOrder &&
     workOrder.status !== "archived" &&
-    Boolean(settingsData);
+    Boolean(settingsData) &&
+    Boolean(defaultArchiveFolderId) &&
+    archiveFolders.length > 0;
   const canSubmitSettings = canEditStructuredSettings || canManageLifecycle;
   const showProtectedEditReason =
     workOrder.status === "completed" || workOrder.status === "archived";
@@ -619,8 +623,8 @@ export function WorkOrderSettingsPanel({
           workOrderId={workOrder.id}
           spaceId={workOrder.spaceId}
           workOrderTitle={workOrder.title}
-          defaultFolderId={settingsData.defaultArchiveFolderId}
-          folders={settingsData.archiveFolders}
+          defaultFolderId={defaultArchiveFolderId}
+          folders={archiveFolders}
         />
       ) : null}
     </div>

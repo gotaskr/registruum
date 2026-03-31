@@ -8,6 +8,7 @@ import { getWorkOrderMembers } from "@/features/members/api/work-order-members";
 import { getSpacesForUser } from "@/features/spaces/api/spaces";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getArchiveRecordHref } from "@/lib/route-utils";
+import { isMissingArchiveTableError } from "@/lib/supabase/schema-compat";
 import { formatDateTimeLabel } from "@/lib/utils";
 import type {
   ArchiveFolder,
@@ -38,6 +39,36 @@ type GetArchivePageDataInput = Readonly<{
   query?: string | null;
   sort?: string | null;
 }>;
+
+type ArchiveFolderOptionsResult = Readonly<{
+  defaultFolderId: string;
+  folders: ArchiveFolderOption[];
+}>;
+
+function isArchiveUnavailableError(error: unknown) {
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message =
+      typeof (error as { message?: unknown }).message === "string"
+        ? (error as { message: string }).message.toLowerCase()
+        : "";
+
+    return (
+      message.includes("missing required environment variable: supabase_service_role_key") ||
+      message.includes("archive_folders") ||
+      message.includes("archived_work_orders") ||
+      message.includes("archive_activity_logs")
+    );
+  }
+
+  return false;
+}
+
+function getArchiveUnavailableFolderOptions(): ArchiveFolderOptionsResult {
+  return {
+    defaultFolderId: "",
+    folders: [],
+  };
+}
 
 function normalizeArchiveSort(value?: string | null): ArchiveSortOption {
   switch (value) {
@@ -74,57 +105,90 @@ function mapArchiveFolderOption(row: ArchiveFolderRow): ArchiveFolderOption {
 }
 
 async function ensureDefaultArchiveFolder() {
-  const adminSupabase = createSupabaseAdminClient();
-  const { data: existingFolder, error: existingFolderError } = await adminSupabase
-    .from("archive_folders")
-    .select("*")
-    .eq("is_system_default", true)
-    .maybeSingle();
+  try {
+    const adminSupabase = createSupabaseAdminClient();
+    const { data: existingFolder, error: existingFolderError } = await adminSupabase
+      .from("archive_folders")
+      .select("*")
+      .eq("is_system_default", true)
+      .maybeSingle();
 
-  if (existingFolderError) {
-    throw new Error(existingFolderError.message);
+    if (existingFolderError) {
+      if (isMissingArchiveTableError(existingFolderError)) {
+        return null;
+      }
+
+      throw new Error(existingFolderError.message);
+    }
+
+    if (existingFolder) {
+      return existingFolder as ArchiveFolderRow;
+    }
+
+    const { data: createdFolder, error: createdFolderError } = await adminSupabase
+      .from("archive_folders")
+      .insert({
+        name: "Unsorted Archive",
+        is_system_default: true,
+        created_by_user_id: null,
+      })
+      .select("*")
+      .single();
+
+    if (createdFolderError) {
+      if (isMissingArchiveTableError(createdFolderError)) {
+        return null;
+      }
+
+      throw new Error(createdFolderError.message);
+    }
+
+    return createdFolder as ArchiveFolderRow;
+  } catch (error) {
+    if (isArchiveUnavailableError(error)) {
+      return null;
+    }
+
+    throw error;
   }
-
-  if (existingFolder) {
-    return existingFolder as ArchiveFolderRow;
-  }
-
-  const { data: createdFolder, error: createdFolderError } = await adminSupabase
-    .from("archive_folders")
-    .insert({
-      name: "Unsorted Archive",
-      is_system_default: true,
-      created_by_user_id: null,
-    })
-    .select("*")
-    .single();
-
-  if (createdFolderError) {
-    throw new Error(createdFolderError.message);
-  }
-
-  return createdFolder as ArchiveFolderRow;
 }
 
 export async function getArchiveFolderOptions() {
-  const { supabase } = await requireAuthenticatedAppUser();
-  const defaultFolder = await ensureDefaultArchiveFolder();
-  const { data, error } = await supabase
-    .from("archive_folders")
-    .select("*")
-    .order("is_system_default", { ascending: false })
-    .order("name", { ascending: true });
+  try {
+    const { supabase } = await requireAuthenticatedAppUser();
+    const defaultFolder = await ensureDefaultArchiveFolder();
 
-  if (error) {
-    throw new Error(error.message);
+    if (!defaultFolder) {
+      return getArchiveUnavailableFolderOptions();
+    }
+
+    const { data, error } = await supabase
+      .from("archive_folders")
+      .select("*")
+      .order("is_system_default", { ascending: false })
+      .order("name", { ascending: true });
+
+    if (error) {
+      if (isMissingArchiveTableError(error)) {
+        return getArchiveUnavailableFolderOptions();
+      }
+
+      throw new Error(error.message);
+    }
+
+    const folderRows = (data ?? []) as ArchiveFolderRow[];
+
+    return {
+      defaultFolderId: defaultFolder.id,
+      folders: folderRows.map(mapArchiveFolderOption),
+    };
+  } catch (error) {
+    if (isArchiveUnavailableError(error)) {
+      return getArchiveUnavailableFolderOptions();
+    }
+
+    throw error;
   }
-
-  const folderRows = (data ?? []) as ArchiveFolderRow[];
-
-  return {
-    defaultFolderId: defaultFolder.id,
-    folders: folderRows.map(mapArchiveFolderOption),
-  };
 }
 
 function sortArchivedItems(items: ArchivedWorkOrderItem[], sort: ArchiveSortOption) {
@@ -163,6 +227,21 @@ export async function getArchivePageData({
   const selectedSpaceId =
     spaceId && accessibleSpaceIds.includes(spaceId) ? spaceId : null;
 
+  if (!defaultFolder) {
+    return {
+      folders: [],
+      folderOptions: [],
+      spaceOptions,
+      selectedFolderId: folderId ?? null,
+      selectedSpaceId,
+      defaultFolderId: "",
+      searchQuery: rawQuery,
+      sort: normalizedSort,
+      items: [],
+      totalCount: 0,
+    };
+  }
+
   const { data: folderData, error: folderError } = await supabase
     .from("archive_folders")
     .select("*")
@@ -170,6 +249,21 @@ export async function getArchivePageData({
     .order("name", { ascending: true });
 
   if (folderError) {
+    if (isMissingArchiveTableError(folderError)) {
+      return {
+        folders: [],
+        folderOptions: [],
+        spaceOptions,
+        selectedFolderId: folderId ?? null,
+        selectedSpaceId,
+        defaultFolderId: "",
+        searchQuery: rawQuery,
+        sort: normalizedSort,
+        items: [],
+        totalCount: 0,
+      };
+    }
+
     throw new Error(folderError.message);
   }
 
@@ -190,12 +284,29 @@ export async function getArchivePageData({
     };
   }
 
+  const selectedFolderId = folderId ?? null;
+
   const { data: archivedData, error: archivedError } = await supabase
     .from("archived_work_orders")
     .select("*")
     .in("space_id", accessibleSpaceIds);
 
   if (archivedError) {
+    if (isMissingArchiveTableError(archivedError)) {
+      return {
+        folders: folderRows.map((row) => mapArchiveFolder(row, 0)),
+        folderOptions: folderRows.map(mapArchiveFolderOption),
+        spaceOptions,
+        selectedFolderId,
+        selectedSpaceId,
+        defaultFolderId: defaultFolder.id,
+        searchQuery: rawQuery,
+        sort: normalizedSort,
+        items: [],
+        totalCount: 0,
+      };
+    }
+
     throw new Error(archivedError.message);
   }
 
@@ -246,7 +357,6 @@ export async function getArchivePageData({
     );
   }
 
-  const selectedFolderId = folderId ?? null;
   const mappedItems = archivedRows
     .filter((row) => (selectedFolderId ? row.archive_folder_id === selectedFolderId : true))
     .filter((row) => (selectedSpaceId ? row.space_id === selectedSpaceId : true))
@@ -307,6 +417,10 @@ export async function getArchivedWorkOrderDetails(
     .maybeSingle();
 
   if (archivedRowError) {
+    if (isMissingArchiveTableError(archivedRowError)) {
+      return null;
+    }
+
     throw new Error(archivedRowError.message);
   }
 

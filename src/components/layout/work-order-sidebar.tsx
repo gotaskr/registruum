@@ -97,7 +97,10 @@ function SidebarTree({
                     workOrderTitle={workOrder.title}
                     returnTo={pathname}
                   />
-                ) : permissions.canArchiveWorkOrder && permissions.isCompleted ? (
+                ) : permissions.canArchiveWorkOrder &&
+                  permissions.isCompleted &&
+                  defaultArchiveFolderId &&
+                  archiveFolders.length > 0 ? (
                   <WorkOrderSidebarArchiveAction
                     workOrderId={workOrder.id}
                     spaceId={space.id}
