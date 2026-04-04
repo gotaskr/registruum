@@ -126,6 +126,7 @@ export type Database = {
           id: string
           is_system_default: boolean
           name: string
+          owner_user_id: string | null
           parent_id: string | null
           updated_at: string
         }
@@ -135,6 +136,7 @@ export type Database = {
           id?: string
           is_system_default?: boolean
           name: string
+          owner_user_id?: string | null
           parent_id?: string | null
           updated_at?: string
         }
@@ -144,6 +146,7 @@ export type Database = {
           id?: string
           is_system_default?: boolean
           name?: string
+          owner_user_id?: string | null
           parent_id?: string | null
           updated_at?: string
         }
@@ -162,6 +165,13 @@ export type Database = {
             referencedRelation: "archive_folders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "archive_folders_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       archived_work_orders: {
@@ -172,6 +182,7 @@ export type Database = {
           created_at: string
           id: string
           immutable: boolean
+          owner_user_id: string
           original_work_order_id: string
           space_id: string
           status_snapshot: Database["public"]["Enums"]["work_order_status"]
@@ -185,6 +196,7 @@ export type Database = {
           created_at?: string
           id?: string
           immutable?: boolean
+          owner_user_id: string
           original_work_order_id: string
           space_id: string
           status_snapshot: Database["public"]["Enums"]["work_order_status"]
@@ -198,6 +210,7 @@ export type Database = {
           created_at?: string
           id?: string
           immutable?: boolean
+          owner_user_id?: string
           original_work_order_id?: string
           space_id?: string
           status_snapshot?: Database["public"]["Enums"]["work_order_status"]
@@ -224,6 +237,13 @@ export type Database = {
             columns: ["original_work_order_id"]
             isOneToOne: true
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archived_work_orders_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

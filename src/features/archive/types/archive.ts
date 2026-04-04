@@ -3,6 +3,8 @@ export type ArchiveFolder = Readonly<{
   name: string;
   parentId: string | null;
   isSystemDefault: boolean;
+  depth: number;
+  pathLabel: string;
   archivedCount: number;
   createdAt: string;
   updatedAt: string;
@@ -11,7 +13,10 @@ export type ArchiveFolder = Readonly<{
 export type ArchiveFolderOption = Readonly<{
   id: string;
   name: string;
+  parentId: string | null;
   isSystemDefault: boolean;
+  depth: number;
+  pathLabel: string;
 }>;
 
 export type ArchiveSpaceFilterOption = Readonly<{

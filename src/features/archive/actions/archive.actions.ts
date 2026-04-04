@@ -7,6 +7,10 @@ import { createActivityLog } from "@/features/logs/api/activity-logs";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
+  getArchiveOwnershipUpgradeMessage,
+  isMissingArchiveOwnershipColumnError,
+} from "@/lib/supabase/schema-compat";
+import {
   initialArchiveActionState,
   type ArchiveActionState,
 } from "@/features/archive/types/archive";
@@ -16,6 +20,14 @@ import type { Database } from "@/types/database";
 type ArchiveFolderRow = Database["public"]["Tables"]["archive_folders"]["Row"];
 type ArchivedWorkOrderRow = Database["public"]["Tables"]["archived_work_orders"]["Row"];
 type ServerSupabaseClient = SupabaseClient<Database>;
+
+function toArchiveActionError(error: unknown) {
+  if (isMissingArchiveOwnershipColumnError(error as { message?: string } | null)) {
+    return new Error(getArchiveOwnershipUpgradeMessage());
+  }
+
+  return error instanceof Error ? error : new Error("Archive action failed.");
+}
 
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -27,16 +39,17 @@ function readBoolean(formData: FormData, key: string) {
   return value === "true" || value === "on";
 }
 
-async function getDefaultArchiveFolder() {
+async function getDefaultArchiveFolderForUser(ownerUserId: string) {
   const adminSupabase = createSupabaseAdminClient();
   const { data: existingFolder, error: existingFolderError } = await adminSupabase
     .from("archive_folders")
     .select("*")
     .eq("is_system_default", true)
+    .eq("owner_user_id", ownerUserId)
     .maybeSingle();
 
   if (existingFolderError) {
-    throw new Error(existingFolderError.message);
+    throw toArchiveActionError(existingFolderError);
   }
 
   if (existingFolder) {
@@ -48,13 +61,14 @@ async function getDefaultArchiveFolder() {
     .insert({
       name: "Unsorted Archive",
       is_system_default: true,
-      created_by_user_id: null,
+      created_by_user_id: ownerUserId,
+      owner_user_id: ownerUserId,
     })
     .select("*")
     .single();
 
   if (createdFolderError) {
-    throw new Error(createdFolderError.message);
+    throw toArchiveActionError(createdFolderError);
   }
 
   return createdFolder as ArchiveFolderRow;
@@ -77,25 +91,39 @@ async function createArchiveActivityLog(input: Readonly<{
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw toArchiveActionError(error);
   }
 }
 
 async function getArchiveFolderById(
   supabase: ServerSupabaseClient,
   folderId: string,
+  ownerUserId: string,
 ) {
   const { data, error } = await supabase
     .from("archive_folders")
     .select("*")
     .eq("id", folderId)
+    .eq("owner_user_id", ownerUserId)
     .maybeSingle();
 
   if (error) {
-    throw new Error(error.message);
+    throw toArchiveActionError(error);
   }
 
   return (data as ArchiveFolderRow | null) ?? null;
+}
+
+async function resolveArchiveParentFolder(input: Readonly<{
+  supabase: ServerSupabaseClient;
+  ownerUserId: string;
+  parentFolderId: string;
+}>) {
+  if (!input.parentFolderId) {
+    return null;
+  }
+
+  return getArchiveFolderById(input.supabase, input.parentFolderId, input.ownerUserId);
 }
 
 async function resolveTargetArchiveFolder(input: Readonly<{
@@ -103,21 +131,29 @@ async function resolveTargetArchiveFolder(input: Readonly<{
   actorUserId: string;
   archiveFolderId: string;
   newFolderName: string;
+  parentFolderId: string;
 }>): Promise<ArchiveFolderRow> {
   if (input.newFolderName.length > 0) {
+    const parentFolder = await resolveArchiveParentFolder({
+      supabase: input.supabase,
+      ownerUserId: input.actorUserId,
+      parentFolderId: input.parentFolderId,
+    });
+
     const { data, error } = await input.supabase
       .from("archive_folders")
       .insert({
         name: input.newFolderName,
-        parent_id: null,
+        parent_id: parentFolder?.id ?? null,
         created_by_user_id: input.actorUserId,
+        owner_user_id: input.actorUserId,
         is_system_default: false,
       })
       .select("*")
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      throw toArchiveActionError(error);
     }
 
     const createdFolder = data as ArchiveFolderRow;
@@ -139,6 +175,7 @@ async function resolveTargetArchiveFolder(input: Readonly<{
     const existingFolder = await getArchiveFolderById(
       input.supabase,
       input.archiveFolderId,
+      input.actorUserId,
     );
 
     if (existingFolder) {
@@ -146,7 +183,7 @@ async function resolveTargetArchiveFolder(input: Readonly<{
     }
   }
 
-  return getDefaultArchiveFolder();
+  return getDefaultArchiveFolderForUser(input.actorUserId);
 }
 
 function getReturnPath(returnTo: string, fallback: string) {
@@ -167,6 +204,7 @@ export async function archiveWorkOrderRecord(
   const spaceId = readText(formData, "spaceId");
   const archiveFolderId = readText(formData, "archiveFolderId");
   const newFolderName = readText(formData, "newArchiveFolderName");
+  const newArchiveParentFolderId = readText(formData, "newArchiveParentFolderId");
   const returnTo = readText(formData, "returnTo");
 
   const context = await getWorkOrderActorContextForAction(spaceId, workOrderId);
@@ -194,6 +232,7 @@ export async function archiveWorkOrderRecord(
     actorUserId: context.user.id,
     archiveFolderId,
     newFolderName,
+    parentFolderId: newArchiveParentFolderId,
   });
   const actorSupabase = context.supabase;
   const archivedAt = new Date().toISOString();
@@ -217,6 +256,7 @@ export async function archiveWorkOrderRecord(
       original_work_order_id: workOrderId,
       archive_folder_id: targetFolder.id,
       archived_by_user_id: context.user.id,
+      owner_user_id: context.user.id,
       archived_at: archivedAt,
       title_snapshot: context.workOrder.title,
       space_id: spaceId,
@@ -262,6 +302,7 @@ export async function archiveWorkOrderRecord(
   });
 
   revalidatePath("/archive");
+  revalidatePath("/m/archive");
   revalidatePath(`/space/${spaceId}`);
   revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/overview`);
   revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/settings`);
@@ -272,25 +313,33 @@ export async function archiveWorkOrderRecord(
 export async function createArchiveFolderAction(formData: FormData) {
   const { supabase, user } = await requireAuthenticatedAppUser();
   const name = readText(formData, "name");
+  const parentFolderId = readText(formData, "parentFolderId");
   const returnTo = readText(formData, "returnTo");
 
   if (!name) {
     redirect(getReturnPath(returnTo, "/archive"));
   }
 
+  const parentFolder = await resolveArchiveParentFolder({
+    supabase,
+    ownerUserId: user.id,
+    parentFolderId,
+  });
+
   const { data, error } = await supabase
     .from("archive_folders")
     .insert({
       name,
-      parent_id: null,
+      parent_id: parentFolder?.id ?? null,
       created_by_user_id: user.id,
+      owner_user_id: user.id,
       is_system_default: false,
     })
     .select("*")
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw toArchiveActionError(error);
   }
 
   const folder = data as ArchiveFolderRow;
@@ -307,6 +356,7 @@ export async function createArchiveFolderAction(formData: FormData) {
   });
 
   revalidatePath("/archive");
+  revalidatePath("/m/archive");
   redirect(getReturnPath(returnTo, `/archive?folder=${folder.id}`));
 }
 
@@ -320,7 +370,7 @@ export async function renameArchiveFolderAction(formData: FormData) {
     redirect(getReturnPath(returnTo, "/archive"));
   }
 
-  const currentFolder = await getArchiveFolderById(supabase, folderId);
+  const currentFolder = await getArchiveFolderById(supabase, folderId, user.id);
 
   if (!currentFolder || currentFolder.is_system_default) {
     redirect(getReturnPath(returnTo, "/archive"));
@@ -331,10 +381,11 @@ export async function renameArchiveFolderAction(formData: FormData) {
     .update({
       name,
     })
+    .eq("owner_user_id", user.id)
     .eq("id", folderId);
 
   if (error) {
-    throw new Error(error.message);
+    throw toArchiveActionError(error);
   }
 
   await createArchiveActivityLog({
@@ -350,6 +401,7 @@ export async function renameArchiveFolderAction(formData: FormData) {
   });
 
   revalidatePath("/archive");
+  revalidatePath("/m/archive");
   redirect(getReturnPath(returnTo, `/archive?folder=${folderId}`));
 }
 
@@ -362,15 +414,16 @@ export async function moveArchivedWorkOrderAction(formData: FormData) {
     redirect(getReturnPath(returnTo, "/archive"));
   }
 
-  const { supabase } = await requireAuthenticatedAppUser();
+  const { supabase, user } = await requireAuthenticatedAppUser();
   const { data: archivedData, error: archivedError } = await supabase
     .from("archived_work_orders")
     .select("*")
     .eq("id", archivedWorkOrderId)
+    .eq("owner_user_id", user.id)
     .maybeSingle();
 
   if (archivedError) {
-    throw new Error(archivedError.message);
+    throw toArchiveActionError(archivedError);
   }
 
   const archivedRow = (archivedData as ArchivedWorkOrderRow | null);
@@ -391,8 +444,13 @@ export async function moveArchivedWorkOrderAction(formData: FormData) {
   const currentFolder = await getArchiveFolderById(
     context.supabase,
     archivedRow.archive_folder_id,
+    context.user.id,
   );
-  const targetFolder = await getArchiveFolderById(context.supabase, targetFolderId);
+  const targetFolder = await getArchiveFolderById(
+    context.supabase,
+    targetFolderId,
+    context.user.id,
+  );
 
   if (!currentFolder || !targetFolder || currentFolder.id === targetFolder.id) {
     redirect(getReturnPath(returnTo, "/archive"));
@@ -403,10 +461,11 @@ export async function moveArchivedWorkOrderAction(formData: FormData) {
     .update({
       archive_folder_id: targetFolder.id,
     })
+    .eq("owner_user_id", context.user.id)
     .eq("id", archivedWorkOrderId);
 
   if (moveError) {
-    throw new Error(moveError.message);
+    throw toArchiveActionError(moveError);
   }
 
   await createArchiveActivityLog({
@@ -439,6 +498,7 @@ export async function moveArchivedWorkOrderAction(formData: FormData) {
   });
 
   revalidatePath("/archive");
+  revalidatePath("/m/archive");
   redirect(getReturnPath(returnTo, "/archive"));
 }
 
@@ -452,20 +512,48 @@ export async function deleteArchiveFolderAction(formData: FormData) {
     redirect(getReturnPath(returnTo, "/archive"));
   }
 
-  const currentFolder = await getArchiveFolderById(supabase, folderId);
+  const currentFolder = await getArchiveFolderById(supabase, folderId, user.id);
 
   if (!currentFolder || currentFolder.is_system_default) {
     redirect(getReturnPath(returnTo, "/archive"));
   }
 
-  const defaultFolder = await getDefaultArchiveFolder();
+  const defaultFolder = await getDefaultArchiveFolderForUser(user.id);
+  const { data: childFolderData, error: childFolderError } = await supabase
+    .from("archive_folders")
+    .select("id")
+    .eq("owner_user_id", user.id)
+    .eq("parent_id", folderId);
+
+  if (childFolderError) {
+    throw toArchiveActionError(childFolderError);
+  }
+
+  const childFolderIds = ((childFolderData ?? []) as Pick<ArchiveFolderRow, "id">[]).map(
+    (folder) => folder.id,
+  );
+
+  if (childFolderIds.length > 0) {
+    const { error: reparentError } = await supabase
+      .from("archive_folders")
+      .update({
+        parent_id: currentFolder.parent_id,
+      })
+      .in("id", childFolderIds);
+
+    if (reparentError) {
+      throw toArchiveActionError(reparentError);
+    }
+  }
+
   const { data: archivedData, error: archivedError } = await supabase
     .from("archived_work_orders")
     .select("*")
+    .eq("owner_user_id", user.id)
     .eq("archive_folder_id", folderId);
 
   if (archivedError) {
-    throw new Error(archivedError.message);
+    throw toArchiveActionError(archivedError);
   }
 
   const archivedRows = (archivedData ?? []) as ArchivedWorkOrderRow[];
@@ -480,10 +568,11 @@ export async function deleteArchiveFolderAction(formData: FormData) {
       .update({
         archive_folder_id: defaultFolder.id,
       })
+      .eq("owner_user_id", user.id)
       .eq("archive_folder_id", folderId);
 
     if (moveError) {
-      throw new Error(moveError.message);
+      throw toArchiveActionError(moveError);
     }
 
     for (const archivedRow of archivedRows) {
@@ -506,10 +595,11 @@ export async function deleteArchiveFolderAction(formData: FormData) {
   const { error: deleteError } = await supabase
     .from("archive_folders")
     .delete()
+    .eq("owner_user_id", user.id)
     .eq("id", folderId);
 
   if (deleteError) {
-    throw new Error(deleteError.message);
+    throw toArchiveActionError(deleteError);
   }
 
   await createArchiveActivityLog({
@@ -524,5 +614,6 @@ export async function deleteArchiveFolderAction(formData: FormData) {
   });
 
   revalidatePath("/archive");
+  revalidatePath("/m/archive");
   redirect(getReturnPath(returnTo, `/archive?folder=${defaultFolder.id}`));
 }

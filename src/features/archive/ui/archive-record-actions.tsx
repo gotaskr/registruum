@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Download, ExternalLink, FolderInput, MoreHorizontal } from "lucide-react";
 import { moveArchivedWorkOrderAction } from "@/features/archive/actions/archive.actions";
+import { formatArchiveFolderOptionLabel } from "@/features/archive/lib/archive-folder-tree";
 import type { ArchiveFolderOption, ArchivedWorkOrderItem } from "@/features/archive/types/archive";
 
 type ArchiveRecordActionsProps = Readonly<{
@@ -83,7 +84,7 @@ export function ArchiveRecordActions({
               >
                 {folders.map((folder) => (
                   <option key={folder.id} value={folder.id}>
-                    {folder.name}
+                    {formatArchiveFolderOptionLabel(folder)}
                   </option>
                 ))}
               </select>

@@ -20,7 +20,9 @@ export function ArchiveSidebar({
 }: ArchiveSidebarProps) {
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
   const customFolders = folders.filter((folder) => !folder.isSystemDefault);
-  const allArchiveCount = folders.reduce((total, folder) => total + folder.archivedCount, 0);
+  const allArchiveCount = folders
+    .filter((folder) => folder.depth === 0)
+    .reduce((total, folder) => total + folder.archivedCount, 0);
   const defaultFolder = folders.find((folder) => folder.id === defaultFolderId) ?? null;
 
   return (
@@ -73,7 +75,11 @@ export function ArchiveSidebar({
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
             Create Folder
           </p>
-          <ArchiveCreateFolderModal returnTo="/archive" />
+          <ArchiveCreateFolderModal
+            returnTo="/archive"
+            folders={folders}
+            defaultParentFolderId={selectedFolderId}
+          />
         </div>
 
         {selectedFolder && !selectedFolder.isSystemDefault ? (

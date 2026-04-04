@@ -32,3 +32,21 @@ export function isMissingArchiveTableError(error: PostgrestLikeError) {
     hasMissingRelationError(error, "archive_activity_logs")
   );
 }
+
+export function isMissingArchiveOwnershipColumnError(error: PostgrestLikeError) {
+  const message = error?.message?.toLowerCase() ?? "";
+
+  return (
+    hasMissingColumnError(error, "archive_folders", "owner_user_id") ||
+    hasMissingColumnError(error, "archived_work_orders", "owner_user_id") ||
+    message.includes("could not find the 'owner_user_id' column of 'archive_folders'") ||
+    message.includes("could not find the 'owner_user_id' column of 'archived_work_orders'")
+  );
+}
+
+export function getArchiveOwnershipUpgradeMessage() {
+  return [
+    "Archive ownership columns are missing in the database.",
+    "Apply migration 20260404150000_personal_archive_ownership.sql and refresh Supabase schema cache.",
+  ].join(" ");
+}

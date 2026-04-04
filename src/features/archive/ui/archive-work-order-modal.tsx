@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import { archiveWorkOrderRecord } from "@/features/archive/actions/archive.actions";
+import { formatArchiveFolderOptionLabel } from "@/features/archive/lib/archive-folder-tree";
 import {
   initialArchiveActionState,
   type ArchiveFolderOption,
@@ -90,7 +91,7 @@ export function ArchiveWorkOrderModal({
           >
             {folders.map((folder) => (
               <option key={folder.id} value={folder.id}>
-                {folder.name}
+                {formatArchiveFolderOptionLabel(folder)}
               </option>
             ))}
           </select>
@@ -100,18 +101,37 @@ export function ArchiveWorkOrderModal({
         </label>
 
         {showCreateFolder || !hasCustomFolders ? (
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-foreground">Create New Folder</span>
-            <input
-              name="newArchiveFolderName"
-              type="text"
-              placeholder="Folder name"
-              className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
-            />
+          <div className="space-y-4">
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-foreground">Create New Folder</span>
+              <input
+                name="newArchiveFolderName"
+                type="text"
+                placeholder="Folder name"
+                className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+              />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-foreground">Parent Folder</span>
+              <select
+                name="newArchiveParentFolderId"
+                defaultValue=""
+                className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+              >
+                <option value="">Top level</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {formatArchiveFolderOptionLabel(folder)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <p className="text-xs text-muted">
               Add a new folder here and this work order will be stored there automatically.
             </p>
-          </label>
+          </div>
         ) : null}
 
         <div className="flex items-center justify-end gap-3 border-t border-border pt-4">

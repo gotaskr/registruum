@@ -1,16 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FolderClosed, Trash2 } from "lucide-react";
+import { ChevronRight, FolderClosed, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { deleteArchiveFolderAction } from "@/features/archive/actions/archive.actions";
-import { ArchiveFolderNavItem } from "@/features/archive/ui/archive-folder-nav-item";
+import {
+  ArchiveFolderNavItem,
+  ArchiveFolderTreeGuides,
+} from "@/features/archive/ui/archive-folder-nav-item";
 import type { ArchiveFolder } from "@/features/archive/types/archive";
 import { cn } from "@/lib/utils";
 
 type ArchiveCustomFolderListProps = Readonly<{
   folders: ArchiveFolder[];
   selectedFolderId: string | null;
+}>;
+
+type ArchiveFolderTreeRow = Readonly<{
+  folder: ArchiveFolder;
+  treeGuides: boolean[];
+  isBranchEnd: boolean;
+  hasChildren: boolean;
 }>;
 
 export function ArchiveCustomFolderList({
@@ -20,10 +30,87 @@ export function ArchiveCustomFolderList({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedFolderIdForDelete, setSelectedFolderIdForDelete] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(new Set());
   const selectedFolder = useMemo(
     () => folders.find((folder) => folder.id === selectedFolderIdForDelete) ?? null,
     [folders, selectedFolderIdForDelete],
   );
+  const folderById = useMemo(
+    () => new Map(folders.map((folder) => [folder.id, folder])),
+    [folders],
+  );
+  const childrenByParent = useMemo(() => {
+    const nextChildrenByParent = new Map<string | null, ArchiveFolder[]>();
+
+    for (const folder of folders) {
+      const normalizedParentId =
+        folder.parentId && folderById.has(folder.parentId) ? folder.parentId : null;
+      const siblings = nextChildrenByParent.get(normalizedParentId) ?? [];
+
+      siblings.push(folder);
+      nextChildrenByParent.set(normalizedParentId, siblings);
+    }
+
+    return nextChildrenByParent;
+  }, [folderById, folders]);
+  const allExpandableFolderIds = useMemo(
+    () =>
+      folders
+        .filter((folder) => (childrenByParent.get(folder.id)?.length ?? 0) > 0)
+        .map((folder) => folder.id),
+    [childrenByParent, folders],
+  );
+  const effectiveCollapsedFolderIds = useMemo(() => {
+    const next = new Set<string>();
+
+    for (const folderId of collapsedFolderIds) {
+      if (allExpandableFolderIds.includes(folderId)) {
+        next.add(folderId);
+      }
+    }
+
+    return next;
+  }, [allExpandableFolderIds, collapsedFolderIds]);
+  const treeRows = useMemo<ArchiveFolderTreeRow[]>(() => {
+    const rows: ArchiveFolderTreeRow[] = [];
+
+    function visit(parentId: string | null, ancestorGuideState: boolean[]) {
+      const children = childrenByParent.get(parentId) ?? [];
+
+      children.forEach((folder, index) => {
+        const isBranchEnd = index === children.length - 1;
+        const hasChildren = (childrenByParent.get(folder.id)?.length ?? 0) > 0;
+
+        rows.push({
+          folder,
+          treeGuides: ancestorGuideState,
+          isBranchEnd,
+          hasChildren,
+        });
+
+        if (!effectiveCollapsedFolderIds.has(folder.id)) {
+          visit(folder.id, [...ancestorGuideState, !isBranchEnd]);
+        }
+      });
+    }
+
+    visit(null, []);
+    return rows;
+  }, [childrenByParent, effectiveCollapsedFolderIds]);
+
+  function toggleFolderCollapse(folderId: string) {
+    setCollapsedFolderIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+
+      return next;
+    });
+  }
 
   function handleToggleSelectionMode() {
     setSelectionMode((current) => {
@@ -79,8 +166,8 @@ export function ArchiveCustomFolderList({
       </div>
 
       <div className="mt-3 space-y-2">
-        {folders.length > 0 ? (
-          folders.map((folder) =>
+        {treeRows.length > 0 ? (
+          treeRows.map(({ folder, treeGuides, isBranchEnd, hasChildren }) =>
             selectionMode ? (
               <label
                 key={folder.id}
@@ -100,6 +187,32 @@ export function ArchiveCustomFolderList({
                     }
                     className="h-4 w-4 rounded border-border"
                   />
+                  <ArchiveFolderTreeGuides guides={treeGuides} isBranchEnd={isBranchEnd} />
+                  {hasChildren ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        toggleFolderCollapse(folder.id);
+                      }}
+                      aria-label={
+                        effectiveCollapsedFolderIds.has(folder.id)
+                          ? `Expand ${folder.name}`
+                          : `Collapse ${folder.name}`
+                      }
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-900"
+                    >
+                      <ChevronRight
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          effectiveCollapsedFolderIds.has(folder.id) ? "rotate-0" : "rotate-90",
+                        )}
+                      />
+                    </button>
+                  ) : (
+                    <span className="block w-7 shrink-0" aria-hidden="true" />
+                  )}
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600">
                     <FolderClosed className="h-4 w-4" />
                   </div>
@@ -117,6 +230,20 @@ export function ArchiveCustomFolderList({
                 count={folder.archivedCount}
                 href={`/archive?folder=${folder.id}`}
                 icon={FolderClosed}
+                depth={folder.depth}
+                treeGuides={treeGuides}
+                isBranchEnd={isBranchEnd}
+                toggleButton={
+                  hasChildren
+                    ? {
+                        isExpanded: !effectiveCollapsedFolderIds.has(folder.id),
+                        onToggle: () => toggleFolderCollapse(folder.id),
+                        ariaLabel: effectiveCollapsedFolderIds.has(folder.id)
+                          ? `Expand ${folder.name}`
+                          : `Collapse ${folder.name}`,
+                      }
+                    : null
+                }
                 isActive={selectedFolderId === folder.id}
               />
             ),

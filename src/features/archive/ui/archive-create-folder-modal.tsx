@@ -3,13 +3,19 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { createArchiveFolderAction } from "@/features/archive/actions/archive.actions";
+import { formatArchiveFolderOptionLabel } from "@/features/archive/lib/archive-folder-tree";
+import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 
 type ArchiveCreateFolderModalProps = Readonly<{
   returnTo: string;
+  folders: ArchiveFolderOption[];
+  defaultParentFolderId?: string | null;
 }>;
 
 export function ArchiveCreateFolderModal({
   returnTo,
+  folders,
+  defaultParentFolderId = null,
 }: ArchiveCreateFolderModalProps) {
   const [open, setOpen] = useState(false);
 
@@ -31,7 +37,7 @@ export function ArchiveCreateFolderModal({
         open={open}
         onClose={handleClose}
         title="Create Archive Folder"
-        description="Add a folder to organize archived work orders."
+        description="Add a folder or subfolder to organize archived work orders."
       >
         <form action={createArchiveFolderAction} className="space-y-4 px-5 py-4">
           <input type="hidden" name="returnTo" value={returnTo} />
@@ -45,6 +51,22 @@ export function ArchiveCreateFolderModal({
               autoFocus
               className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
             />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-foreground">Parent Folder</span>
+            <select
+              name="parentFolderId"
+              defaultValue={defaultParentFolderId ?? ""}
+              className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+            >
+              <option value="">Top level</option>
+              {folders.map((folder) => (
+                <option key={folder.id} value={folder.id}>
+                  {formatArchiveFolderOptionLabel(folder)}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
