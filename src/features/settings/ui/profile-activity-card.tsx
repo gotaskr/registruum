@@ -15,18 +15,22 @@ export function ProfileActivityCard({
       title="Account activity summary"
       description="A quick view of identity lifecycle timestamps."
     >
-      <div className="divide-y divide-border">
-        <div className="flex items-center justify-between gap-4 py-3">
-          <span className="text-sm text-muted">Last active</span>
-          <span className="text-sm font-medium text-foreground">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-[1.35rem] border border-border bg-panel-muted px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+            Last active
+          </p>
+          <p className="mt-3 text-sm font-medium text-foreground">
             {formatDateTimeLabel(profile.updatedAt)}
-          </span>
+          </p>
         </div>
-        <div className="flex items-center justify-between gap-4 py-3">
-          <span className="text-sm text-muted">Account created</span>
-          <span className="text-sm font-medium text-foreground">
+        <div className="rounded-[1.35rem] border border-border bg-panel-muted px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+            Account created
+          </p>
+          <p className="mt-3 text-sm font-medium text-foreground">
             {formatDateLabel(profile.createdAt)}
-          </span>
+          </p>
         </div>
       </div>
     </SettingsCard>

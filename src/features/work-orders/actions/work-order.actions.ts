@@ -7,7 +7,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   editableWorkOrderRoles,
   allWorkOrderPermissionKeys,
+  createPermissionValues,
   createDefaultWorkOrderPermissionMatrix,
+  type WorkOrderPermissionKey,
 } from "@/features/permissions/lib/work-order-permission-definitions";
 import {
   canChangeWorkOrderStatusTo,
@@ -16,6 +18,7 @@ import {
 import { uploadWorkOrderFilesAsDocuments } from "@/features/documents/api/document-uploads";
 import { inferDocumentKindFromFile } from "@/features/documents/lib/document-system";
 import { buildWorkOrderDescription } from "@/features/work-orders/lib/work-order-description";
+import { syncSpaceTeamMembersIntoWorkOrder } from "@/features/work-orders/lib/space-team-memberships";
 import {
   createWorkOrderSchema,
   updateWorkOrderSchema,
@@ -58,11 +61,12 @@ function formatStatusLabel(value: "open" | "in_progress" | "on_hold" | "complete
 
 function buildPermissionMatrixFromFormData(formData: FormData) {
   const defaults = createDefaultWorkOrderPermissionMatrix();
-  const matrix = {
-    admin: { ...defaults.admin },
-    manager: { ...defaults.manager },
-    member: { ...defaults.member },
-  };
+  const matrix = Object.fromEntries(
+    editableWorkOrderRoles.map((role) => [role, createPermissionValues(defaults[role])]),
+  ) as Record<
+    (typeof editableWorkOrderRoles)[number],
+    Record<WorkOrderPermissionKey, boolean>
+  >;
 
   for (const role of editableWorkOrderRoles) {
     for (const permissionKey of allWorkOrderPermissionKeys) {
@@ -73,7 +77,7 @@ function buildPermissionMatrixFromFormData(formData: FormData) {
     }
   }
 
-  return matrix;
+  return matrix as ReturnType<typeof createDefaultWorkOrderPermissionMatrix>;
 }
 
 function isMissingWorkOrderSettingsColumnError(message: string) {
@@ -126,9 +130,13 @@ export async function createWorkOrder(
     };
   }
 
-  if (actor.spaceRole !== "admin") {
+  if (
+    actor.spaceRole !== "admin" &&
+    actor.spaceRole !== "operations_manager" &&
+    actor.spaceRole !== "manager"
+  ) {
     return {
-      error: "Only admins can create work orders.",
+      error: "Only admins, operations managers, and managers can create work orders.",
     };
   }
 
@@ -162,6 +170,24 @@ export async function createWorkOrder(
   if (createError) {
     return {
       error: createError.message,
+    };
+  }
+
+  try {
+    await syncSpaceTeamMembersIntoWorkOrder({
+      supabase: adminSupabase,
+      spaceId: parsed.data.spaceId,
+      workOrderId,
+      assignedByUserId: actor.user.id,
+    });
+  } catch (error) {
+    await adminSupabase.from("work_orders").delete().eq("id", workOrderId);
+
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to assign the space team to the new work order.",
     };
   }
 
@@ -654,7 +680,7 @@ export async function saveWorkOrderPermissions(
     entityType: "work_order",
     entityId: workOrderId,
     details: {
-      summary: "Saved role permission changes for manager and member. Admin remains full control.",
+      summary: "Saved role permission changes for the active work order roles. Admin remains full control.",
     },
   });
 

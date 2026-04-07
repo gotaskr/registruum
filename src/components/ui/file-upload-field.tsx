@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Paperclip, type LucideIcon, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type FileUploadFieldProps = Readonly<{
   name: string;
@@ -15,6 +16,11 @@ type FileUploadFieldProps = Readonly<{
   iconOnly?: boolean;
   title?: string;
   onFilesChange?: (count: number) => void;
+  className?: string;
+  buttonClassName?: string;
+  helperTextClassName?: string;
+  fileListClassName?: string;
+  fileChipClassName?: string;
 }>;
 
 type SelectedFile = Readonly<{
@@ -47,6 +53,11 @@ export function FileUploadField({
   iconOnly = false,
   title,
   onFilesChange,
+  className,
+  buttonClassName,
+  helperTextClassName,
+  fileListClassName,
+  fileChipClassName,
 }: FileUploadFieldProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -123,7 +134,7 @@ export function FileUploadField({
   };
 
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2", className)}>
       {label ? (
         <span className="block text-sm font-medium text-foreground">{label}</span>
       ) : null}
@@ -141,25 +152,27 @@ export function FileUploadField({
       <label
         htmlFor={inputId}
         title={title ?? buttonLabel}
-        className={[
+        className={cn(
           "inline-flex cursor-pointer items-center rounded-lg border border-border bg-panel-muted text-sm font-medium text-foreground",
           iconOnly ? "w-10 justify-center px-0" : "gap-2 px-3",
           compact ? "h-10" : "h-10",
           disabled ? "cursor-not-allowed opacity-60" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
+          buttonClassName,
+        )}
       >
         <Icon className="h-4 w-4" />
         {iconOnly ? <span className="sr-only">{buttonLabel}</span> : <span>{buttonLabel}</span>}
       </label>
-      {helperText ? <p className="text-xs text-muted">{helperText}</p> : null}
+      {helperText ? <p className={cn("text-xs text-muted", helperTextClassName)}>{helperText}</p> : null}
       {selectedFiles.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
+        <div className={cn("flex flex-wrap gap-2", fileListClassName)}>
           {selectedFiles.map((file) => (
             <div
               key={file.id}
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-panel px-3 py-2 text-xs text-foreground"
+              className={cn(
+                "inline-flex items-center gap-2 rounded-lg border border-border bg-panel px-3 py-2 text-xs text-foreground",
+                fileChipClassName,
+              )}
             >
               <span>{file.name}</span>
               <span className="text-muted">{formatFileSize(file.size)}</span>

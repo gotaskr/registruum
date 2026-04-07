@@ -15,6 +15,7 @@ import {
   initialWorkOrderMemberCodePreviewState,
   initialWorkOrderMemberActionState,
 } from "@/features/members/types/work-order-member-action-state";
+import { getDefaultWorkOrderInviteRole } from "@/features/permissions/lib/roles";
 import { formatRoleLabel } from "@/lib/utils";
 
 type InviteTab = "link" | "code";
@@ -33,6 +34,7 @@ export function WorkOrderInviteMemberModal({
   workOrderId,
 }: WorkOrderInviteMemberModalProps) {
   const router = useRouter();
+  const defaultRole = getDefaultWorkOrderInviteRole();
   const [activeTab, setActiveTab] = useState<InviteTab>("link");
   const [userCode, setUserCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -108,7 +110,7 @@ export function WorkOrderInviteMemberModal({
         <div className="inline-flex rounded-2xl border border-border bg-panel-muted p-1">
           {([
             { id: "link", label: "Invite via Link", icon: Link2 },
-            { id: "code", label: "Add by Member Code", icon: UserRoundPlus },
+            { id: "code", label: "Add by User Tag", icon: UserRoundPlus },
           ] as const).map((tab) => {
             const Icon = tab.icon;
 
@@ -138,7 +140,8 @@ export function WorkOrderInviteMemberModal({
 
             <div className="rounded-2xl border border-border bg-panel-muted px-4 py-4 text-sm text-muted">
               Anyone who joins through this invite link will be added to the work order as a
-              member. An admin can change their role later.
+              {" "}
+              {formatRoleLabel(defaultRole).toLowerCase()}. A lead or manager can change their role later.
             </div>
 
             {emailState.inviteLink ? (
@@ -184,7 +187,7 @@ export function WorkOrderInviteMemberModal({
               <input type="hidden" name="spaceId" value={spaceId} />
               <input type="hidden" name="workOrderId" value={workOrderId} />
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-foreground">Member Code</span>
+                <span className="text-sm font-medium text-foreground">User Tag</span>
                 <input
                   name="userCode"
                   type="text"
@@ -234,8 +237,8 @@ export function WorkOrderInviteMemberModal({
                   <input type="hidden" name="userCode" value={userCode} />
 
                   <div className="rounded-2xl border border-border bg-panel px-4 py-4 text-sm text-muted">
-                    Adding by member code always assigns the default role:{" "}
-                    <span className="font-medium text-foreground">{formatRoleLabel("member")}</span>
+                    Adding by user tag always assigns the default role:{" "}
+                    <span className="font-medium text-foreground">{formatRoleLabel(defaultRole)}</span>
                   </div>
 
                   <FormMessage

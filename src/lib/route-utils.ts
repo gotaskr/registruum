@@ -31,11 +31,23 @@ export function getSpaceHref(spaceId: string) {
 }
 
 export function getSpaceEntryHref(space: Pick<Space, "id" | "canAccessOverview" | "landingWorkOrderId">) {
-  if (space.canAccessOverview || !space.landingWorkOrderId) {
-    return getSpaceHref(space.id);
-  }
+  return getSpaceHref(space.id);
+}
 
-  return getWorkOrderModuleHref(space.id, space.landingWorkOrderId, "overview");
+export function getSpaceWorkOrdersHref(spaceId: string) {
+  return getSpaceHref(spaceId);
+}
+
+export function getSpaceTeamHref(spaceId: string) {
+  return `/space/${spaceId}/team`;
+}
+
+export function getSpaceArchiveHref(spaceId: string) {
+  return `/space/${spaceId}/archive`;
+}
+
+export function getSpaceSettingsHref(spaceId: string) {
+  return `/space/${spaceId}/settings`;
 }
 
 export function getDashboardHref() {

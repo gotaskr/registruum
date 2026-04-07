@@ -15,6 +15,7 @@ import { saveWorkOrderPermissions } from "@/features/work-orders/actions/work-or
 import {
   initialWorkOrderActionState,
 } from "@/features/work-orders/types/work-order-action-state";
+import { formatRoleLabel } from "@/lib/utils";
 import type { WorkOrder } from "@/types/work-order";
 
 type WorkOrderPermissionsPanelProps = Readonly<{
@@ -24,11 +25,9 @@ type WorkOrderPermissionsPanelProps = Readonly<{
 }>;
 
 function createMutableMatrix(matrix: WorkOrderPermissionMatrix) {
-  return {
-    admin: { ...matrix.admin },
-    manager: { ...matrix.manager },
-    member: { ...matrix.member },
-  };
+  return Object.fromEntries(
+    editableWorkOrderRoles.map((role) => [role, { ...matrix[role] }]),
+  ) as Record<EditableWorkOrderRole, WorkOrderPermissionMatrix[EditableWorkOrderRole]>;
 }
 
 export function WorkOrderPermissionsPanel({
@@ -115,14 +114,14 @@ export function WorkOrderPermissionsPanel({
               key={role}
               type="button"
               onClick={() => setSelectedRole(role)}
-              className={[
+            className={[
                 "rounded-xl px-4 py-2 text-sm font-medium transition-colors",
                 selectedRole === role
                   ? "bg-slate-950 text-white"
                   : "text-muted hover:text-foreground",
               ].join(" ")}
             >
-              {role.charAt(0).toUpperCase() + role.slice(1)}
+              {formatRoleLabel(role)}
             </button>
           ))}
         </div>

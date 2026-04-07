@@ -6,10 +6,19 @@ import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import { parseLogDetails } from "@/features/logs/lib/log-details";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
+  createPermissionValues,
   createDefaultWorkOrderPermissionMatrix,
+  editableWorkOrderRoles,
   type EditableWorkOrderRole,
+  type WorkOrderPermissionKey,
 } from "@/features/permissions/lib/work-order-permission-definitions";
 import { getWorkOrderPermissionSet } from "@/features/permissions/lib/work-order-permissions";
+import {
+  canAccessSpaceOverview,
+  isPrimarySpaceRole,
+  isSpaceTeamRole,
+} from "@/features/permissions/lib/roles";
+import { syncSpaceTeamMembershipAcrossExistingWorkOrders } from "@/features/work-orders/lib/space-team-memberships";
 import { isMissingSpaceMembershipStatusColumn } from "@/lib/supabase/schema-compat";
 import { formatDateTimeLabel } from "@/lib/utils";
 import type { Database } from "@/types/database";
@@ -124,24 +133,22 @@ async function resolveWorkOrderPermissionMatrix(workOrderId: string) {
   }
 
   const defaults = createDefaultWorkOrderPermissionMatrix();
-  const matrix = {
-    admin: { ...defaults.admin },
-    manager: { ...defaults.manager },
-    member: { ...defaults.member },
-  };
+  const matrix = Object.fromEntries(
+    editableWorkOrderRoles.map((role) => [role, createPermissionValues(defaults[role])]),
+  ) as Record<EditableWorkOrderRole, Record<WorkOrderPermissionKey, boolean>>;
 
   for (const row of (data ?? []) as Pick<
     WorkOrderRolePermissionRow,
     "role" | "permission_key" | "is_allowed"
   >[]) {
-    if (row.role === "admin" || row.role === "manager" || row.role === "member") {
+    if (row.role in matrix) {
       matrix[row.role][
         row.permission_key as keyof (typeof matrix)[EditableWorkOrderRole]
       ] = row.is_allowed;
     }
   }
 
-  return matrix;
+  return matrix as ReturnType<typeof createDefaultWorkOrderPermissionMatrix>;
 }
 
 async function resolveSpaceMembership(
@@ -232,7 +239,11 @@ async function resolveWorkOrderActorContext(
     authenticated.user.id,
   );
   const isAssigned = Boolean(assignment);
-  const actorRole = membership.role === "admin" ? "admin" : assignment?.role ?? null;
+  const actorRole = isPrimarySpaceRole(membership.role)
+    ? membership.role
+    : membership.role === "field_lead_superintendent" && isAssigned
+      ? "field_lead_superintendent"
+      : assignment?.role ?? null;
   const workOrder = mapWorkOrderRow(workOrderRow, actorRole);
   const permissionMatrix = await resolveWorkOrderPermissionMatrix(workOrderId);
   const permissions = getWorkOrderPermissionSet({
@@ -289,7 +300,7 @@ export async function getWorkOrdersForSpace(spaceId: string) {
     notFound();
   }
 
-  if (membership.role === "admin") {
+  if (canAccessSpaceOverview(membership.role)) {
     const { data, error } = await authenticated.supabase
       .from("work_orders")
       .select("*")
@@ -302,8 +313,18 @@ export async function getWorkOrdersForSpace(spaceId: string) {
     }
 
     return ((data ?? []) as WorkOrderRow[]).map((row) =>
-      mapWorkOrderRow(row, "admin"),
+      mapWorkOrderRow(row, membership.role),
     );
+  }
+
+  if (isSpaceTeamRole(membership.role)) {
+    await syncSpaceTeamMembershipAcrossExistingWorkOrders({
+      supabase: createSupabaseAdminClient(),
+      spaceId,
+      userId: authenticated.user.id,
+      role: membership.role,
+      assignedByUserId: authenticated.user.id,
+    });
   }
 
   const { data: assignmentRows, error: assignmentError } = await authenticated.supabase
@@ -342,7 +363,7 @@ export async function getWorkOrdersForSpace(spaceId: string) {
   }
 
   return ((data ?? []) as WorkOrderRow[]).map((row) =>
-    mapWorkOrderRow(row, roleByWorkOrderId.get(row.id) ?? "member"),
+    mapWorkOrderRow(row, roleByWorkOrderId.get(row.id) ?? null),
   );
 }
 

@@ -99,17 +99,14 @@ export async function signUp(
     redirect(parsed.data.next ?? "/");
   }
 
-  const signInUrl = new URL("/sign-in", appUrl);
-  signInUrl.searchParams.set(
-    "message",
-    "Check your email to verify your account before signing in.",
-  );
+  const verifyEmailUrl = new URL("/verify-email", appUrl);
+  verifyEmailUrl.searchParams.set("email", parsed.data.email);
 
   if (parsed.data.next) {
-    signInUrl.searchParams.set("next", parsed.data.next);
+    verifyEmailUrl.searchParams.set("next", parsed.data.next);
   }
 
-  redirect(signInUrl.toString());
+  redirect(verifyEmailUrl.toString());
 }
 
 export async function signOut() {

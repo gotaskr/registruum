@@ -23,6 +23,34 @@ type SettingsSidebarProps = Readonly<{
   canManagePassword: boolean;
 }>;
 
+function getSectionHelperText(sectionId: SettingsSectionId) {
+  if (sectionId === "profile") {
+    return "Identity and company presence";
+  }
+
+  if (sectionId === "invitations") {
+    return "Pending invites and access requests";
+  }
+
+  if (sectionId === "security") {
+    return "Password and account protection";
+  }
+
+  if (sectionId === "preferences") {
+    return "Theme, landing page, and format";
+  }
+
+  if (sectionId === "notifications") {
+    return "In-app and email delivery";
+  }
+
+  if (sectionId === "subscription") {
+    return "Plans, billing, and invoices";
+  }
+
+  return "Device and session activity";
+}
+
 export function SettingsSidebar({
   canManagePassword,
 }: SettingsSidebarProps) {
@@ -32,21 +60,31 @@ export function SettingsSidebar({
   const activeSection = getActiveSection(searchParams.get("section"));
   const resolvedActiveSection = visibleSections.some((section) => section.id === activeSection)
     ? activeSection
-    : visibleSections[0]?.id ?? "profile";
+    : null;
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[auto_1fr]">
-      <div className="border-b border-border px-4 py-5">
-        <h1 className="text-[15px] font-semibold text-foreground">Settings</h1>
-        <p className="mt-2 text-sm text-muted">
-          Account controls and workspace preferences.
-        </p>
+    <div className="grid min-w-0 content-start gap-4 py-1">
+      <div className="min-w-0 overflow-hidden rounded-[1.75rem] border border-border bg-panel px-4 py-4 shadow-[0_14px_28px_rgba(15,23,42,0.04)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+              Settings
+            </p>
+            <h1 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+              {visibleSections.find((section) => section.id === resolvedActiveSection)?.label ?? "Profile"}
+            </h1>
+          </div>
+          <div className="rounded-full bg-accent-soft px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+            Active
+          </div>
+        </div>
       </div>
 
-      <nav className="min-h-0 overflow-hidden px-3 py-4">
-        <div className="space-y-1">
+      <nav className="min-w-0 overflow-hidden rounded-[2rem] border border-border bg-panel p-3 shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+        <div className="space-y-2">
           {visibleSections.map((section) => {
             const Icon = section.icon;
+            const isActive = resolvedActiveSection === section.id;
 
             return (
               <Link
@@ -54,14 +92,38 @@ export function SettingsSidebar({
                 href={`${pathname}?section=${section.id}`}
                 scroll={false}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  resolvedActiveSection === section.id
-                    ? "bg-panel-muted text-foreground"
-                    : "text-muted hover:bg-panel-muted hover:text-foreground",
+                  "group flex min-w-0 items-center gap-3 overflow-hidden rounded-[1.4rem] border px-3 py-3.5 text-sm transition-all",
+                  isActive
+                    ? "border-border-strong bg-accent-soft text-foreground shadow-[0_10px_22px_rgba(47,95,212,0.08)]"
+                    : "border-transparent text-muted hover:border-border hover:bg-panel-muted hover:text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
-                <span>{section.label}</span>
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition-colors",
+                    isActive
+                      ? "border-border bg-panel text-accent"
+                      : "border-border bg-panel-muted text-muted group-hover:border-border-strong group-hover:text-accent",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{section.label}</p>
+                  <p className="mt-0.5 max-w-full truncate text-xs text-muted">
+                    {getSectionHelperText(section.id)}
+                  </p>
+                </div>
+
+                <span
+                  className={cn(
+                    "text-base transition-transform",
+                    isActive ? "text-accent" : "text-muted group-hover:translate-x-0.5",
+                  )}
+                >
+                  ›
+                </span>
               </Link>
             );
           })}

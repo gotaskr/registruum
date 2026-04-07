@@ -9,6 +9,7 @@ export type WorkOrderInviteDetails = Readonly<{
   status: "pending" | "accepted" | "revoked" | "expired";
   spaceId: string;
   spaceName: string;
+  role: string;
   workOrderId: string | null;
   workOrderTitle: string | null;
   invitedByName: string;
@@ -21,7 +22,7 @@ export async function getWorkOrderInviteByToken(
   const adminSupabase = createSupabaseAdminClient();
   const { data: invite, error } = await adminSupabase
     .from("invites")
-    .select("id, status, space_id, invited_by_user_id, assigned_work_order_ids, expires_at")
+    .select("id, status, role, space_id, invited_by_user_id, assigned_work_order_ids, expires_at")
     .eq("token_hash", token)
     .eq("method", "link")
     .maybeSingle();
@@ -68,6 +69,7 @@ export async function getWorkOrderInviteByToken(
     status: invite.status,
     spaceId: invite.space_id,
     spaceName: spaceResult.data?.name ?? "Unknown Space",
+    role: invite.role,
     workOrderId: workOrderResult.data?.id ?? invite.assigned_work_order_ids[0] ?? null,
     workOrderTitle: workOrderResult.data?.title ?? null,
     invitedByName: inviterResult.data?.full_name ?? "Unknown User",

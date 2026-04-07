@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getFormDataFiles } from "@/lib/form-data";
 import type { Database } from "@/lib/supabase/database.types";
 
 type StorageScope = "documents" | "messages";
@@ -39,9 +40,7 @@ export function buildDocumentTitle(fileName: string) {
 }
 
 export function getValidFiles(formData: FormData, key: string) {
-  return formData
-    .getAll(key)
-    .filter((value): value is File => value instanceof File && value.size > 0);
+  return getFormDataFiles(formData, key);
 }
 
 export function buildWorkOrderStoragePath({

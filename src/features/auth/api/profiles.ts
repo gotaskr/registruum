@@ -79,6 +79,10 @@ async function mapProfileRow(
     companyName: row.company_name,
     companyEmail: row.company_email,
     companyAddress: row.company_address,
+    companyWebsite: row.company_website,
+    companyFacebookUrl: row.company_facebook_url,
+    companyXUrl: row.company_x_url,
+    companyInstagramUrl: row.company_instagram_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

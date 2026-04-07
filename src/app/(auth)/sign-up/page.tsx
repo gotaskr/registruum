@@ -12,9 +12,10 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
   return (
     <AuthShell
+      intent="sign-up"
       title="Create your Registruum account"
-      description="Create your account to access work orders, spaces, and invitations."
-      footer="If email verification is enabled, we’ll ask you to confirm your email before you can continue."
+      description="Create your account to access work orders, spaces, invitations, and structured archive access."
+      footer="If email verification is enabled, we'll ask you to confirm your email before you can continue."
     >
       <SignUpForm next={next} />
     </AuthShell>

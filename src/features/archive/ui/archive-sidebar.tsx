@@ -1,4 +1,4 @@
-import { FolderOpen, Vault } from "lucide-react";
+import { FolderOpen, FolderTree, Vault } from "lucide-react";
 import {
   renameArchiveFolderAction,
 } from "@/features/archive/actions/archive.actions";
@@ -26,18 +26,32 @@ export function ArchiveSidebar({
   const defaultFolder = folders.find((folder) => folder.id === defaultFolderId) ?? null;
 
   return (
-    <div className="grid h-full min-h-[18rem] grid-rows-[auto_1fr_auto] bg-[#f7f8fa]">
-      <div className="border-b border-border px-5 py-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted">
+    <div className="grid h-full min-h-[18rem] grid-rows-[auto_1fr_auto] gap-4 bg-transparent">
+      <div className="rounded-[2rem] border border-border bg-panel px-5 py-5 shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-[1.35rem] bg-accent-soft text-accent">
+          <Vault className="h-5 w-5" />
+        </div>
+        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-muted">
           Archive Vault
         </p>
-        <h1 className="mt-2 text-lg font-semibold tracking-tight text-foreground">Archive</h1>
-        <p className="mt-1 text-sm text-muted">
-          Read-only records organized by folder.
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">Archive</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          Browse read-only records, move through nested folders, and reopen archived work history.
         </p>
+        <div className="mt-4 rounded-[1.5rem] border border-border bg-panel-muted px-4 py-3">
+          <div className="flex items-start gap-3">
+            <FolderTree className="mt-0.5 h-4 w-4 text-accent" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">{allArchiveCount} archived records</p>
+              <p className="mt-1 text-sm text-muted">
+                Use the tree to jump between folders and collapse subfolders as needed.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="overflow-y-auto px-4 py-4">
+      <div className="min-h-0 overflow-y-auto rounded-[2rem] border border-border bg-panel px-4 py-4 shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
         <div>
           <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
             System Folders
@@ -70,7 +84,7 @@ export function ArchiveSidebar({
         />
       </div>
 
-      <div className="border-t border-border bg-white px-5 py-4">
+      <div className="rounded-[2rem] border border-border bg-panel px-5 py-4 shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
         <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
             Create Folder
@@ -83,7 +97,7 @@ export function ArchiveSidebar({
         </div>
 
         {selectedFolder && !selectedFolder.isSystemDefault ? (
-          <details className="mt-4 rounded-xl border border-border bg-[#fbfbfc]">
+          <details className="mt-4 rounded-[1.5rem] border border-border bg-panel-muted/60">
             <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground">
               Folder options
             </summary>
@@ -103,12 +117,12 @@ export function ArchiveSidebar({
                     name="name"
                     type="text"
                     defaultValue={selectedFolder.name}
-                    className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none"
+                    className="h-11 w-full rounded-2xl border border-border bg-panel px-4 text-sm text-foreground outline-none transition-colors focus:border-border-strong"
                   />
                 </label>
                 <button
                   type="submit"
-                  className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-border bg-white px-4 text-sm font-medium text-foreground"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-2xl border border-border bg-panel px-4 text-sm font-semibold text-foreground transition-colors hover:bg-panel-muted"
                 >
                   Save Name
                 </button>

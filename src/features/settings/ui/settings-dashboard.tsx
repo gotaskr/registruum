@@ -1,4 +1,5 @@
 import { MainShell } from "@/components/layout/main-shell";
+import { CheckCircle2, Mail, Shield } from "lucide-react";
 import type { ThemePreference } from "@/features/settings/lib/preferences";
 import type { SessionDetails } from "@/features/settings/lib/session-details";
 import type { SettingsInvitation } from "@/features/settings/types/invitation";
@@ -23,10 +24,19 @@ export function SettingsDashboard({
       title="Settings"
       description="Operational account controls for your Registruum workspace."
       subheader={
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted">
-          <span>{profile.fullName}</span>
-          <span>{profile.email}</span>
-          <span>Infrastructure-grade account controls</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-2 rounded-full bg-panel-muted px-3 py-1.5 text-sm text-muted">
+            <Shield className="h-4 w-4 text-accent" />
+            {profile.fullName}
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full bg-panel-muted px-3 py-1.5 text-sm text-muted">
+            <Mail className="h-4 w-4 text-accent" />
+            {profile.email}
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-sm text-success-text">
+            <CheckCircle2 className="h-4 w-4" />
+            Infrastructure-grade account controls
+          </span>
         </div>
       }
     >

@@ -16,6 +16,7 @@ import {
   buildProfileAvatarPath,
   profileAvatarBucket,
 } from "@/features/settings/lib/profile-avatar-storage";
+import { readFormDataFile } from "@/lib/form-data";
 
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -28,8 +29,7 @@ function readBoolean(formData: FormData, key: string) {
 }
 
 function readAvatarFile(formData: FormData) {
-  const value = formData.get("avatar");
-  return value instanceof File && value.size > 0 ? value : null;
+  return readFormDataFile(formData, "avatar");
 }
 
 export async function updateProfileIdentity(
@@ -156,6 +156,10 @@ export async function updateProfileCompany(
     companyName: readText(formData, "companyName"),
     companyEmail: readText(formData, "companyEmail"),
     companyAddress: readText(formData, "companyAddress"),
+    companyWebsite: readText(formData, "companyWebsite"),
+    companyFacebookUrl: readText(formData, "companyFacebookUrl"),
+    companyXUrl: readText(formData, "companyXUrl"),
+    companyInstagramUrl: readText(formData, "companyInstagramUrl"),
   });
 
   if (!parsed.success) {
@@ -172,6 +176,14 @@ export async function updateProfileCompany(
       company_name: parsed.data.representsCompany ? parsed.data.companyName : null,
       company_email: parsed.data.representsCompany ? parsed.data.companyEmail : null,
       company_address: parsed.data.representsCompany ? parsed.data.companyAddress : null,
+      company_website: parsed.data.representsCompany ? parsed.data.companyWebsite : null,
+      company_facebook_url: parsed.data.representsCompany
+        ? parsed.data.companyFacebookUrl
+        : null,
+      company_x_url: parsed.data.representsCompany ? parsed.data.companyXUrl : null,
+      company_instagram_url: parsed.data.representsCompany
+        ? parsed.data.companyInstagramUrl
+        : null,
     })
     .eq("id", profile.id);
 

@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import { createActivityLog } from "@/features/logs/api/activity-logs";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isMissingSpaceMembershipStatusColumn } from "@/lib/supabase/schema-compat";
 import type { Database } from "@/types/database";
+import { isSpaceTeamRole } from "@/features/permissions/lib/roles";
+import { syncSpaceTeamMembershipAcrossExistingWorkOrders } from "@/features/work-orders/lib/space-team-memberships";
 import {
   initialInvitationActionState,
   type InvitationActionState,
@@ -49,7 +52,7 @@ async function getPendingInviteForCurrentUser(inviteId: string) {
 }
 
 async function ensureActiveSpaceMembership(input: {
-  supabase: Awaited<ReturnType<typeof requireAuthenticatedAppUser>>["supabase"];
+  supabase: ReturnType<typeof createSupabaseAdminClient>;
   spaceId: string;
   userId: string;
   invitedByUserId: string;
@@ -59,7 +62,7 @@ async function ensureActiveSpaceMembership(input: {
 
   let membershipQuery = await supabase
     .from("space_memberships")
-    .select("id, status")
+    .select("id, status, role")
     .eq("space_id", spaceId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -106,6 +109,21 @@ async function ensureActiveSpaceMembership(input: {
     if (error) {
       throw new Error(error.message);
     }
+    return;
+  }
+
+  if (!isSpaceTeamRole(membership.role) && isSpaceTeamRole(role)) {
+    const { error } = await supabase
+      .from("space_memberships")
+      .update({
+        invited_by_user_id: invitedByUserId,
+        role,
+      })
+      .eq("id", membership.id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 }
 
@@ -122,8 +140,9 @@ export async function acceptInvitation(
 
   try {
     const { supabase, user, profile, invite } = await getPendingInviteForCurrentUser(inviteId);
+    const adminSupabase = createSupabaseAdminClient();
     await ensureActiveSpaceMembership({
-      supabase,
+      supabase: adminSupabase,
       spaceId: invite.space_id,
       userId: user.id,
       invitedByUserId: invite.invited_by_user_id,
@@ -132,8 +151,18 @@ export async function acceptInvitation(
 
     const assignedWorkOrderIds = invite.assigned_work_order_ids ?? [];
 
+    if (assignedWorkOrderIds.length === 0 && isSpaceTeamRole(invite.role)) {
+      await syncSpaceTeamMembershipAcrossExistingWorkOrders({
+        supabase: adminSupabase,
+        spaceId: invite.space_id,
+        userId: user.id,
+        role: invite.role,
+        assignedByUserId: invite.invited_by_user_id,
+      });
+    }
+
     if (assignedWorkOrderIds.length > 0) {
-      const { data: existingRows, error: existingError } = await supabase
+      const { data: existingRows, error: existingError } = await adminSupabase
         .from("work_order_memberships")
         .select("work_order_id")
         .eq("user_id", user.id)
@@ -151,7 +180,7 @@ export async function acceptInvitation(
       );
 
       if (missingWorkOrderIds.length > 0) {
-        const { error: insertError } = await supabase.from("work_order_memberships").insert(
+        const { error: insertError } = await adminSupabase.from("work_order_memberships").insert(
           missingWorkOrderIds.map((workOrderId) => ({
             work_order_id: workOrderId,
             user_id: user.id,
@@ -181,21 +210,31 @@ export async function acceptInvitation(
       }
     }
 
-    const { error: updateError } = await supabase
+    const { data: acceptedInvite, error: updateError } = await adminSupabase
       .from("invites")
       .update({
         status: "accepted",
         accepted_by_user_id: user.id,
         accepted_at: new Date().toISOString(),
+        target_user_id: user.id,
       })
       .eq("id", invite.id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
 
     if (updateError) {
       throw new Error(updateError.message);
     }
 
+    if (!acceptedInvite) {
+      throw new Error("Invitation could not be marked as accepted.");
+    }
+
     revalidatePath("/settings");
+    revalidatePath("/");
+    revalidatePath(`/space/${invite.space_id}`);
+    revalidatePath(`/space/${invite.space_id}/team`);
     for (const workOrderId of invite.assigned_work_order_ids ?? []) {
       revalidatePath(`/space/${invite.space_id}/work-order/${workOrderId}/members`);
     }
@@ -221,17 +260,24 @@ export async function declineInvitation(
 
   try {
     const { supabase, user, profile, invite } = await getPendingInviteForCurrentUser(inviteId);
+    const adminSupabase = createSupabaseAdminClient();
 
-    const { error: updateError } = await supabase
+    const { data: revokedInvite, error: updateError } = await adminSupabase
       .from("invites")
       .update({
         status: "revoked",
       })
       .eq("id", invite.id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
 
     if (updateError) {
       throw new Error(updateError.message);
+    }
+
+    if (!revokedInvite) {
+      throw new Error("Invitation could not be declined.");
     }
 
     for (const workOrderId of invite.assigned_work_order_ids ?? []) {

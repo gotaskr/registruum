@@ -6,6 +6,7 @@ import { Clock3, ShieldCheck, UserPlus2, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkOrderInviteMemberModal } from "@/features/members/ui/work-order-invite-member-modal";
 import { WorkOrderMemberRowActions } from "@/features/members/ui/work-order-member-row-actions";
+import { isWorkOrderAssignmentRole } from "@/features/permissions/lib/roles";
 import { formatRoleLabel } from "@/lib/utils";
 import type {
   WorkOrderMember,
@@ -19,6 +20,9 @@ type MemberListProps = Readonly<{
   spaceId: string;
   workOrderId: string;
   canManageMembers: boolean;
+  canInvitePeople: boolean;
+  canChangeMemberRoles: boolean;
+  canRemovePeople: boolean;
   actorRole: SpaceMembershipRole;
   actorUserId: string;
   lockedMessage?: string;
@@ -26,10 +30,13 @@ type MemberListProps = Readonly<{
 
 const roleClasses: Record<string, string> = {
   admin: "border-slate-300 bg-slate-100 text-slate-800",
+  operations_manager: "border-sky-200 bg-sky-50 text-sky-800",
   manager: "border-slate-300 bg-slate-50 text-slate-700",
+  officer_coordinator: "border-violet-200 bg-violet-50 text-violet-800",
+  field_lead_superintendent: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  helper: "border-border bg-panel text-foreground",
   contractor: "border-amber-200 bg-amber-50 text-amber-800",
-  member: "border-border bg-panel text-foreground",
-  viewer: "border-border bg-panel-muted text-muted",
+  worker: "border-border bg-panel-muted text-muted",
 };
 
 function MemberRolePill({ role }: Readonly<{ role: WorkOrderMember["role"] }>) {
@@ -48,23 +55,23 @@ function MemberRolePill({ role }: Readonly<{ role: WorkOrderMember["role"] }>) {
 function AssignMembersCard({
   spaceId,
   workOrderId,
-  canManageMembers,
+  canInvitePeople,
   membersCount,
   pendingInviteCount,
   lockedMessage,
 }: Readonly<{
   spaceId: string;
   workOrderId: string;
-  canManageMembers: boolean;
+  canInvitePeople: boolean;
   membersCount: number;
   pendingInviteCount: number;
   lockedMessage?: string;
 }>) {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
-  const helperText = !canManageMembers
-    ? lockedMessage ?? "Only admins and managers can change members for this work order."
-    : "Invite someone with a shareable link or add an existing Registruum user by their member code.";
+  const helperText = !canInvitePeople
+    ? lockedMessage ?? "You can review the member list, but this role cannot invite new people into the work order."
+    : "Invite someone with a shareable link or add an existing Registruum user by their user tag.";
 
   return (
     <section className="rounded-3xl border border-border bg-panel shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
@@ -82,12 +89,12 @@ function AssignMembersCard({
         <div className="rounded-2xl border border-border bg-panel-muted px-4 py-4">
           <p className="text-sm text-muted">
             New people can join this work order through an invite link. Existing users can be
-            added immediately by member code.
+            added immediately by user tag.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button
               onClick={() => setInviteModalOpen(true)}
-              disabled={!canManageMembers}
+              disabled={!canInvitePeople}
               className="h-11 rounded-2xl px-5"
             >
               <UserPlus2 className="mr-2 h-4 w-4" />
@@ -150,25 +157,29 @@ function MembersEmptyState({
 
 function AssignedMemberRow({
   member,
-  canManageMembers,
   canChangeRole,
+  canRemovePeople,
   actorRole,
   actorUserId,
   spaceId,
   workOrderId,
 }: Readonly<{
   member: WorkOrderMember;
-  canManageMembers: boolean;
   canChangeRole: boolean;
+  canRemovePeople: boolean;
   actorRole: SpaceMembershipRole;
   actorUserId: string;
   spaceId: string;
   workOrderId: string;
 }>) {
   const canRemoveMember =
-    canManageMembers &&
+    canRemovePeople &&
     member.userId !== actorUserId &&
-    (actorRole === "admin" || member.role !== "admin");
+    actorRole !== "contractor" &&
+    member.role !== "admin" &&
+    member.role !== "operations_manager" &&
+    member.role !== "manager";
+  const showActionMenu = isWorkOrderAssignmentRole(member.role);
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-panel-muted px-5 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.03)] transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.06)] lg:flex-row lg:items-center lg:justify-between">
@@ -205,17 +216,19 @@ function AssignedMemberRow({
 
       <div className="flex items-center gap-3 self-start lg:self-center">
         <MemberRolePill role={member.role} />
-        <WorkOrderMemberRowActions
-          memberId={member.id}
-          memberUserId={member.userId}
-          memberName={member.name}
-          currentRole={member.role}
-          actorUserId={actorUserId}
-          spaceId={spaceId}
-          workOrderId={workOrderId}
-          canRemove={canRemoveMember}
-          canChangeRole={canChangeRole}
-        />
+        {showActionMenu ? (
+          <WorkOrderMemberRowActions
+            memberId={member.id}
+            memberUserId={member.userId}
+            memberName={member.name}
+            currentRole={member.role}
+            actorUserId={actorUserId}
+            spaceId={spaceId}
+            workOrderId={workOrderId}
+            canRemove={canRemoveMember}
+            canChangeRole={canChangeRole}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -227,6 +240,9 @@ export function MemberList({
   spaceId,
   workOrderId,
   canManageMembers,
+  canInvitePeople,
+  canChangeMemberRoles,
+  canRemovePeople,
   actorRole,
   actorUserId,
   lockedMessage,
@@ -236,7 +252,7 @@ export function MemberList({
       <AssignMembersCard
         spaceId={spaceId}
         workOrderId={workOrderId}
-        canManageMembers={canManageMembers}
+        canInvitePeople={canInvitePeople}
         membersCount={members.length}
         pendingInviteCount={pendingInvites.length}
         lockedMessage={lockedMessage}
@@ -274,12 +290,12 @@ export function MemberList({
                 <AssignedMemberRow
                   key={member.id}
                   member={member}
-                  canManageMembers={canManageMembers}
-                  canChangeRole={actorRole === "admin"}
+                  canChangeRole={canChangeMemberRoles}
                   actorRole={actorRole}
                   actorUserId={actorUserId}
                   spaceId={spaceId}
                   workOrderId={workOrderId}
+                  canRemovePeople={canRemovePeople}
                 />
               ))}
             </div>

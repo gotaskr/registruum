@@ -3,6 +3,7 @@ import type { WorkOrderModule } from "@/types/work-order";
 import {
   createDefaultWorkOrderPermissionMatrix,
   createPermissionValues,
+  editableWorkOrderRoles,
   type EditableWorkOrderRole,
   type WorkOrderPermissionKey,
   type WorkOrderPermissionMatrix,
@@ -51,23 +52,8 @@ function getResolvedRolePermissions(
   role: SpaceMembershipRole | null,
   matrix: WorkOrderPermissionMatrix,
 ): WorkOrderRolePermissionValues {
-  if (role === "admin") {
-    return createDefaultWorkOrderPermissionMatrix().admin;
-  }
-
-  if (role === "manager") {
-    return matrix.manager;
-  }
-
-  if (role === "member" || role === "contractor") {
-    return matrix.member;
-  }
-
-  if (role === "viewer") {
-    return createPermissionValues({
-      download_files: true,
-      view_logs: false,
-    });
+  if (role && role in matrix) {
+    return matrix[role as EditableWorkOrderRole];
   }
 
   return createPermissionValues();
@@ -82,19 +68,15 @@ function resolvePermissionMatrix(
     return defaults;
   }
 
-  return {
-    admin: createPermissionValues({
-      ...defaults.admin,
-    }),
-    manager: createPermissionValues({
-      ...defaults.manager,
-      ...input.manager,
-    }),
-    member: createPermissionValues({
-      ...defaults.member,
-      ...input.member,
-    }),
-  };
+  return Object.fromEntries(
+    editableWorkOrderRoles.map((role) => [
+      role,
+      createPermissionValues({
+        ...defaults[role],
+        ...input[role],
+      }),
+    ]),
+  ) as WorkOrderPermissionMatrix;
 }
 
 export function isLockedWorkOrder(status: WorkOrderStatus) {
@@ -106,7 +88,11 @@ export function isProtectedWorkOrder(status: WorkOrderStatus) {
 }
 
 export function canCreateWorkOrder(role: SpaceMembershipRole | null) {
-  return role === "admin";
+  return (
+    role === "admin" ||
+    role === "operations_manager" ||
+    role === "manager"
+  );
 }
 
 export function canEditWorkOrder(
@@ -117,14 +103,26 @@ export function canEditWorkOrder(
     return false;
   }
 
-  return role === "admin" || role === "manager";
+  return (
+    role === "admin" ||
+    role === "operations_manager" ||
+    role === "manager" ||
+    role === "field_lead_superintendent"
+  );
 }
 
 export function canDeleteWorkOrder(
   role: SpaceMembershipRole | null,
   status: WorkOrderStatus,
 ) {
-  return role === "admin" && status !== "completed" && status !== "archived";
+  return (
+    (role === "admin" ||
+      role === "operations_manager" ||
+      role === "manager" ||
+      role === "field_lead_superintendent") &&
+    status !== "completed" &&
+    status !== "archived"
+  );
 }
 
 export function canAccessWorkOrder(role: SpaceMembershipRole | null) {
@@ -255,7 +253,7 @@ export function canAccessWorkOrderModule(
     case "documents":
       return permissions.canView;
     case "members":
-      return permissions.canView && permissions.canManageMembers;
+      return permissions.canView;
     case "logs":
       return permissions.canViewLogs;
     case "settings":

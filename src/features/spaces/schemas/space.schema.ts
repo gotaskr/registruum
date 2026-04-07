@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { spaceTypeOptions } from "@/features/spaces/lib/space-types";
+
+const spaceTypeValues = spaceTypeOptions.map((option) => option.value) as [
+  (typeof spaceTypeOptions)[number]["value"],
+  ...(typeof spaceTypeOptions)[number]["value"][],
+];
 
 const spaceNameSchema = z
   .string()
@@ -8,6 +14,9 @@ const spaceNameSchema = z
 
 export const createSpaceSchema = z.object({
   name: spaceNameSchema,
+  spaceType: z.enum(spaceTypeValues, {
+    message: "Select a space type.",
+  }),
   address: z
     .string()
     .trim()
@@ -16,15 +25,14 @@ export const createSpaceSchema = z.object({
     .transform((value) => value ?? ""),
 });
 
-export const renameSpaceSchema = z.object({
+export const updateSpaceSchema = z.object({
   spaceId: z.string().uuid("Invalid space id."),
-  name: spaceNameSchema,
-});
+}).merge(createSpaceSchema);
 
 export const deleteSpaceSchema = z.object({
   spaceId: z.string().uuid("Invalid space id."),
 });
 
 export type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
-export type RenameSpaceInput = z.infer<typeof renameSpaceSchema>;
+export type UpdateSpaceInput = z.infer<typeof updateSpaceSchema>;
 export type DeleteSpaceInput = z.infer<typeof deleteSpaceSchema>;

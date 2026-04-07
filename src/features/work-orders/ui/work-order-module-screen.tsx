@@ -134,6 +134,9 @@ export function WorkOrderModuleScreen({
           spaceId={workOrder.spaceId}
           workOrderId={workOrder.id}
           canManageMembers={permissions.canManageMembers}
+          canInvitePeople={permissions.canInvitePeople}
+          canChangeMemberRoles={permissions.canChangeMemberRoles}
+          canRemovePeople={permissions.canRemovePeople}
           actorRole={actorRole}
           actorUserId={actorUserId}
           lockedMessage={lockedMessage}

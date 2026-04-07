@@ -6,11 +6,11 @@ type StatusBadgeProps = Readonly<{
 }>;
 
 const statusClasses: Record<WorkOrderStatus, string> = {
-  open: "bg-[#f3f5f8] text-[#6b778c]",
-  in_progress: "bg-[#eef4ff] text-[#356dff]",
-  on_hold: "bg-[#fff7e8] text-[#a16207]",
-  completed: "bg-[#e9faf3] text-[#0f9f6e]",
-  archived: "bg-[#f1f3f7] text-[#8a94a6]",
+  open: "bg-panel-muted text-muted ring-1 ring-border",
+  in_progress: "bg-accent-soft text-accent ring-1 ring-border",
+  on_hold: "bg-warning-soft text-warning-text ring-1 ring-border",
+  completed: "bg-success-soft text-success-text ring-1 ring-border",
+  archived: "bg-panel-muted text-muted ring-1 ring-border",
 };
 
 const statusLabels: Record<WorkOrderStatus, string> = {

@@ -45,15 +45,17 @@ export function SettingsSectionView({
   invitations,
 }: SettingsSectionViewProps) {
   const searchParams = useSearchParams();
-  const visibleSections = getVisibleSettingsSections(canManagePassword);
   const requestedSection = getSectionFromSearchParam(searchParams.get("section"));
-  const activeSection = visibleSections.some((section) => section.id === requestedSection)
-    ? requestedSection
-    : visibleSections[0]?.id ?? "profile";
+  const activeSection =
+    requestedSection === "security" && !canManagePassword
+      ? "profile"
+      : requestedSection;
 
   const activeSectionMeta = useMemo(
-    () => visibleSections.find((section) => section.id === activeSection) ?? visibleSections[0],
-    [activeSection, visibleSections],
+    () =>
+      settingsSections.find((section) => section.id === activeSection) ??
+      getVisibleSettingsSections(canManagePassword)[0],
+    [activeSection, canManagePassword],
   );
 
   const activeSectionContent =
@@ -74,10 +76,13 @@ export function SettingsSectionView({
     );
 
   return (
-    <section className="px-5 py-5 lg:px-6">
-      <div className="mb-4 border-b border-border pb-4">
+    <section className="px-6 py-6 lg:px-8">
+      <div className="mb-5 rounded-[1.75rem] border border-border bg-panel px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
           {activeSectionMeta?.label ?? "Profile"}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          Configure how your Registruum identity and account surfaces behave.
         </p>
       </div>
 

@@ -1,6 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  AtSign,
+  Building2,
+  Globe,
+  Landmark,
+  Link2,
+  Mail,
+  MapPin,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import { updateProfileCompany } from "@/features/settings/actions/profile.actions";
@@ -14,6 +23,10 @@ type ProfileCompanyCardProps = Readonly<{
   profile: Profile;
 }>;
 
+function subscribeToHydration() {
+  return () => {};
+}
+
 export function ProfileCompanyCard({
   profile,
 }: ProfileCompanyCardProps) {
@@ -21,6 +34,11 @@ export function ProfileCompanyCard({
   const [state, formAction, isPending] = useActionState(
     updateProfileCompany,
     initialProfileActionState,
+  );
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
   );
   const [representsCompany, setRepresentsCompany] = useState(profile.representsCompany);
 
@@ -38,39 +56,59 @@ export function ProfileCompanyCard({
       title="Representation details"
       description="Add company information when this identity is acting on behalf of an organization."
     >
-      <form action={formAction} className="grid gap-4">
+      <form action={formAction} className="grid gap-5">
         <input
           type="hidden"
           name="representsCompany"
           value={representsCompany ? "true" : "false"}
         />
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-panel-muted px-4 py-3">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">
-              Representing a company
-            </p>
-            <p className="text-sm text-muted">
-              Add organization details when acting on behalf of a company.
+        <div className="flex items-start justify-between gap-4 rounded-[1.5rem] border border-border bg-panel-muted px-5 py-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-accent" />
+              <p className="text-sm font-medium text-foreground">
+                Representing a company
+              </p>
+            </div>
+            <p className="text-sm leading-6 text-muted">
+              Add organization details, website, and social links when acting on behalf of a company.
             </p>
           </div>
 
-          <button
-            type="button"
-            role="switch"
-            aria-checked={representsCompany}
-            onClick={() => setRepresentsCompany((value) => !value)}
-            className={[
-              "relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-150",
-              representsCompany ? "bg-slate-900" : "bg-slate-300",
-            ].join(" ")}
-          >
-            <span
+          {isHydrated ? (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={representsCompany}
+              onClick={() => setRepresentsCompany((value) => !value)}
               className={[
-                "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-150",
-                representsCompany ? "translate-x-5" : "translate-x-0",
+                "relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-150",
+                representsCompany ? "bg-accent" : "bg-border-strong",
               ].join(" ")}
-            />
-          </button>
+            >
+              <span
+                className={[
+                  "absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-panel shadow-sm transition-transform duration-150 dark:shadow-none",
+                  representsCompany ? "translate-x-5" : "translate-x-0",
+                ].join(" ")}
+              />
+            </button>
+          ) : (
+            <div
+              aria-hidden="true"
+              className={[
+                "relative inline-flex h-7 w-12 shrink-0 rounded-full",
+                profile.representsCompany ? "bg-accent" : "bg-border-strong",
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-panel shadow-sm dark:shadow-none",
+                  profile.representsCompany ? "translate-x-5" : "translate-x-0",
+                ].join(" ")}
+              />
+            </div>
+          )}
         </div>
 
         <div
@@ -80,44 +118,119 @@ export function ProfileCompanyCard({
           ].join(" ")}
         >
           <div className="overflow-hidden">
-            <div className="rounded-lg border border-border bg-panel-muted/70 px-4 py-4">
-              <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-[1.6rem] border border-border bg-panel p-5 shadow-[0_12px_24px_rgba(15,23,42,0.04)] dark:shadow-none">
+              <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 md:col-span-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
                     Company Name
                   </span>
-                  <input
-                    name="companyName"
-                    type="text"
-                    required={representsCompany}
-                    defaultValue={profile.companyName ?? ""}
-                    placeholder="Registered company name"
-                    className="h-10 w-full rounded-lg border border-border bg-panel px-3 text-sm text-foreground outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      name="companyName"
+                      type="text"
+                      required={representsCompany}
+                      defaultValue={profile.companyName ?? ""}
+                      placeholder="Registered company name"
+                      className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 pl-11 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                    />
+                    <Landmark className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  </div>
                 </label>
+
                 <label className="space-y-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
                     Company Email
                   </span>
-                  <input
-                    name="companyEmail"
-                    type="email"
-                    defaultValue={profile.companyEmail ?? ""}
-                    placeholder="company@example.com"
-                    className="h-10 w-full rounded-lg border border-border bg-panel px-3 text-sm text-foreground outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      name="companyEmail"
+                      type="email"
+                      defaultValue={profile.companyEmail ?? ""}
+                      placeholder="company@example.com"
+                      className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 pl-11 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                    />
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  </div>
                 </label>
+
+                <label className="space-y-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+                    Company Website
+                  </span>
+                  <div className="relative">
+                    <input
+                      name="companyWebsite"
+                      type="url"
+                      defaultValue={profile.companyWebsite ?? ""}
+                      placeholder="https://company.com"
+                      className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 pl-11 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                    />
+                    <Globe className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  </div>
+                </label>
+
                 <label className="space-y-2 md:col-span-2">
-                  <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
                     Company Address
                   </span>
-                  <input
-                    name="companyAddress"
-                    type="text"
-                    defaultValue={profile.companyAddress ?? ""}
-                    placeholder="Street, city, province/state, postal code"
-                    className="h-10 w-full rounded-lg border border-border bg-panel px-3 text-sm text-foreground outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      name="companyAddress"
+                      type="text"
+                      defaultValue={profile.companyAddress ?? ""}
+                      placeholder="Street, city, province/state, postal code"
+                      className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 pl-11 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                    />
+                    <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  </div>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+                    Facebook
+                  </span>
+                  <div className="relative">
+                    <input
+                      name="companyFacebookUrl"
+                      type="url"
+                      defaultValue={profile.companyFacebookUrl ?? ""}
+                      placeholder="https://facebook.com/your-company"
+                      className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 pl-11 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                    />
+                    <Link2 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  </div>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+                    X
+                  </span>
+                  <div className="relative">
+                    <input
+                      name="companyXUrl"
+                      type="url"
+                      defaultValue={profile.companyXUrl ?? ""}
+                      placeholder="https://x.com/your-company"
+                      className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 pl-11 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                    />
+                    <AtSign className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  </div>
+                </label>
+
+                <label className="space-y-2 md:col-span-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+                    Instagram
+                  </span>
+                  <div className="relative">
+                    <input
+                      name="companyInstagramUrl"
+                      type="url"
+                      defaultValue={profile.companyInstagramUrl ?? ""}
+                      placeholder="https://instagram.com/your-company"
+                      className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 pl-11 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+                    />
+                    <Link2 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  </div>
                 </label>
               </div>
             </div>
@@ -133,7 +246,8 @@ export function ProfileCompanyCard({
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            suppressHydrationWarning
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60 dark:shadow-none"
           >
             {isPending ? "Saving..." : "Save Company Details"}
           </button>

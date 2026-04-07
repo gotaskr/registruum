@@ -22,6 +22,10 @@ export type Profile = Readonly<{
   companyName: string | null;
   companyEmail: string | null;
   companyAddress: string | null;
+  companyWebsite: string | null;
+  companyFacebookUrl: string | null;
+  companyXUrl: string | null;
+  companyInstagramUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }>;

@@ -8,6 +8,14 @@ const optionalEmail = z
     message: "Enter a valid email address.",
   });
 
+const optionalUrl = z
+  .string()
+  .trim()
+  .transform((value) => (value.length > 0 ? value : null))
+  .refine((value) => value === null || z.url().safeParse(value).success, {
+    message: "Enter a valid URL.",
+  });
+
 export const updateProfileIdentitySchema = z.object({
   fullName: z
     .string()
@@ -41,6 +49,10 @@ export const updateProfileCompanySchema = z
       .trim()
       .max(240, "Company address is too long.")
       .transform((value) => (value.length > 0 ? value : null)),
+    companyWebsite: optionalUrl,
+    companyFacebookUrl: optionalUrl,
+    companyXUrl: optionalUrl,
+    companyInstagramUrl: optionalUrl,
   })
   .superRefine((value, context) => {
     if (value.representsCompany && !value.companyName) {

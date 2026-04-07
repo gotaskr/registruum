@@ -2,6 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createActivityLog } from "@/features/logs/api/activity-logs";
+import {
+  canContractorAssignRole,
+  getDefaultWorkOrderInviteRole,
+  isProtectedInheritedWorkOrderRole,
+  isWorkOrderAssignmentRole,
+} from "@/features/permissions/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getLockedWorkOrderMessage } from "@/features/permissions/lib/work-order-permissions";
 import { getWorkOrderActorContextForAction } from "@/features/work-orders/api/work-orders";
@@ -241,6 +247,15 @@ export async function assignWorkOrderMember(
     };
   }
 
+  if (
+    context.actorRole === "contractor" &&
+    !canContractorAssignRole(targetSpaceMembership.role)
+  ) {
+    return {
+      error: "Contractors can only add workers to a work order.",
+    };
+  }
+
   const { data: targetProfile, error: targetProfileError } = await context.supabase
     .from("profiles")
     .select("full_name")
@@ -253,7 +268,8 @@ export async function assignWorkOrderMember(
     };
   }
 
-  const { data: insertedRow, error: insertError } = await context.supabase
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: insertedRow, error: insertError } = await adminSupabase
     .from("work_order_memberships")
     .insert({
       work_order_id: parsed.data.workOrderId,
@@ -342,7 +358,7 @@ export async function createWorkOrderInvite(
       space_id: parsed.data.spaceId,
       invited_by_user_id: context.user.id,
       email: null,
-      role: "member",
+      role: getDefaultWorkOrderInviteRole(),
       token_hash: token,
       status: "pending",
       expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
@@ -429,7 +445,7 @@ export async function previewWorkOrderMemberByCode(
   if (!profile) {
     return {
       ...previousState,
-      error: "No user was found for that member code.",
+      error: "No user was found for that user tag.",
     };
   }
 
@@ -504,11 +520,19 @@ export async function addWorkOrderMemberByCode(
 
   if (!profile) {
     return {
-      error: "No user was found for that member code.",
+      error: "No user was found for that user tag.",
     };
   }
 
   try {
+    const defaultRole = getDefaultWorkOrderInviteRole();
+
+    if (context.actorRole === "contractor" && !canContractorAssignRole(defaultRole)) {
+      return {
+        error: "Contractors can only add workers to a work order.",
+      };
+    }
+
     await ensureNotAlreadyAssigned({
       supabase: context.supabase,
       workOrderId: parsed.data.workOrderId,
@@ -519,7 +543,7 @@ export async function addWorkOrderMemberByCode(
       spaceId: parsed.data.spaceId,
       userId: profile.id,
       invitedByUserId: context.user.id,
-      role: "member",
+      role: defaultRole,
     });
 
     const { data: insertedRow, error: insertError } = await adminSupabase
@@ -527,7 +551,7 @@ export async function addWorkOrderMemberByCode(
       .insert({
         work_order_id: parsed.data.workOrderId,
         user_id: profile.id,
-        role: "member",
+        role: defaultRole,
         assigned_by_user_id: context.user.id,
       })
       .select("id")
@@ -651,7 +675,8 @@ export async function removeWorkOrderMember(formData: FormData) {
     return;
   }
 
-  const { data: membership, error: membershipError } = await context.supabase
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: membership, error: membershipError } = await adminSupabase
     .from("work_order_memberships")
     .select("id, user_id, role")
     .eq("id", parsed.data.membershipId)
@@ -666,7 +691,7 @@ export async function removeWorkOrderMember(formData: FormData) {
     return;
   }
 
-  if (membership.role === "admin" && context.spaceRole !== "admin") {
+  if (isProtectedInheritedWorkOrderRole(membership.role)) {
     return;
   }
 
@@ -680,7 +705,7 @@ export async function removeWorkOrderMember(formData: FormData) {
     return;
   }
 
-  const { error } = await context.supabase
+  const { error } = await adminSupabase
     .from("work_order_memberships")
     .delete()
     .eq("id", parsed.data.membershipId)
@@ -688,6 +713,37 @@ export async function removeWorkOrderMember(formData: FormData) {
 
   if (error) {
     return;
+  }
+
+  if (isWorkOrderAssignmentRole(membership.role)) {
+    const { data: remainingMemberships, error: remainingMembershipsError } =
+      await adminSupabase
+        .from("work_order_memberships")
+        .select("id, work_orders!inner(space_id)")
+        .eq("user_id", membership.user_id)
+        .eq("work_orders.space_id", parsed.data.spaceId)
+        .limit(1);
+
+    if (remainingMembershipsError) {
+      return;
+    }
+
+    if ((remainingMemberships ?? []).length === 0) {
+      const { error: spaceMembershipUpdateError } = await adminSupabase
+        .from("space_memberships")
+        .update({
+          status: "removed",
+          removed_by_user_id: context.user.id,
+          removed_at: new Date().toISOString(),
+        })
+        .eq("space_id", parsed.data.spaceId)
+        .eq("user_id", membership.user_id)
+        .eq("role", membership.role);
+
+      if (spaceMembershipUpdateError) {
+        return;
+      }
+    }
   }
 
   await createActivityLog({
@@ -747,13 +803,8 @@ export async function updateWorkOrderMemberRole(
     };
   }
 
-  if (context.spaceRole !== "admin") {
-    return {
-      error: "Only admins can change member roles.",
-    };
-  }
-
-  const { data: membership, error: membershipError } = await context.supabase
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: membership, error: membershipError } = await adminSupabase
     .from("work_order_memberships")
     .select("id, user_id, role")
     .eq("id", parsed.data.membershipId)
@@ -780,13 +831,19 @@ export async function updateWorkOrderMemberRole(
 
   if (membership.user_id === context.user.id) {
     return {
-      error: "Admin access cannot be changed from the member list.",
+      error: "Your own work order access cannot be changed from the member list.",
     };
   }
 
-  if (membership.role === "admin") {
+  if (isProtectedInheritedWorkOrderRole(membership.role)) {
     return {
-      error: "Admin access is managed separately and cannot be changed here.",
+      error: "Space team access is managed separately and cannot be changed here.",
+    };
+  }
+
+  if (context.actorRole === "contractor" && !canContractorAssignRole(parsed.data.role)) {
+    return {
+      error: "Contractors can only assign the worker role.",
     };
   }
 
@@ -808,7 +865,7 @@ export async function updateWorkOrderMemberRole(
     };
   }
 
-  const { error: updateError } = await context.supabase
+  const { error: updateError } = await adminSupabase
     .from("work_order_memberships")
     .update({
       role: parsed.data.role,

@@ -40,7 +40,7 @@ export function ProfileDisplayIdentityCard({
     >
       <form action={formAction} className="space-y-4">
         <label className="space-y-2">
-          <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
             Display Name
           </span>
           <input
@@ -48,14 +48,14 @@ export function ProfileDisplayIdentityCard({
             type="text"
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
-            className="h-10 w-full rounded-lg border border-border bg-panel px-3 text-sm text-foreground outline-none"
+            className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
           />
           <p className="text-sm text-muted">
             Used in chat, logs, and work orders.
           </p>
-          <p className="text-sm text-foreground">
+          <div className="rounded-[1.35rem] border border-border bg-panel-muted px-4 py-3 text-sm text-foreground">
             <span className="text-muted">Preview:</span> {displayName || profile.fullName}
-          </p>
+          </div>
         </label>
 
         <FormMessage
@@ -67,7 +67,7 @@ export function ProfileDisplayIdentityCard({
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60 dark:shadow-none"
           >
             {isPending ? "Saving..." : "Save Display Name"}
           </button>

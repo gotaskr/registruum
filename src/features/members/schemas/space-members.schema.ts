@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-const roleSchema = z.enum(["admin", "manager", "member", "viewer"]);
+const roleSchema = z.enum([
+  "admin",
+  "operations_manager",
+  "manager",
+  "field_lead_superintendent",
+]);
 
 const workOrderIdsSchema = z
   .array(z.string().uuid("Invalid work order id."))
@@ -23,8 +28,8 @@ export const previewMemberByCodeSchema = z.object({
   userCode: z
     .string()
     .trim()
-    .min(6, "Enter a valid 6-character member code.")
-    .max(7, "Enter a valid 6-character member code."),
+    .min(6, "Enter a valid user tag.")
+    .max(7, "Enter a valid user tag."),
 });
 
 export const addMemberByCodeSchema = z.object({
@@ -32,8 +37,8 @@ export const addMemberByCodeSchema = z.object({
   userCode: z
     .string()
     .trim()
-    .min(6, "Enter a valid 6-character member code.")
-    .max(7, "Enter a valid 6-character member code."),
+    .min(6, "Enter a valid user tag.")
+    .max(7, "Enter a valid user tag."),
   role: roleSchema,
   workOrderIds: workOrderIdsSchema,
 });

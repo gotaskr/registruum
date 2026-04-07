@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import {
+  editableWorkOrderAssignmentRoles,
+  isWorkOrderAssignmentRole,
+} from "@/features/permissions/lib/roles";
+import {
   removeWorkOrderMember,
   updateWorkOrderMemberRole,
 } from "@/features/members/actions/member.actions";
@@ -14,12 +18,7 @@ import { initialWorkOrderMemberActionState } from "@/features/members/types/work
 import { formatRoleLabel } from "@/lib/utils";
 import type { SpaceMembershipRole } from "@/types/database";
 
-const roleOptions: SpaceMembershipRole[] = [
-  "manager",
-  "contractor",
-  "member",
-  "viewer",
-];
+const roleOptions: SpaceMembershipRole[] = [...editableWorkOrderAssignmentRoles];
 
 type WorkOrderMemberRowActionsProps = Readonly<{
   memberId: string;
@@ -84,7 +83,7 @@ export function WorkOrderMemberRowActions({
   }, [router, state.success]);
 
   const canOpenChangeRole =
-    canChangeRole && currentRole !== "admin" && memberUserId !== actorUserId;
+    canChangeRole && isWorkOrderAssignmentRole(currentRole) && memberUserId !== actorUserId;
 
   if (!canRemove && !canChangeRole) {
     return null;
@@ -126,7 +125,6 @@ export function WorkOrderMemberRowActions({
                 <input type="hidden" name="membershipId" value={memberId} />
                 <button
                   type="submit"
-                  onClick={() => setMenuOpen(false)}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-700 transition-colors hover:bg-red-50"
                 >
                   <UserMinus className="h-4 w-4" />

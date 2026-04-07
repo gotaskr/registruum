@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { BellRing, MailOpen, MessageSquareText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import { updateProfileNotifications } from "@/features/settings/actions/notifications.actions";
@@ -44,9 +45,45 @@ export function NotificationsSettingsSection({
       id="notifications"
       label="Notifications"
       title="Alert routing"
-      description="Choose which updates should reach you inside Registruum and by email."
+      description="Choose how activity should reach you across the workspace, inbox, and direct mentions."
     >
       <form action={formAction} className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-[1.4rem] border border-border bg-panel-muted px-4 py-4">
+            <div className="flex items-center gap-2">
+              <BellRing className="h-4 w-4 text-accent" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+                In-App
+              </p>
+            </div>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {inAppNotificationsEnabled ? "Enabled" : "Muted"}
+            </p>
+          </div>
+          <div className="rounded-[1.4rem] border border-border bg-panel-muted px-4 py-4">
+            <div className="flex items-center gap-2">
+              <MailOpen className="h-4 w-4 text-accent" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+                Email
+              </p>
+            </div>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {emailNotificationsEnabled ? "Enabled" : "Muted"}
+            </p>
+          </div>
+          <div className="rounded-[1.4rem] border border-border bg-panel-muted px-4 py-4">
+            <div className="flex items-center gap-2">
+              <MessageSquareText className="h-4 w-4 text-accent" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+                Mentions
+              </p>
+            </div>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {mentionsOnlyMode ? "Mentions only" : "All activity"}
+            </p>
+          </div>
+        </div>
+
         <div className="space-y-3">
           <SettingsToggle
             label="In-app notifications"
@@ -94,7 +131,7 @@ export function NotificationsSettingsSection({
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60 dark:shadow-none"
           >
             {isPending ? "Saving..." : "Save Notifications"}
           </button>

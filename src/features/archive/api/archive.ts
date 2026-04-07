@@ -413,6 +413,9 @@ export async function getArchivePageData({
   }
 
   const archivedRows = (archivedData ?? []) as ArchivedWorkOrderRow[];
+  const scopedArchivedRows = selectedSpaceId
+    ? archivedRows.filter((row) => row.space_id === selectedSpaceId)
+    : archivedRows;
   const actorIds = [
     ...new Set(
       archivedRows
@@ -452,7 +455,7 @@ export async function getArchivePageData({
   );
   const directArchivedCountByFolderId = new Map<string, number>();
 
-  for (const row of archivedRows) {
+  for (const row of scopedArchivedRows) {
     directArchivedCountByFolderId.set(
       row.archive_folder_id,
       (directArchivedCountByFolderId.get(row.archive_folder_id) ?? 0) + 1,
@@ -470,11 +473,10 @@ export async function getArchivePageData({
     archivedCountByFolderId.set(row.id, aggregateCount);
   }
 
-  const mappedItems = archivedRows
+  const mappedItems = scopedArchivedRows
     .filter((row) =>
       selectedFolderIds ? selectedFolderIds.has(row.archive_folder_id) : true,
     )
-    .filter((row) => (selectedSpaceId ? row.space_id === selectedSpaceId : true))
     .filter((row) =>
       normalizedQuery.length > 0
         ? row.title_snapshot.toLowerCase().includes(normalizedQuery)
@@ -518,7 +520,7 @@ export async function getArchivePageData({
     searchQuery: rawQuery,
     sort: normalizedSort,
     items: sortArchivedItems(mappedItems, normalizedSort),
-    totalCount: archivedRows.length,
+    totalCount: scopedArchivedRows.length,
   };
 }
 

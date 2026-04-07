@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 const workOrderMemberRoleSchema = z.enum([
-  "manager",
+  "officer_coordinator",
+  "helper",
   "contractor",
-  "member",
-  "viewer",
+  "worker",
 ]);
 
 export const assignWorkOrderMemberSchema = z.object({
@@ -24,8 +24,8 @@ export const previewWorkOrderMemberByCodeSchema = z.object({
   userCode: z
     .string()
     .trim()
-    .min(6, "Enter a valid 6-character member code.")
-    .max(7, "Enter a valid 6-character member code."),
+    .min(6, "Enter a valid user tag.")
+    .max(7, "Enter a valid user tag."),
 });
 
 export const addWorkOrderMemberByCodeSchema = z.object({
@@ -34,8 +34,8 @@ export const addWorkOrderMemberByCodeSchema = z.object({
   userCode: z
     .string()
     .trim()
-    .min(6, "Enter a valid 6-character member code.")
-    .max(7, "Enter a valid 6-character member code."),
+    .min(6, "Enter a valid user tag.")
+    .max(7, "Enter a valid user tag."),
 });
 
 export const cancelWorkOrderInviteSchema = z.object({

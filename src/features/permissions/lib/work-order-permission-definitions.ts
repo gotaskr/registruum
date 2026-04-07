@@ -1,4 +1,6 @@
-export const editableWorkOrderRoles = ["admin", "manager", "member"] as const;
+import { workOrderRoleOptions } from "@/features/permissions/lib/roles";
+
+export const editableWorkOrderRoles = workOrderRoleOptions;
 
 export type EditableWorkOrderRole = (typeof editableWorkOrderRoles)[number];
 
@@ -197,11 +199,17 @@ export function getDefaultWorkOrderPermissions(
         manage_work_order_settings: true,
         manage_permissions: true,
       });
+    case "operations_manager":
     case "manager":
       return createPermissionValues({
         edit_work_order: true,
         change_work_order_status: true,
+        archive_work_order: true,
+        reopen_work_order: true,
+        delete_work_order: true,
         invite_people: true,
+        remove_people: true,
+        change_member_roles: true,
         upload_files: true,
         delete_own_files: true,
         delete_any_files: true,
@@ -209,16 +217,56 @@ export function getDefaultWorkOrderPermissions(
         send_messages: true,
         edit_own_messages: true,
         delete_own_messages: true,
+        delete_any_message: true,
         view_logs: true,
         manage_work_order_settings: true,
       });
-    case "member":
+    case "field_lead_superintendent":
       return createPermissionValues({
+        edit_work_order: true,
+        change_work_order_status: true,
+        archive_work_order: true,
+        reopen_work_order: true,
+        delete_work_order: true,
+        invite_people: true,
+        remove_people: true,
+        change_member_roles: true,
         upload_files: true,
+        delete_own_files: true,
+        delete_any_files: true,
         download_files: true,
         send_messages: true,
         edit_own_messages: true,
         delete_own_messages: true,
+        delete_any_message: true,
+        view_logs: true,
+        manage_work_order_settings: true,
+      });
+    case "officer_coordinator":
+      return createPermissionValues({
+        download_files: true,
+        send_messages: true,
+        edit_own_messages: true,
+        delete_own_messages: true,
+        view_logs: true,
+      });
+    case "contractor":
+      return createPermissionValues({
+        invite_people: true,
+        download_files: true,
+        send_messages: true,
+        edit_own_messages: true,
+        delete_own_messages: true,
+        view_logs: true,
+      });
+    case "helper":
+    case "worker":
+      return createPermissionValues({
+        download_files: true,
+        send_messages: true,
+        edit_own_messages: true,
+        delete_own_messages: true,
+        view_logs: true,
       });
     default:
       return createPermissionValues();
@@ -228,7 +276,12 @@ export function getDefaultWorkOrderPermissions(
 export function createDefaultWorkOrderPermissionMatrix(): WorkOrderPermissionMatrix {
   return {
     admin: getDefaultWorkOrderPermissions("admin"),
+    operations_manager: getDefaultWorkOrderPermissions("operations_manager"),
     manager: getDefaultWorkOrderPermissions("manager"),
-    member: getDefaultWorkOrderPermissions("member"),
+    officer_coordinator: getDefaultWorkOrderPermissions("officer_coordinator"),
+    field_lead_superintendent: getDefaultWorkOrderPermissions("field_lead_superintendent"),
+    helper: getDefaultWorkOrderPermissions("helper"),
+    contractor: getDefaultWorkOrderPermissions("contractor"),
+    worker: getDefaultWorkOrderPermissions("worker"),
   };
 }

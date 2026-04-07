@@ -81,3 +81,212 @@ a {
 button {
   font: inherit;
 }
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-screen-bg {
+  background: #f3f6fb;
+}
+
+.mobile-card-surface {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  border: 1px solid #dbe4f0;
+  border-radius: 1.5rem;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.05);
+}
+
+.mobile-hero-surface {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border: 1px solid #dbe4f0;
+  border-radius: 1.75rem;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+}
+
+.mobile-input-surface {
+  background: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 1.35rem;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.mobile-primary-button {
+  background: linear-gradient(180deg, #4376e4 0%, #3566d6 100%);
+  color: #ffffff;
+  border-radius: 1.25rem;
+  box-shadow: 0 16px 30px rgba(53, 102, 214, 0.24);
+}
+
+.mobile-secondary-button {
+  background: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 1.15rem;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.mobile-soft-badge {
+  background: #eef3fb;
+  color: #6b7890;
+  border-radius: 999px;
+}
+
+.auth-shell-bg {
+  background:
+    radial-gradient(circle at top left, rgba(67, 118, 228, 0.18), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.12), transparent 32%),
+    linear-gradient(135deg, #eef4ff 0%, #f7f9fc 45%, #ffffff 100%);
+}
+
+html[data-theme="dark"] .auth-shell-bg {
+  background:
+    radial-gradient(circle at top left, rgba(122, 162, 255, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(71, 118, 230, 0.18), transparent 32%),
+    linear-gradient(135deg, #0d1420 0%, #111a28 48%, #162235 100%);
+}
+
+.auth-grid-overlay {
+  background-image:
+    linear-gradient(rgba(127, 140, 163, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 140, 163, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.92), transparent);
+}
+
+.auth-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(4px);
+  animation: authFloat 10s ease-in-out infinite;
+}
+
+.auth-orb-delay {
+  animation-delay: -4s;
+}
+
+.auth-float-card {
+  animation: authCardFloat 14s ease-in-out infinite;
+}
+
+.auth-float-card-delay {
+  animation-delay: -5s;
+}
+
+.auth-enter {
+  animation: authEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-enter-delay {
+  animation-delay: 0.12s;
+  animation-fill-mode: both;
+}
+
+.auth-input-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-input-shell::after {
+  content: "";
+  position: absolute;
+  inset: auto -30% -65% auto;
+  height: 6rem;
+  width: 6rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent 70%);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.auth-input-shell:focus-within::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.auth-panel-glow {
+  position: relative;
+}
+
+.auth-panel-glow::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(59, 130, 246, 0.03), rgba(59, 130, 246, 0));
+  pointer-events: none;
+}
+
+html[data-theme="dark"] .auth-panel-glow::before {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(122, 162, 255, 0.04), rgba(122, 162, 255, 0));
+}
+
+.auth-shimmer-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-shimmer-line::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -40%;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+  animation: authShimmer 3.4s linear infinite;
+}
+
+html[data-theme="dark"] .auth-shimmer-line::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09), transparent);
+}
+
+@keyframes authFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -16px, 0) scale(1.04);
+  }
+}
+
+@keyframes authCardFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) rotate(-0.6deg);
+  }
+}
+
+@keyframes authEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes authShimmer {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}

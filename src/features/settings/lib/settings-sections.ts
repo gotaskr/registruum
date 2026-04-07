@@ -26,18 +26,14 @@ export const settingsSections: ReadonlyArray<{
   { id: "profile", label: "Profile", icon: UserRound },
   { id: "invitations", label: "Invitations", icon: Inbox },
   { id: "security", label: "Security", icon: Lock },
-  { id: "preferences", label: "Preferences", icon: Globe },
+  { id: "preferences", label: "Preference", icon: Globe },
   { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "subscription", label: "Subscription", icon: CreditCard },
-  { id: "session", label: "Session", icon: Database },
+  { id: "subscription", label: "Billing", icon: CreditCard },
+  { id: "session", label: "Sessions", icon: Database },
 ];
 
 export function getVisibleSettingsSections(canManagePassword: boolean) {
   return settingsSections.filter((section) => {
-    if (section.id === "subscription") {
-      return false;
-    }
-
     if (!canManagePassword && section.id === "security") {
       return false;
     }

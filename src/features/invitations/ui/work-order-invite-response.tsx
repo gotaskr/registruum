@@ -14,12 +14,14 @@ type WorkOrderInviteResponseProps = Readonly<{
   token: string;
   isAuthenticated: boolean;
   autoAccept: boolean;
+  isWorkOrderInvite: boolean;
 }>;
 
 export function WorkOrderInviteResponse({
   token,
   isAuthenticated,
   autoAccept,
+  isWorkOrderInvite,
 }: WorkOrderInviteResponseProps) {
   const [acceptState, acceptAction, acceptPending] = useActionState(
     acceptWorkOrderInviteLink,
@@ -41,8 +43,9 @@ export function WorkOrderInviteResponse({
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-border bg-panel-muted px-4 py-4 text-sm text-muted">
-        Accepting this invite will add you to the work order as a member. If you are not
-        signed in, you will continue through authentication first.
+        {isWorkOrderInvite
+          ? "Accepting this invite will add you to the work order with the default assigned role. If you are not signed in, you will continue through authentication first."
+          : "Accepting this invite will add you to the space team with the assigned team role. If you are not signed in, you will continue through authentication first."}
       </div>
       <div className="flex flex-wrap gap-3">
         {isAuthenticated ? (

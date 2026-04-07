@@ -10,6 +10,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Registruum",
   description: "Operational workspace for spaces, work orders, and documents.",
+  manifest: "/manifest.webmanifest",
 };
 
 type RootLayoutProps = Readonly<{

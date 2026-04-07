@@ -35,16 +35,16 @@ export function SettingsToggle({
   return (
     <label
       htmlFor={inputId}
-      className="flex items-center justify-between gap-4 rounded-lg border border-border bg-panel-muted px-3 py-3"
+      className="flex items-center justify-between gap-4 rounded-[1.45rem] border border-border bg-panel-muted px-4 py-4"
     >
       <div>
         <p className="text-sm font-medium text-foreground">{label}</p>
-        {description ? <p className="mt-1 text-xs text-muted">{description}</p> : null}
+        {description ? <p className="mt-1 text-sm leading-6 text-muted">{description}</p> : null}
       </div>
       <span
         className={cn(
-          "relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors",
-          resolvedChecked ? "bg-slate-900" : "bg-slate-300",
+          "relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors",
+          resolvedChecked ? "bg-accent" : "bg-border-strong",
         )}
       >
         <input
@@ -56,7 +56,7 @@ export function SettingsToggle({
         />
         <span
           className={cn(
-            "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform",
+            "absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-panel shadow-sm transition-transform dark:shadow-none",
             resolvedChecked ? "translate-x-5" : "translate-x-0",
           )}
         />

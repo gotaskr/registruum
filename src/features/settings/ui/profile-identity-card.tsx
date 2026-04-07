@@ -48,10 +48,11 @@ export function ProfileIdentityCard({
       label="Identity"
       title="System identity record"
       description="This identity is used across work orders, logs, and audit-ready records."
+      highlighted
     >
       <div className="grid gap-4">
-        <div className="grid gap-4 md:grid-cols-[5rem_minmax(0,1fr)_auto]">
-          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-border bg-panel-muted text-xl font-semibold text-foreground shadow-sm">
+        <div className="grid gap-5 md:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
+          <div className="flex h-[5.5rem] w-[5.5rem] items-center justify-center overflow-hidden rounded-[1.6rem] border border-border bg-panel-muted text-xl font-semibold text-foreground shadow-[0_12px_24px_rgba(15,23,42,0.05)] dark:shadow-none">
             {profile.avatarUrl ? (
               <Image
                 src={profile.avatarUrl}
@@ -67,13 +68,13 @@ export function ProfileIdentityCard({
           </div>
           <div className="min-w-0 space-y-3">
             <div className="space-y-1">
-              <h3 className="text-xl font-semibold tracking-tight text-foreground">
+              <h3 className="text-2xl font-semibold tracking-tight text-foreground">
                 {profile.fullName}
               </h3>
               <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
                 <span className="truncate">{profile.email}</span>
-                <span className="text-border">/</span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-panel-muted px-2 py-1 text-[11px] font-medium text-muted">
+                <span className="text-border-strong">/</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-panel px-2.5 py-1 text-[11px] font-medium text-muted">
                   <CheckCircle2 className="h-3 w-3" />
                   {isVerified ? "Verified" : "Pending"}
                 </span>
@@ -81,13 +82,13 @@ export function ProfileIdentityCard({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 font-mono text-xs font-semibold tracking-[0.14em] text-white">
+              <span className="inline-flex items-center rounded-full bg-[#111827] px-3 py-1.5 font-mono text-xs font-semibold tracking-[0.14em] text-white">
                 {profile.userTag}
               </span>
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-panel text-muted transition-colors hover:text-foreground"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-panel text-muted transition-colors hover:bg-panel-muted hover:text-foreground"
                 aria-label="Copy user tag"
                 title="Copy user tag"
               >
@@ -108,21 +109,21 @@ export function ProfileIdentityCard({
             <button
               type="button"
               onClick={() => setMenuOpen((value) => !value)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-panel text-muted transition-colors hover:text-foreground"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-panel text-muted transition-colors hover:bg-panel-muted hover:text-foreground"
               aria-label="Open identity actions"
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
 
             {menuOpen ? (
-              <div className="absolute right-0 top-11 z-10 min-w-36 rounded-lg border border-border bg-panel p-1 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+              <div className="absolute right-0 top-12 z-10 min-w-36 rounded-[1.2rem] border border-border bg-panel p-1.5 shadow-[0_16px_34px_rgba(15,23,42,0.08)] dark:shadow-none">
                 <button
                   type="button"
                   onClick={() => {
                     setMenuOpen(false);
                     setEditOpen(true);
                   }}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-panel-muted"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-panel-muted"
                 >
                   <PencilLine className="h-4 w-4" />
                   Edit
@@ -132,8 +133,8 @@ export function ProfileIdentityCard({
           </div>
         </div>
 
-        <div className="border-t border-border pt-4">
-          <p className="text-sm text-muted">
+        <div className="rounded-[1.35rem] border border-border bg-panel-muted px-4 py-4">
+          <p className="text-sm leading-6 text-muted">
             This tag is used for member invites and internal identification.
           </p>
         </div>

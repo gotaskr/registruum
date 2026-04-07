@@ -6,6 +6,7 @@ export type Member = Readonly<{
   userId: string;
   name: string;
   email: string;
+  userTag: string | null;
   role: SpaceMembershipRole;
   initials: string;
   avatarUrl: string | null;

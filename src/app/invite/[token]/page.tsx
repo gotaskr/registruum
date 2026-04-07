@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getWorkOrderInviteByToken } from "@/features/invitations/api/work-order-invite";
 import { WorkOrderInviteResponse } from "@/features/invitations/ui/work-order-invite-response";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { formatRoleLabel } from "@/lib/utils";
 
 type InvitePageProps = Readonly<{
   params: Promise<{
@@ -29,16 +30,17 @@ export default async function InvitePage({
     data: { user },
   } = await supabase.auth.getUser();
   const isPending = invite.status === "pending";
+  const isWorkOrderInvite = Boolean(invite.workOrderId);
 
   return (
     <main className="min-h-screen bg-panel-muted px-4 py-12">
       <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-panel shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
         <div className="border-b border-border px-6 py-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-            Work Order Invite
+            {isWorkOrderInvite ? "Work Order Invite" : "Space Team Invite"}
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-            {invite.workOrderTitle ?? "Join this work order"}
+            {invite.workOrderTitle ?? `Join ${invite.spaceName}`}
           </h1>
           <p className="mt-2 text-sm text-muted">
             Invited by {invite.invitedByName} in {invite.spaceName}
@@ -51,7 +53,9 @@ export default async function InvitePage({
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
                 Access
               </p>
-              <p className="mt-2 text-base font-semibold text-foreground">Member</p>
+              <p className="mt-2 text-base font-semibold text-foreground">
+                {formatRoleLabel(invite.role)}
+              </p>
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
@@ -73,6 +77,7 @@ export default async function InvitePage({
               token={token}
               isAuthenticated={Boolean(user)}
               autoAccept={Boolean(user) && intent === "accept"}
+              isWorkOrderInvite={isWorkOrderInvite}
             />
           )}
         </div>

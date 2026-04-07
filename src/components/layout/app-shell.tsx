@@ -1,6 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
-import { GlobalRail } from "@/components/layout/global-rail";
-import { WorkOrderSidebar } from "@/components/layout/work-order-sidebar";
+import { ContextSidebar } from "@/components/layout/context-sidebar";
+import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 import type { Profile } from "@/types/profile";
 import type { Space } from "@/types/space";
@@ -26,25 +28,20 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="h-full min-h-0 overflow-hidden bg-background text-foreground">
-      <div className="grid h-full min-h-0 grid-cols-1 bg-panel lg:grid-cols-[4.75rem_21.5rem_minmax(0,1fr)]">
-        <GlobalRail
-          activeView="spaces"
-          currentSpaceId={space.id}
-          spaces={spaces}
-          profile={profile}
-        />
-        <WorkOrderSidebar
+    <WorkspaceShell
+      profile={profile}
+      spaces={spaces}
+      space={space}
+      sidebar={(
+        <ContextSidebar
           space={space}
           workOrders={workOrders}
-          profile={profile}
           archiveFolders={archiveFolders}
           defaultArchiveFolderId={defaultArchiveFolderId}
         />
-        <div className="min-h-0 min-w-0 overflow-hidden border-t border-border bg-panel lg:border-t-0 lg:border-l">
-          {children}
-        </div>
-      </div>
-    </div>
+      )}
+    >
+      {children}
+    </WorkspaceShell>
   );
 }

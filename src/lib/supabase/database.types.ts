@@ -159,17 +159,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "archive_folders_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "archive_folders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "archive_folders_owner_user_id_fkey"
             columns: ["owner_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "archive_folders"
             referencedColumns: ["id"]
           },
         ]
@@ -182,8 +182,8 @@ export type Database = {
           created_at: string
           id: string
           immutable: boolean
-          owner_user_id: string
           original_work_order_id: string
+          owner_user_id: string
           space_id: string
           status_snapshot: Database["public"]["Enums"]["work_order_status"]
           title_snapshot: string
@@ -196,8 +196,8 @@ export type Database = {
           created_at?: string
           id?: string
           immutable?: boolean
-          owner_user_id: string
           original_work_order_id: string
+          owner_user_id: string
           space_id: string
           status_snapshot: Database["public"]["Enums"]["work_order_status"]
           title_snapshot: string
@@ -210,8 +210,8 @@ export type Database = {
           created_at?: string
           id?: string
           immutable?: boolean
-          owner_user_id?: string
           original_work_order_id?: string
+          owner_user_id?: string
           space_id?: string
           status_snapshot?: Database["public"]["Enums"]["work_order_status"]
           title_snapshot?: string
@@ -608,7 +608,11 @@ export type Database = {
           avatar_path: string | null
           company_address: string | null
           company_email: string | null
+          company_facebook_url: string | null
+          company_instagram_url: string | null
           company_name: string | null
+          company_website: string | null
+          company_x_url: string | null
           contact_info: string | null
           created_at: string
           date_format: string
@@ -633,7 +637,11 @@ export type Database = {
           avatar_path?: string | null
           company_address?: string | null
           company_email?: string | null
+          company_facebook_url?: string | null
+          company_instagram_url?: string | null
           company_name?: string | null
+          company_website?: string | null
+          company_x_url?: string | null
           contact_info?: string | null
           created_at?: string
           date_format?: string
@@ -658,7 +666,11 @@ export type Database = {
           avatar_path?: string | null
           company_address?: string | null
           company_email?: string | null
+          company_facebook_url?: string | null
+          company_instagram_url?: string | null
           company_name?: string | null
+          company_website?: string | null
+          company_x_url?: string | null
           contact_info?: string | null
           created_at?: string
           date_format?: string
@@ -791,30 +803,42 @@ export type Database = {
       }
       spaces: {
         Row: {
+          address: string | null
           created_at: string
           created_by_user_id: string
           id: string
           invite_code: string | null
           invite_token: string | null
           name: string
+          photo_file_name: string | null
+          photo_path: string | null
+          space_type: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           created_by_user_id: string
           id?: string
           invite_code?: string | null
           invite_token?: string | null
           name: string
+          photo_file_name?: string | null
+          photo_path?: string | null
+          space_type?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           created_by_user_id?: string
           id?: string
           invite_code?: string | null
           invite_token?: string | null
           name?: string
+          photo_file_name?: string | null
+          photo_path?: string | null
+          space_type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1157,6 +1181,15 @@ export type Database = {
         Args: { input_token: string }
         Returns: string
       }
+      can_access_archive: { Args: never; Returns: boolean }
+      can_access_archive_folder: {
+        Args: { target_folder_id: string }
+        Returns: boolean
+      }
+      can_access_archived_work_order: {
+        Args: { target_archived_work_order_id: string }
+        Returns: boolean
+      }
       can_access_profile_avatar: {
         Args: { object_name: string }
         Returns: boolean
@@ -1278,7 +1311,15 @@ export type Database = {
         | "document"
         | "message"
         | "invite"
-      app_role: "admin" | "manager" | "contractor" | "member" | "viewer"
+      app_role:
+        | "admin"
+        | "operations_manager"
+        | "manager"
+        | "officer_coordinator"
+        | "field_lead_superintendent"
+        | "helper"
+        | "contractor"
+        | "worker"
       invite_method: "email" | "link" | "code"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
       job_market_post_status: "active" | "closed" | "withdrawn"
@@ -1434,7 +1475,16 @@ export const Constants = {
         "message",
         "invite",
       ],
-      app_role: ["admin", "manager", "contractor", "member", "viewer"],
+      app_role: [
+        "admin",
+        "operations_manager",
+        "manager",
+        "officer_coordinator",
+        "field_lead_superintendent",
+        "helper",
+        "contractor",
+        "worker",
+      ],
       invite_method: ["email", "link", "code"],
       invite_status: ["pending", "accepted", "revoked", "expired"],
       job_market_post_status: ["active", "closed", "withdrawn"],
@@ -1457,4 +1507,3 @@ export const Constants = {
     },
   },
 } as const
-

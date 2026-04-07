@@ -9,7 +9,12 @@ import {
   initialInvitationActionState,
   type InvitationActionState,
 } from "@/features/settings/types/invitation-action-state";
+import {
+  getDefaultWorkOrderInviteRole,
+  isSpaceTeamRole,
+} from "@/features/permissions/lib/roles";
 import { DEFAULT_MODULE } from "@/lib/constants";
+import { syncSpaceTeamMembershipAcrossExistingWorkOrders } from "@/features/work-orders/lib/space-team-memberships";
 import type { Database } from "@/types/database";
 
 type InviteRow = Database["public"]["Tables"]["invites"]["Row"];
@@ -61,14 +66,11 @@ export async function acceptWorkOrderInviteLink(
     const { user, profile } = await requireAuthenticatedAppUser();
     const { adminSupabase, invite } = await getPendingLinkInvite(token);
     const workOrderId = invite.assigned_work_order_ids[0];
-
-    if (!workOrderId) {
-      throw new Error("This invitation is not linked to a work order.");
-    }
+    const defaultAssignedRole = workOrderId ? getDefaultWorkOrderInviteRole() : invite.role;
 
     const { data: existingSpaceMembership, error: membershipError } = await adminSupabase
       .from("space_memberships")
-      .select("id, status")
+      .select("id, status, role")
       .eq("space_id", invite.space_id)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -82,7 +84,7 @@ export async function acceptWorkOrderInviteLink(
         space_id: invite.space_id,
         user_id: user.id,
         invited_by_user_id: invite.invited_by_user_id,
-        role: "member",
+        role: defaultAssignedRole,
         status: "active",
       });
 
@@ -94,7 +96,7 @@ export async function acceptWorkOrderInviteLink(
         .from("space_memberships")
         .update({
           invited_by_user_id: invite.invited_by_user_id,
-          role: "member",
+          role: defaultAssignedRole,
           status: "active",
           removed_at: null,
           removed_by_user_id: null,
@@ -104,30 +106,54 @@ export async function acceptWorkOrderInviteLink(
       if (error) {
         throw new Error(error.message);
       }
-    }
-
-    const { data: existingMembership, error: existingWorkOrderMembershipError } =
-      await adminSupabase
-        .from("work_order_memberships")
-        .select("id")
-        .eq("work_order_id", workOrderId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-    if (existingWorkOrderMembershipError) {
-      throw new Error(existingWorkOrderMembershipError.message);
-    }
-
-    if (!existingMembership) {
-      const { error } = await adminSupabase.from("work_order_memberships").insert({
-        work_order_id: workOrderId,
-        user_id: user.id,
-        role: "member",
-        assigned_by_user_id: invite.invited_by_user_id,
-      });
+    } else if (!workOrderId && !isSpaceTeamRole(existingSpaceMembership.role)) {
+      const { error } = await adminSupabase
+        .from("space_memberships")
+        .update({
+          invited_by_user_id: invite.invited_by_user_id,
+          role: invite.role,
+        })
+        .eq("id", existingSpaceMembership.id);
 
       if (error) {
         throw new Error(error.message);
+      }
+    }
+
+    if (!workOrderId && isSpaceTeamRole(invite.role)) {
+      await syncSpaceTeamMembershipAcrossExistingWorkOrders({
+        supabase: adminSupabase,
+        spaceId: invite.space_id,
+        userId: user.id,
+        role: invite.role,
+        assignedByUserId: invite.invited_by_user_id,
+      });
+    }
+
+    if (workOrderId) {
+      const { data: existingMembership, error: existingWorkOrderMembershipError } =
+        await adminSupabase
+          .from("work_order_memberships")
+          .select("id")
+          .eq("work_order_id", workOrderId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+      if (existingWorkOrderMembershipError) {
+        throw new Error(existingWorkOrderMembershipError.message);
+      }
+
+      if (!existingMembership) {
+        const { error } = await adminSupabase.from("work_order_memberships").insert({
+          work_order_id: workOrderId,
+          user_id: user.id,
+          role: defaultAssignedRole,
+          assigned_by_user_id: invite.invited_by_user_id,
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
       }
     }
 
@@ -148,7 +174,7 @@ export async function acceptWorkOrderInviteLink(
 
     await createActivityLog({
       supabase: adminSupabase,
-      action: "Accepted a work order invite",
+      action: workOrderId ? "Accepted a work order invite" : "Accepted a space invite",
       actorUserId: user.id,
       spaceId: invite.space_id,
       workOrderId,
@@ -159,8 +185,14 @@ export async function acceptWorkOrderInviteLink(
       },
     });
 
-    revalidatePath(`/space/${invite.space_id}/work-order/${workOrderId}/members`);
-    redirectPath = `/space/${invite.space_id}/work-order/${workOrderId}/${DEFAULT_MODULE}`;
+    if (workOrderId) {
+      revalidatePath(`/space/${invite.space_id}/work-order/${workOrderId}/members`);
+      redirectPath = `/space/${invite.space_id}/work-order/${workOrderId}/${DEFAULT_MODULE}`;
+    } else {
+      revalidatePath(`/space/${invite.space_id}`);
+      revalidatePath(`/space/${invite.space_id}/team`);
+      redirectPath = `/space/${invite.space_id}`;
+    }
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unable to accept invitation.",
@@ -203,7 +235,7 @@ export async function declineWorkOrderInviteLink(
 
     await createActivityLog({
       supabase: adminSupabase,
-      action: "Declined a work order invite",
+      action: workOrderId ? "Declined a work order invite" : "Declined a space invite",
       actorUserId: null,
       spaceId: invite.space_id,
       workOrderId,
@@ -215,6 +247,9 @@ export async function declineWorkOrderInviteLink(
     });
 
     revalidatePath(`/invite/${token}`);
+    if (!workOrderId) {
+      revalidatePath("/settings");
+    }
     return {
       success: "Invitation declined.",
     };

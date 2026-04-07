@@ -27,8 +27,8 @@ export default async function SpaceLayout({
 
   return (
     <AppShell
-      profile={profile}
       spaces={spaces}
+      profile={profile}
       space={space}
       workOrders={workOrders}
       archiveFolders={archiveFolderData.folders}

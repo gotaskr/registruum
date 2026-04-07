@@ -4,14 +4,19 @@ import { notFound } from "next/navigation";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import { parseLogDetails } from "@/features/logs/lib/log-details";
 import { profileAvatarBucket } from "@/features/settings/lib/profile-avatar-storage";
+import { spacePhotoBucket } from "@/features/spaces/lib/space-photo-storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  canAccessSpaceOverview,
+  canSeeSpaceOnDashboard,
+  isSpaceTeamRole,
+} from "@/features/permissions/lib/roles";
 import { isMissingSpaceMembershipStatusColumn } from "@/lib/supabase/schema-compat";
 import { formatDateTimeLabel, getInitials } from "@/lib/utils";
 import type { Database } from "@/types/database";
 import type { LogEntry } from "@/types/log";
 import type { Member } from "@/types/member";
-import type { Space } from "@/types/space";
-import type { SpaceOverviewMember } from "@/features/spaces/types/space-overview";
+import type { Space, SpaceType } from "@/types/space";
 
 type SpaceRow = Database["public"]["Tables"]["spaces"]["Row"];
 type SpaceMembershipRow = Database["public"]["Tables"]["space_memberships"]["Row"];
@@ -20,7 +25,7 @@ type WorkOrderMembershipRow =
   Database["public"]["Tables"]["work_order_memberships"]["Row"];
 type ProfileSummaryRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
-  "id" | "full_name" | "email" | "avatar_path"
+  "id" | "full_name" | "email" | "avatar_path" | "user_tag"
 >;
 type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"];
 type ProfileNameRow = Pick<
@@ -53,15 +58,46 @@ async function resolveAvatarUrls(
   return new Map(avatarEntries);
 }
 
+async function resolveSpacePhotoUrls(
+  spaces: Pick<SpaceRow, "id" | "photo_path">[],
+) {
+  const adminSupabase = createSupabaseAdminClient();
+  const photoEntries = await Promise.all(
+    spaces.map(async (space) => {
+      if (!space.photo_path) {
+        return [space.id, null] as const;
+      }
+
+      const { data, error } = await adminSupabase.storage
+        .from(spacePhotoBucket)
+        .createSignedUrl(space.photo_path, 60 * 60);
+
+      if (error || !data?.signedUrl) {
+        return [space.id, null] as const;
+      }
+
+      return [space.id, data.signedUrl] as const;
+    }),
+  );
+
+  return new Map(photoEntries);
+}
+
 function mapSpaceRow(
   row: SpaceRow,
   membershipRole: Member["role"] | undefined,
   canAccessOverview: boolean,
   landingWorkOrderId: string | null,
+  photoUrl: string | null,
 ): Space {
   return {
     id: row.id,
     name: row.name,
+    address: row.address,
+    spaceType: row.space_type as SpaceType | null,
+    photoPath: row.photo_path,
+    photoFileName: row.photo_file_name,
+    photoUrl,
     createdByUserId: row.created_by_user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -171,11 +207,12 @@ export async function getSpacesForUser() {
   }
 
   const rows = (spaceRows ?? []) as SpaceRow[];
+  const photoUrlBySpaceId = await resolveSpacePhotoUrls(rows);
 
   return rows
     .map((space) => {
       const membershipRole = membershipRoleBySpaceId.get(space.id);
-      const canAccessOverview = membershipRole === "admin";
+      const canAccessOverview = canAccessSpaceOverview(membershipRole);
       const landingWorkOrderId =
         canAccessOverview ? null : firstAssignedWorkOrderIdBySpaceId.get(space.id) ?? null;
 
@@ -184,9 +221,12 @@ export async function getSpacesForUser() {
         membershipRole,
         canAccessOverview,
         landingWorkOrderId,
+        photoUrlBySpaceId.get(space.id) ?? null,
       );
     })
-    .filter((space) => space.canAccessOverview || Boolean(space.landingWorkOrderId));
+    .filter((space) =>
+      canSeeSpaceOnDashboard(space.membershipRole) || Boolean(space.landingWorkOrderId),
+    );
 }
 
 export async function getSpaceByIdForUser(spaceId: string) {
@@ -252,7 +292,9 @@ export async function getSpaceMembersForSpace(spaceId: string) {
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
   const avatarUrlById = await resolveAvatarUrls(profiles);
 
-  return memberships.map((membership) => {
+  return memberships
+    .filter((membership) => isSpaceTeamRole(membership.role))
+    .map((membership) => {
     const profile = profileById.get(membership.user_id);
 
     return {
@@ -261,170 +303,12 @@ export async function getSpaceMembersForSpace(spaceId: string) {
       userId: membership.user_id,
       name: profile?.full_name ?? "Unknown User",
       email: profile?.email ?? "unknown@registruum.app",
+      userTag: profile?.user_tag ?? null,
       role: membership.role,
       initials: getInitials(profile?.full_name ?? "Unknown User"),
       avatarUrl: avatarUrlById.get(membership.user_id) ?? null,
     };
   });
-}
-
-export async function getSpaceOverviewMembers(
-  spaceId: string,
-): Promise<SpaceOverviewMember[]> {
-  const { supabase, user } = await requireAuthenticatedAppUser();
-  const adminSupabase = createSupabaseAdminClient();
-  const membership = await getSpaceByIdForUser(spaceId);
-  const { count: workOrderCount, error: workOrderCountError } = await supabase
-    .from("work_orders")
-    .select("id", { count: "exact", head: true })
-    .eq("space_id", spaceId);
-
-  if (workOrderCountError) {
-    throw new Error(workOrderCountError.message);
-  }
-
-  let membershipQuery = await supabase
-    .from("space_memberships")
-    .select("id, space_id, user_id, role, created_at")
-    .eq("space_id", spaceId)
-    .eq("status", "active")
-    .order("created_at", { ascending: true });
-
-  if (isMissingSpaceMembershipStatusColumn(membershipQuery.error)) {
-    membershipQuery = await supabase
-      .from("space_memberships")
-      .select("id, space_id, user_id, role, created_at")
-      .eq("space_id", spaceId)
-      .order("created_at", { ascending: true });
-  }
-
-  const { data: membershipRows, error: membershipError } = membershipQuery;
-
-  if (membershipError) {
-    throw new Error(membershipError.message);
-  }
-
-  const memberships = (membershipRows ?? []) as SpaceMembershipRow[];
-
-  if (memberships.length === 0) {
-    return [];
-  }
-
-  const userIds = memberships.map((row) => row.user_id);
-  const { data: profileRows, error: profileError } = await adminSupabase
-    .from("profiles")
-    .select("id, full_name, email, avatar_path")
-    .in("id", userIds);
-
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
-
-  const profiles = (profileRows ?? []) as ProfileSummaryRow[];
-  const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
-  const avatarUrlById = await resolveAvatarUrls(profiles);
-  const shouldOnlyShowOwner = (workOrderCount ?? 0) === 0;
-  let visibleWorkOrderRows: Pick<WorkOrderRow, "id" | "title">[] = [];
-
-  if (!shouldOnlyShowOwner && membership.membershipRole === "admin") {
-    const { data: workOrderRows, error: workOrderError } = await supabase
-      .from("work_orders")
-      .select("id, title")
-      .eq("space_id", spaceId)
-      .order("created_at", { ascending: false });
-
-    if (workOrderError) {
-      throw new Error(workOrderError.message);
-    }
-
-    visibleWorkOrderRows = (workOrderRows ?? []) as Pick<WorkOrderRow, "id" | "title">[];
-  } else {
-    const { data: visibleAssignmentRows, error: visibleAssignmentError } = await supabase
-      .from("work_order_memberships")
-      .select("work_order_id")
-      .eq("user_id", user.id);
-
-    if (visibleAssignmentError) {
-      throw new Error(visibleAssignmentError.message);
-    }
-
-    const visibleWorkOrderIds = [
-      ...new Set(
-        ((visibleAssignmentRows ?? []) as Pick<
-          WorkOrderMembershipRow,
-          "work_order_id"
-        >[]).map((row) => row.work_order_id),
-      ),
-    ];
-
-    if (visibleWorkOrderIds.length > 0) {
-      const { data: workOrderRows, error: workOrderError } = await supabase
-        .from("work_orders")
-        .select("id, title")
-        .eq("space_id", spaceId)
-        .in("id", visibleWorkOrderIds)
-        .order("created_at", { ascending: false });
-
-      if (workOrderError) {
-        throw new Error(workOrderError.message);
-      }
-
-      visibleWorkOrderRows = (workOrderRows ?? []) as Pick<
-        WorkOrderRow,
-        "id" | "title"
-      >[];
-    }
-  }
-
-  const visibleWorkOrderIds = visibleWorkOrderRows.map((row) => row.id);
-  const workOrderTitleById = new Map(
-    visibleWorkOrderRows.map((workOrder) => [workOrder.id, workOrder.title] as const),
-  );
-
-  const memberWorkOrdersByUserId = new Map<string, string[]>();
-
-  if (visibleWorkOrderIds.length > 0) {
-    const { data: assignmentRows, error: assignmentError } = await supabase
-      .from("work_order_memberships")
-      .select("user_id, work_order_id")
-      .in("user_id", userIds)
-      .in("work_order_id", visibleWorkOrderIds);
-
-    if (assignmentError) {
-      throw new Error(assignmentError.message);
-    }
-
-    for (const assignment of (assignmentRows ?? []) as Pick<
-      WorkOrderMembershipRow,
-      "user_id" | "work_order_id"
-    >[]) {
-      const currentTitles = memberWorkOrdersByUserId.get(assignment.user_id) ?? [];
-      const workOrderTitle = workOrderTitleById.get(assignment.work_order_id);
-
-      if (workOrderTitle) {
-        currentTitles.push(workOrderTitle);
-        memberWorkOrdersByUserId.set(assignment.user_id, currentTitles);
-      }
-    }
-  }
-
-  return memberships.map((spaceMembership) => {
-    const profile = profileById.get(spaceMembership.user_id);
-
-    return {
-      id: spaceMembership.id,
-      spaceId: spaceMembership.space_id,
-      userId: spaceMembership.user_id,
-      name: profile?.full_name ?? "Unknown User",
-      email: profile?.email ?? "unknown@registruum.app",
-      role: spaceMembership.role,
-      initials: getInitials(profile?.full_name ?? "Unknown User"),
-      avatarUrl: avatarUrlById.get(spaceMembership.user_id) ?? null,
-      workOrderTitles: memberWorkOrdersByUserId.get(spaceMembership.user_id) ?? [],
-    };
-  }).filter((member) =>
-    shouldOnlyShowOwner ? member.userId === membership.createdByUserId : true,
-  );
 }
 
 export async function getRecentActivityForSpace(
