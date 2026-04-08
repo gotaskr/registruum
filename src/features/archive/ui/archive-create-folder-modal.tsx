@@ -10,12 +10,14 @@ type ArchiveCreateFolderModalProps = Readonly<{
   returnTo: string;
   folders: ArchiveFolderOption[];
   defaultParentFolderId?: string | null;
+  spaceId?: string | null;
 }>;
 
 export function ArchiveCreateFolderModal({
   returnTo,
   folders,
   defaultParentFolderId = null,
+  spaceId = null,
 }: ArchiveCreateFolderModalProps) {
   const [open, setOpen] = useState(false);
 
@@ -41,6 +43,7 @@ export function ArchiveCreateFolderModal({
       >
         <form action={createArchiveFolderAction} className="space-y-4 px-5 py-4">
           <input type="hidden" name="returnTo" value={returnTo} />
+          <input type="hidden" name="spaceId" value={spaceId ?? ""} />
 
           <label className="block space-y-2">
             <span className="text-sm font-medium text-foreground">Folder Name</span>

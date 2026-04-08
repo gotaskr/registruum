@@ -5,6 +5,7 @@ import { getWorkOrderMessages } from "@/features/chat/api/messages";
 import { getWorkOrderDocuments } from "@/features/documents/api/documents";
 import { getWorkOrderLogs } from "@/features/logs/api/activity-logs";
 import { getWorkOrderMembers } from "@/features/members/api/work-order-members";
+import { canAccessSpaceArchive } from "@/features/permissions/lib/roles";
 import { getSpacesForUser } from "@/features/spaces/api/spaces";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getArchiveRecordHref } from "@/lib/route-utils";
@@ -49,6 +50,17 @@ type ArchiveFolderOptionsResult = Readonly<{
   defaultFolderId: string;
   folders: ArchiveFolderOption[];
 }>;
+
+type ArchiveFolderScope =
+  | Readonly<{
+      kind: "personal";
+      ownerUserId: string;
+    }>
+  | Readonly<{
+      kind: "space";
+      spaceId: string;
+      actorUserId: string;
+    }>;
 
 function isArchiveUnavailableError(error: unknown) {
   if (isMissingArchiveOwnershipColumnError(error as { message?: string } | null)) {
@@ -189,21 +201,125 @@ async function ensureDefaultArchiveFolder(ownerUserId: string) {
   }
 }
 
-export async function getArchiveFolderOptions() {
+async function ensureDefaultArchiveFolderForSpace(spaceId: string, actorUserId: string) {
+  try {
+    const adminSupabase = createSupabaseAdminClient();
+    const { data: existingFolder, error: existingFolderError } = await adminSupabase
+      .from("archive_folders")
+      .select("*")
+      .eq("is_system_default", true)
+      .eq("space_id", spaceId)
+      .maybeSingle();
+
+    if (existingFolderError) {
+      throwArchiveOwnershipUpgradeErrorIfNeeded(existingFolderError);
+
+      if (isMissingArchiveTableError(existingFolderError)) {
+        return null;
+      }
+
+      throw new Error(existingFolderError.message);
+    }
+
+    if (existingFolder) {
+      return existingFolder as ArchiveFolderRow;
+    }
+
+    const { data: createdFolder, error: createdFolderError } = await adminSupabase
+      .from("archive_folders")
+      .insert({
+        name: "Unsorted Archive",
+        is_system_default: true,
+        created_by_user_id: actorUserId,
+        owner_user_id: null,
+        space_id: spaceId,
+      })
+      .select("*")
+      .single();
+
+    if (createdFolderError) {
+      throwArchiveOwnershipUpgradeErrorIfNeeded(createdFolderError);
+
+      if (isMissingArchiveTableError(createdFolderError)) {
+        return null;
+      }
+
+      throw new Error(createdFolderError.message);
+    }
+
+    return createdFolder as ArchiveFolderRow;
+  } catch (error) {
+    if (isArchiveUnavailableError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+function resolveArchiveFolderScope(
+  spaceId: string | null | undefined,
+  actorUserId: string,
+  accessibleSpaceIds: Set<string>,
+) {
+  if (spaceId && accessibleSpaceIds.has(spaceId)) {
+    return {
+      kind: "space",
+      spaceId,
+      actorUserId,
+    } satisfies ArchiveFolderScope;
+  }
+
+  return {
+    kind: "personal",
+    ownerUserId: actorUserId,
+  } satisfies ArchiveFolderScope;
+}
+
+async function ensureDefaultArchiveFolderForScope(scope: ArchiveFolderScope) {
+  if (scope.kind === "space") {
+    return ensureDefaultArchiveFolderForSpace(scope.spaceId, scope.actorUserId);
+  }
+
+  return ensureDefaultArchiveFolder(scope.ownerUserId);
+}
+
+function getArchiveFolderQuery(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  scope: ArchiveFolderScope,
+) {
+  const query = supabase
+    .from("archive_folders")
+    .select("*")
+    .order("is_system_default", { ascending: false })
+    .order("name", { ascending: true });
+
+  if (scope.kind === "space") {
+    return query.eq("space_id", scope.spaceId);
+  }
+
+  return query.eq("owner_user_id", scope.ownerUserId);
+}
+
+export async function getArchiveFolderOptions(spaceId?: string | null) {
   try {
     const { supabase, user } = await requireAuthenticatedAppUser();
-    const defaultFolder = await ensureDefaultArchiveFolder(user.id);
+    const spaces = await getSpacesForUser();
+    const accessibleSpaceIds = new Set(
+      spaces
+        .filter((space) => canAccessSpaceArchive(space.membershipRole))
+        .map((space) => space.id),
+    );
+    const scope = resolveArchiveFolderScope(spaceId, user.id, accessibleSpaceIds);
+    const folderSupabase =
+      scope.kind === "space" ? createSupabaseAdminClient() : supabase;
+    const defaultFolder = await ensureDefaultArchiveFolderForScope(scope);
 
     if (!defaultFolder) {
       return getArchiveUnavailableFolderOptions();
     }
 
-    const { data, error } = await supabase
-      .from("archive_folders")
-      .select("*")
-      .eq("owner_user_id", user.id)
-      .order("is_system_default", { ascending: false })
-      .order("name", { ascending: true });
+    const { data, error } = await getArchiveFolderQuery(folderSupabase, scope);
 
     if (error) {
       throwArchiveOwnershipUpgradeErrorIfNeeded(error);
@@ -272,17 +388,25 @@ export async function getArchivePageData({
 }: GetArchivePageDataInput = {}): Promise<ArchivePageData> {
   const { supabase, user } = await requireAuthenticatedAppUser();
   const spaces = await getSpacesForUser();
-  const defaultFolder = await ensureDefaultArchiveFolder(user.id);
   const rawQuery = query?.trim() ?? "";
   const normalizedQuery = rawQuery.toLowerCase();
   const normalizedSort = normalizeArchiveSort(sort);
   const accessibleSpaceIds = spaces.map((space) => space.id);
+  const archiveAccessibleSpaceIds = new Set(
+    spaces
+      .filter((space) => canAccessSpaceArchive(space.membershipRole))
+      .map((space) => space.id),
+  );
   const spaceOptions: ArchiveSpaceFilterOption[] = spaces.map((space) => ({
     id: space.id,
     name: space.name,
   }));
   const selectedSpaceId =
-    spaceId && accessibleSpaceIds.includes(spaceId) ? spaceId : null;
+    spaceId && archiveAccessibleSpaceIds.has(spaceId) ? spaceId : null;
+  const scope = resolveArchiveFolderScope(selectedSpaceId, user.id, archiveAccessibleSpaceIds);
+  const folderSupabase =
+    scope.kind === "space" ? createSupabaseAdminClient() : supabase;
+  const defaultFolder = await ensureDefaultArchiveFolderForScope(scope);
 
   if (!defaultFolder) {
     return {
@@ -299,12 +423,10 @@ export async function getArchivePageData({
     };
   }
 
-  const { data: folderData, error: folderError } = await supabase
-    .from("archive_folders")
-    .select("*")
-    .eq("owner_user_id", user.id)
-    .order("is_system_default", { ascending: false })
-    .order("name", { ascending: true });
+  const { data: folderData, error: folderError } = await getArchiveFolderQuery(
+    folderSupabase,
+    scope,
+  );
 
   if (folderError) {
     throwArchiveOwnershipUpgradeErrorIfNeeded(folderError);
@@ -352,7 +474,7 @@ export async function getArchivePageData({
     ? new Set(folderTree.descendantIdsById.get(selectedFolderId) ?? [selectedFolderId])
     : null;
 
-  if (accessibleSpaceIds.length === 0) {
+  if (scope.kind === "personal" && accessibleSpaceIds.length === 0) {
     return {
       folders: orderedFolderRows.map((row) =>
         mapArchiveFolder(
@@ -376,11 +498,11 @@ export async function getArchivePageData({
     };
   }
 
-  const { data: archivedData, error: archivedError } = await supabase
-    .from("archived_work_orders")
-    .select("*")
-    .eq("owner_user_id", user.id)
-    .in("space_id", accessibleSpaceIds);
+  const archivedQuery = folderSupabase.from("archived_work_orders").select("*");
+  const { data: archivedData, error: archivedError } =
+    scope.kind === "space"
+      ? await archivedQuery.eq("space_id", scope.spaceId)
+      : await archivedQuery.eq("owner_user_id", user.id).in("space_id", accessibleSpaceIds);
 
   if (archivedError) {
     throwArchiveOwnershipUpgradeErrorIfNeeded(archivedError);
@@ -534,11 +656,12 @@ export async function getArchivedWorkOrderDetails(
   archivedWorkOrderId: string,
 ): Promise<ArchivedWorkOrderDetails | null> {
   const { supabase, user } = await requireAuthenticatedAppUser();
-  const { data: archivedRowData, error: archivedRowError } = await supabase
+  const spaces = await getSpacesForUser();
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: archivedRowData, error: archivedRowError } = await adminSupabase
     .from("archived_work_orders")
     .select("*")
     .eq("id", archivedWorkOrderId)
-    .eq("owner_user_id", user.id)
     .maybeSingle();
 
   if (archivedRowError) {
@@ -557,6 +680,28 @@ export async function getArchivedWorkOrderDetails(
     return null;
   }
 
+  const hasSpaceArchiveAccess = spaces.some(
+    (space) =>
+      space.id === archivedRow.space_id && canAccessSpaceArchive(space.membershipRole),
+  );
+
+  if (archivedRow.owner_user_id !== user.id && !hasSpaceArchiveAccess) {
+    return null;
+  }
+
+  const folderScope = hasSpaceArchiveAccess
+    ? ({
+        kind: "space",
+        spaceId: archivedRow.space_id,
+        actorUserId: user.id,
+      } satisfies ArchiveFolderScope)
+    : ({
+        kind: "personal",
+        ownerUserId: user.id,
+      } satisfies ArchiveFolderScope);
+  const folderSupabase =
+    folderScope.kind === "space" ? adminSupabase : supabase;
+
   const [
     workOrder,
     overview,
@@ -574,12 +719,19 @@ export async function getArchivedWorkOrderDetails(
     getWorkOrderMessages(archivedRow.space_id, archivedRow.original_work_order_id),
     getWorkOrderMembers(archivedRow.space_id, archivedRow.original_work_order_id),
     getWorkOrderLogs(archivedRow.space_id, archivedRow.original_work_order_id),
-    supabase
-      .from("archive_folders")
-      .select("id, name, parent_id, is_system_default")
-      .eq("owner_user_id", user.id)
-      .order("is_system_default", { ascending: false })
-      .order("name", { ascending: true }),
+    folderScope.kind === "space"
+      ? folderSupabase
+          .from("archive_folders")
+          .select("id, name, parent_id, is_system_default")
+          .eq("space_id", folderScope.spaceId)
+          .order("is_system_default", { ascending: false })
+          .order("name", { ascending: true })
+      : folderSupabase
+          .from("archive_folders")
+          .select("id, name, parent_id, is_system_default")
+          .eq("owner_user_id", user.id)
+          .order("is_system_default", { ascending: false })
+          .order("name", { ascending: true }),
     archivedRow.archived_by_user_id
       ? supabase
           .from("profiles")

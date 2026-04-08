@@ -15,6 +15,7 @@ type ArchiveCustomFolderListProps = Readonly<{
   folders: ArchiveFolder[];
   selectedFolderId: string | null;
   basePath?: string;
+  spaceId?: string | null;
 }>;
 
 type ArchiveFolderTreeRow = Readonly<{
@@ -28,6 +29,7 @@ export function ArchiveCustomFolderList({
   folders,
   selectedFolderId,
   basePath = "/archive",
+  spaceId = null,
 }: ArchiveCustomFolderListProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedFolderIdForDelete, setSelectedFolderIdForDelete] = useState<string | null>(null);
@@ -267,6 +269,7 @@ export function ArchiveCustomFolderList({
           <form action={deleteArchiveFolderAction} className="space-y-4 px-5 py-4">
             <input type="hidden" name="folderId" value={selectedFolder.id} />
             <input type="hidden" name="returnTo" value={basePath} />
+            <input type="hidden" name="spaceId" value={spaceId ?? ""} />
             {selectedFolder.archivedCount > 0 ? (
               <input type="hidden" name="forceMoveContents" value="true" />
             ) : null}

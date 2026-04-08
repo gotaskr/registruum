@@ -55,7 +55,11 @@ export function ArchiveWorkOrderModal({
       <form action={formAction} className="space-y-4 px-5 py-4">
         <input type="hidden" name="workOrderId" value={workOrderId} />
         <input type="hidden" name="spaceId" value={spaceId} />
-        <input type="hidden" name="returnTo" value={`/archive?folder=${defaultFolderId}`} />
+        <input
+          type="hidden"
+          name="returnTo"
+          value={`/space/${spaceId}/archive?folder=${defaultFolderId}`}
+        />
 
         <FormMessage message={state.error} />
 

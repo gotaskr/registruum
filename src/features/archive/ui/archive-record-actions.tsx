@@ -75,6 +75,7 @@ export function ArchiveRecordActions({
             </p>
             <form action={moveArchivedWorkOrderAction} className="mt-3 grid gap-2">
               <input type="hidden" name="archivedWorkOrderId" value={item.id} />
+              <input type="hidden" name="spaceId" value={item.spaceId} />
               <input type="hidden" name="returnTo" value={returnTo} />
               <select
                 name="targetFolderId"

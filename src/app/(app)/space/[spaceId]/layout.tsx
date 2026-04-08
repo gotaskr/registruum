@@ -22,7 +22,7 @@ export default async function SpaceLayout({
     getSpacesForUser(),
     getSpaceByIdForUser(spaceId),
     getWorkOrdersForSpace(spaceId),
-    getArchiveFolderOptions(),
+    getArchiveFolderOptions(spaceId),
   ]);
 
   return (

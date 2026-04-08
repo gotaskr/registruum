@@ -581,7 +581,7 @@ export async function getWorkOrderSettingsData(
   workOrderId: string,
 ): Promise<WorkOrderSettingsData> {
   const context = await getWorkOrderActorContext(spaceId, workOrderId);
-  const archiveFolderOptions = await getArchiveFolderOptions();
+  const archiveFolderOptions = await getArchiveFolderOptions(spaceId);
   const adminSupabase = createSupabaseAdminClient();
   const { data: membershipRows, error: membershipError } = await context.supabase
     .from("work_order_memberships")

@@ -315,6 +315,7 @@ export function SpaceArchiveScreen({
                   folders={customFolders}
                   selectedFolderId={selectedFolderId}
                   basePath={pathname}
+                  spaceId={space.id}
                 />
               </div>
 
@@ -323,6 +324,7 @@ export function SpaceArchiveScreen({
                   returnTo={pathname}
                   folders={folders}
                   defaultParentFolderId={selectedFolderId}
+                  spaceId={space.id}
                 />
               </div>
             </aside>
