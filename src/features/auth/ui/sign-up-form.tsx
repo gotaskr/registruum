@@ -52,7 +52,7 @@ export function SignUpForm({ next }: SignUpFormProps) {
           </span>
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <label className="block space-y-2.5">
             <span className="text-[0.82rem] font-semibold uppercase tracking-[0.18em] text-muted">
               Password
@@ -84,20 +84,6 @@ export function SignUpForm({ next }: SignUpFormProps) {
               />
             </span>
           </label>
-        </div>
-      </div>
-
-      <div className="grid gap-3 rounded-[1.4rem] border border-border bg-panel px-4 py-4 text-xs leading-6 text-muted sm:grid-cols-[minmax(0,1fr)_12rem]">
-        <div>
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-muted">
-            Password Rules
-          </p>
-          <p className="mt-2">
-            Passwords must include one uppercase letter, one number, one symbol, and no spaces.
-          </p>
-        </div>
-        <div className="rounded-[1.15rem] border border-border bg-panel-muted px-4 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-accent">
-          Protected setup
         </div>
       </div>
 
