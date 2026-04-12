@@ -11,6 +11,7 @@ type ArchiveCreateFolderModalProps = Readonly<{
   folders: ArchiveFolderOption[];
   defaultParentFolderId?: string | null;
   spaceId?: string | null;
+  disabled?: boolean;
 }>;
 
 export function ArchiveCreateFolderModal({
@@ -18,6 +19,7 @@ export function ArchiveCreateFolderModal({
   folders,
   defaultParentFolderId = null,
   spaceId = null,
+  disabled = false,
 }: ArchiveCreateFolderModalProps) {
   const [open, setOpen] = useState(false);
 
@@ -30,7 +32,8 @@ export function ArchiveCreateFolderModal({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white"
+        disabled={disabled}
+        className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         Add Folder
       </button>

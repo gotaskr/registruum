@@ -56,7 +56,9 @@ export function ArchiveToolbar({
     const nextSpaceId =
       input.nextSpaceId === undefined ? selectedSpaceId : input.nextSpaceId;
 
-    if (selectedFolderId) {
+    if (input.nextSpaceId !== undefined) {
+      nextParams.delete("folder");
+    } else if (selectedFolderId) {
       nextParams.set("folder", selectedFolderId);
     } else {
       nextParams.delete("folder");

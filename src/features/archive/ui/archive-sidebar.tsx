@@ -11,19 +11,43 @@ type ArchiveSidebarProps = Readonly<{
   folders: ArchiveFolder[];
   selectedFolderId: string | null;
   defaultFolderId: string;
+  basePath?: string;
+  selectedSpaceId?: string | null;
+  allArchiveCount?: number;
 }>;
 
 export function ArchiveSidebar({
   folders,
   selectedFolderId,
   defaultFolderId,
+  basePath = "/archive",
+  selectedSpaceId = null,
+  allArchiveCount: allArchiveCountOverride,
 }: ArchiveSidebarProps) {
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
   const customFolders = folders.filter((folder) => !folder.isSystemDefault);
-  const allArchiveCount = folders
-    .filter((folder) => folder.depth === 0)
-    .reduce((total, folder) => total + folder.archivedCount, 0);
+  const allArchiveCount =
+    allArchiveCountOverride ??
+    folders
+      .filter((folder) => folder.depth === 0)
+      .reduce((total, folder) => total + folder.archivedCount, 0);
   const defaultFolder = folders.find((folder) => folder.id === defaultFolderId) ?? null;
+  const canManageFolders = Boolean(selectedSpaceId);
+
+  function buildHref(folderId: string | null) {
+    const searchParams = new URLSearchParams();
+
+    if (selectedSpaceId) {
+      searchParams.set("space", selectedSpaceId);
+    }
+
+    if (folderId) {
+      searchParams.set("folder", folderId);
+    }
+
+    const nextQuery = searchParams.toString();
+    return nextQuery ? `${basePath}?${nextQuery}` : basePath;
+  }
 
   return (
     <div className="grid h-full min-h-[18rem] grid-rows-[auto_1fr_auto] gap-4 bg-transparent">
@@ -60,7 +84,7 @@ export function ArchiveSidebar({
             <ArchiveFolderNavItem
               label="All Archive"
               count={allArchiveCount}
-              href="/archive"
+              href={buildHref(null)}
               icon={Vault}
               isActive={!selectedFolderId}
               isSystem
@@ -69,7 +93,7 @@ export function ArchiveSidebar({
               <ArchiveFolderNavItem
                 label={defaultFolder.name}
                 count={defaultFolder.archivedCount}
-                href={`/archive?folder=${defaultFolder.id}`}
+                href={buildHref(defaultFolder.id)}
                 icon={FolderOpen}
                 isActive={selectedFolderId === defaultFolder.id}
                 isSystem
@@ -81,6 +105,8 @@ export function ArchiveSidebar({
         <ArchiveCustomFolderList
           folders={customFolders}
           selectedFolderId={selectedFolderId}
+          basePath={basePath}
+          spaceId={selectedSpaceId}
         />
       </div>
 
@@ -90,13 +116,20 @@ export function ArchiveSidebar({
             Create Folder
           </p>
           <ArchiveCreateFolderModal
-            returnTo="/archive"
+            returnTo={buildHref(selectedFolderId)}
             folders={folders}
             defaultParentFolderId={selectedFolderId}
+            spaceId={selectedSpaceId}
+            disabled={!canManageFolders}
           />
+          {!canManageFolders ? (
+            <p className="text-sm text-muted">
+              Select a space from the archive filter before managing folders.
+            </p>
+          ) : null}
         </div>
 
-        {selectedFolder && !selectedFolder.isSystemDefault ? (
+        {selectedFolder && !selectedFolder.isSystemDefault && canManageFolders ? (
           <details className="mt-4 rounded-[1.5rem] border border-border bg-panel-muted/60">
             <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground">
               Folder options
@@ -104,10 +137,11 @@ export function ArchiveSidebar({
             <div className="border-t border-border px-4 py-4">
               <form action={renameArchiveFolderAction} className="space-y-3">
                 <input type="hidden" name="folderId" value={selectedFolder.id} />
+                <input type="hidden" name="spaceId" value={selectedSpaceId ?? ""} />
                 <input
                   type="hidden"
                   name="returnTo"
-                  value={`/archive?folder=${selectedFolder.id}`}
+                  value={buildHref(selectedFolder.id)}
                 />
                 <label className="block space-y-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">

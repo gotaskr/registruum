@@ -26,6 +26,7 @@ export type ArchiveSpaceFilterOption = Readonly<{
 
 export type ArchivedWorkOrderDetails = Readonly<{
   archivedWorkOrderId: string;
+  spaceId: string;
   folderId: string;
   folderName: string;
   archivedAtLabel: string;

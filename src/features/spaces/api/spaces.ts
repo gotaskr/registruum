@@ -2,7 +2,10 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
-import { parseLogDetails } from "@/features/logs/lib/log-details";
+import {
+  mapActivityLogRow,
+  type ActivityLogProfile,
+} from "@/features/logs/lib/log-entry";
 import { profileAvatarBucket } from "@/features/settings/lib/profile-avatar-storage";
 import { spacePhotoBucket } from "@/features/spaces/lib/space-photo-storage";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -12,7 +15,7 @@ import {
   isSpaceTeamRole,
 } from "@/features/permissions/lib/roles";
 import { isMissingSpaceMembershipStatusColumn } from "@/lib/supabase/schema-compat";
-import { formatDateTimeLabel, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 import type { Database } from "@/types/database";
 import type { LogEntry } from "@/types/log";
 import type { Member } from "@/types/member";
@@ -28,10 +31,6 @@ type ProfileSummaryRow = Pick<
   "id" | "full_name" | "email" | "avatar_path" | "user_tag"
 >;
 type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"];
-type ProfileNameRow = Pick<
-  Database["public"]["Tables"]["profiles"]["Row"],
-  "id" | "full_name"
->;
 
 async function resolveAvatarUrls(
   profiles: ProfileSummaryRow[],
@@ -343,25 +342,7 @@ export async function getRecentActivityForSpace(
   ];
 
   if (actorIds.length === 0) {
-    return rows.map((row) => {
-      const details = parseLogDetails(row.details);
-      return {
-      id: row.id,
-      workOrderId: row.work_order_id ?? "",
-      actorUserId: row.actor_user_id,
-      actorName: "System",
-      action: row.action,
-      createdAt: formatDateTimeLabel(row.created_at),
-      rawCreatedAt: row.created_at,
-      details: details.summary,
-      change:
-        details.before || details.after
-          ? {
-              before: details.before,
-              after: details.after,
-            }
-          : undefined,
-    };});
+    return rows.map((row) => mapActivityLogRow(row, new Map()));
   }
 
   const { data: profileRows, error: profileError } = await supabase
@@ -373,28 +354,8 @@ export async function getRecentActivityForSpace(
     throw new Error(profileError.message);
   }
 
-  const profiles = (profileRows ?? []) as ProfileNameRow[];
+  const profiles = (profileRows ?? []) as ActivityLogProfile[];
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
 
-  return rows.map((row) => {
-    const details = parseLogDetails(row.details);
-    return {
-    id: row.id,
-    workOrderId: row.work_order_id ?? "",
-    actorUserId: row.actor_user_id,
-    actorName: row.actor_user_id
-      ? (profileById.get(row.actor_user_id)?.full_name ?? "Unknown User")
-      : "System",
-    action: row.action,
-    createdAt: formatDateTimeLabel(row.created_at),
-    rawCreatedAt: row.created_at,
-    details: details.summary,
-    change:
-      details.before || details.after
-        ? {
-            before: details.before,
-            after: details.after,
-          }
-        : undefined,
-  };});
+  return rows.map((row) => mapActivityLogRow(row, profileById));
 }

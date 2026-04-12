@@ -3,7 +3,10 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { getArchiveFolderOptions } from "@/features/archive/api/archive";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
-import { parseLogDetails } from "@/features/logs/lib/log-details";
+import {
+  mapActivityLogRow,
+  type ActivityLogProfile,
+} from "@/features/logs/lib/log-entry";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   createPermissionValues,
@@ -20,9 +23,7 @@ import {
 } from "@/features/permissions/lib/roles";
 import { syncSpaceTeamMembershipAcrossExistingWorkOrders } from "@/features/work-orders/lib/space-team-memberships";
 import { isMissingSpaceMembershipStatusColumn } from "@/lib/supabase/schema-compat";
-import { formatDateTimeLabel } from "@/lib/utils";
 import type { Database } from "@/types/database";
-import type { LogEntry } from "@/types/log";
 import type { WorkOrder, WorkOrderSubjectType } from "@/types/work-order";
 import type { WorkOrderOverviewData } from "@/features/work-orders/types/work-order-overview";
 import type { WorkOrderSettingsData } from "@/features/work-orders/types/work-order-settings";
@@ -34,10 +35,6 @@ type SpaceMembershipRow =
 type WorkOrderMembershipRow =
   Database["public"]["Tables"]["work_order_memberships"]["Row"];
 type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"];
-type ProfileNameRow = Pick<
-  Database["public"]["Tables"]["profiles"]["Row"],
-  "id" | "full_name"
->;
 type DocumentPreviewRow = Pick<
   Database["public"]["Tables"]["documents"]["Row"],
   "id" | "title" | "storage_path"
@@ -47,11 +44,12 @@ type ProfileSettingsRow = Pick<
   "id" | "full_name" | "email"
 >;
 type WorkOrderRolePermissionRow = Database["public"]["Tables"]["work_order_role_permissions"]["Row"];
+type AuthenticatedAppUser = Awaited<ReturnType<typeof requireAuthenticatedAppUser>>;
 
 export type WorkOrderActorContext = Readonly<{
-  supabase: Awaited<ReturnType<typeof requireAuthenticatedAppUser>>["supabase"];
-  user: Awaited<ReturnType<typeof requireAuthenticatedAppUser>>["user"];
-  profile: Awaited<ReturnType<typeof requireAuthenticatedAppUser>>["profile"];
+  supabase: AuthenticatedAppUser["supabase"];
+  user: AuthenticatedAppUser["user"];
+  profile: AuthenticatedAppUser["profile"];
   workOrder: WorkOrder;
   spaceRole: SpaceMembershipRow["role"];
   workOrderRole: WorkOrderMembershipRow["role"] | null;
@@ -60,34 +58,6 @@ export type WorkOrderActorContext = Readonly<{
   permissions: ReturnType<typeof getWorkOrderPermissionSet>;
   permissionMatrix: ReturnType<typeof createDefaultWorkOrderPermissionMatrix>;
 }>;
-
-function mapOverviewLogRow(
-  row: ActivityLogRow,
-  profileById: Map<string, ProfileNameRow>,
-): LogEntry {
-  const details = parseLogDetails(row.details);
-  const actorName = row.actor_user_id
-    ? (profileById.get(row.actor_user_id)?.full_name ?? "Unknown User")
-    : "System";
-
-  return {
-    id: row.id,
-    workOrderId: row.work_order_id ?? "",
-    actorUserId: row.actor_user_id,
-    actorName,
-    action: row.action,
-    createdAt: formatDateTimeLabel(row.created_at),
-    rawCreatedAt: row.created_at,
-    details: details.summary,
-    change:
-      details.before || details.after
-        ? {
-            before: details.before,
-            after: details.after,
-          }
-        : undefined,
-  };
-}
 
 function mapWorkOrderRow(
   row: WorkOrderRow,
@@ -152,10 +122,10 @@ async function resolveWorkOrderPermissionMatrix(workOrderId: string) {
 }
 
 async function resolveSpaceMembership(
+  authenticated: AuthenticatedAppUser,
   spaceId: string,
   userId: string,
 ) {
-  const authenticated = await requireAuthenticatedAppUser();
   let query = await authenticated.supabase
     .from("space_memberships")
     .select("*")
@@ -183,10 +153,10 @@ async function resolveSpaceMembership(
 }
 
 async function resolveWorkOrderAssignment(
+  authenticated: AuthenticatedAppUser,
   workOrderId: string,
   userId: string,
 ) {
-  const authenticated = await requireAuthenticatedAppUser();
   const { data, error } = await authenticated.supabase
     .from("work_order_memberships")
     .select("id, role")
@@ -201,8 +171,11 @@ async function resolveWorkOrderAssignment(
   return data;
 }
 
-async function resolveWorkOrderRow(spaceId: string, workOrderId: string) {
-  const authenticated = await requireAuthenticatedAppUser();
+async function resolveWorkOrderRow(
+  authenticated: AuthenticatedAppUser,
+  spaceId: string,
+  workOrderId: string,
+) {
   const { data, error } = await authenticated.supabase
     .from("work_orders")
     .select("*")
@@ -222,19 +195,28 @@ async function resolveWorkOrderActorContext(
   workOrderId: string,
 ) {
   const authenticated = await requireAuthenticatedAppUser();
-  const membership = await resolveSpaceMembership(spaceId, authenticated.user.id);
+  const membership = await resolveSpaceMembership(
+    authenticated,
+    spaceId,
+    authenticated.user.id,
+  );
 
   if (!membership) {
     return null;
   }
 
-  const workOrderRow = await resolveWorkOrderRow(spaceId, workOrderId);
+  const workOrderRow = await resolveWorkOrderRow(
+    authenticated,
+    spaceId,
+    workOrderId,
+  );
 
   if (!workOrderRow) {
     return null;
   }
 
   const assignment = await resolveWorkOrderAssignment(
+    authenticated,
     workOrderId,
     authenticated.user.id,
   );
@@ -278,7 +260,11 @@ async function resolveWorkOrderActorContext(
 
 export async function getSpaceMembershipForAction(spaceId: string) {
   const authenticated = await requireAuthenticatedAppUser();
-  const membership = await resolveSpaceMembership(spaceId, authenticated.user.id);
+  const membership = await resolveSpaceMembership(
+    authenticated,
+    spaceId,
+    authenticated.user.id,
+  );
 
   if (!membership) {
     return null;
@@ -294,7 +280,11 @@ export async function getSpaceMembershipForAction(spaceId: string) {
 
 export async function getWorkOrdersForSpace(spaceId: string) {
   const authenticated = await requireAuthenticatedAppUser();
-  const membership = await resolveSpaceMembership(spaceId, authenticated.user.id);
+  const membership = await resolveSpaceMembership(
+    authenticated,
+    spaceId,
+    authenticated.user.id,
+  );
 
   if (!membership) {
     notFound();
@@ -548,7 +538,7 @@ export async function getWorkOrderOverviewData(
         .filter((value): value is string => value !== null),
     ),
   ];
-  const profileById = new Map<string, ProfileNameRow>();
+  const profileById = new Map<string, ActivityLogProfile>();
 
   if (actorIds.length > 0) {
     const { data: profileRows, error: profileError } = await context.supabase
@@ -560,7 +550,7 @@ export async function getWorkOrderOverviewData(
       throw new Error(profileError.message);
     }
 
-    for (const profile of (profileRows ?? []) as ProfileNameRow[]) {
+    for (const profile of (profileRows ?? []) as ActivityLogProfile[]) {
       profileById.set(profile.id, profile);
     }
   }
@@ -572,7 +562,7 @@ export async function getWorkOrderOverviewData(
     photoCount: photoCountResult.count ?? 0,
     photos,
     activityCount: activityCountResult.count ?? 0,
-    recentLogs: rows.map((row) => mapOverviewLogRow(row, profileById)),
+    recentLogs: rows.map((row) => mapActivityLogRow(row, profileById)),
   };
 }
 

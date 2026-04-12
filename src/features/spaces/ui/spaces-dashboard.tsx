@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Building2, MapPin, Plus } from "lucide-react";
 import Link from "next/link";
 import { MainShell } from "@/components/layout/main-shell";
+import { RealtimeRouteRefresh } from "@/components/realtime/realtime-route-refresh";
 import { getSpaceTypeLabel } from "@/features/spaces/lib/space-types";
 import { CreateSpaceModal } from "@/features/spaces/ui/create-space-modal";
 import { SpaceAvatar } from "@/features/spaces/ui/space-avatar";
@@ -22,6 +23,14 @@ export function SpacesDashboard({
 
   return (
     <>
+      <RealtimeRouteRefresh
+        channelName="dashboard:spaces"
+        subscriptions={[
+          { table: "spaces" },
+          { table: "space_memberships" },
+          { table: "invites" },
+        ]}
+      />
       <MainShell
         title="Active Spaces"
         description="Browse the organizations you belong to and jump into their active work."

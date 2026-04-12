@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight, KeyRound, Mail, User2 } from "lucide-react";
 import { useActionState } from "react";
 import { signUp } from "@/features/auth/actions/auth.actions";
@@ -96,24 +95,6 @@ export function SignUpForm({ next }: SignUpFormProps) {
         <ArrowRight className="h-4 w-4" />
       </button>
 
-      <div className="rounded-[1.4rem] border border-border bg-panel px-4 py-4 text-sm text-muted">
-        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-muted">
-          Verification Step
-        </p>
-        <p className="mt-2 leading-6">
-          We&apos;ll verify your email before unlocking spaces, invitations, and archive access.
-        </p>
-      </div>
-
-      <p className="text-sm leading-7 text-muted">
-        Already have an account?{" "}
-        <Link
-          href={next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in"}
-          className="font-semibold text-foreground transition-colors hover:text-accent"
-        >
-          Sign in
-        </Link>
-      </p>
     </form>
   );
 }

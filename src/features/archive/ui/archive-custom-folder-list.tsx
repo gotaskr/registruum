@@ -138,6 +138,21 @@ export function ArchiveCustomFolderList({
     setIsConfirmOpen(false);
   }
 
+  function buildHref(folderId: string | null) {
+    const searchParams = new URLSearchParams();
+
+    if (spaceId) {
+      searchParams.set("space", spaceId);
+    }
+
+    if (folderId) {
+      searchParams.set("folder", folderId);
+    }
+
+    const nextQuery = searchParams.toString();
+    return nextQuery ? `${basePath}?${nextQuery}` : basePath;
+  }
+
   return (
     <div className="mt-5 border-t border-border pt-4">
       <div className="flex items-center justify-between gap-3 px-2">
@@ -232,7 +247,7 @@ export function ArchiveCustomFolderList({
                 key={folder.id}
                 label={folder.name}
                 count={folder.archivedCount}
-                href={`${basePath}?folder=${folder.id}`}
+                href={buildHref(folder.id)}
                 icon={FolderClosed}
                 depth={folder.depth}
                 treeGuides={treeGuides}
@@ -268,7 +283,7 @@ export function ArchiveCustomFolderList({
         >
           <form action={deleteArchiveFolderAction} className="space-y-4 px-5 py-4">
             <input type="hidden" name="folderId" value={selectedFolder.id} />
-            <input type="hidden" name="returnTo" value={basePath} />
+            <input type="hidden" name="returnTo" value={buildHref(selectedFolderId)} />
             <input type="hidden" name="spaceId" value={spaceId ?? ""} />
             {selectedFolder.archivedCount > 0 ? (
               <input type="hidden" name="forceMoveContents" value="true" />

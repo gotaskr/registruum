@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, MailCheck, ShieldCheck } from "lucide-react";
 import { AuthShell } from "@/features/auth/ui/auth-shell";
+import { AuthPageFooter } from "@/features/auth/ui/auth-page-footer";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type VerifyEmailPageProps = Readonly<{
   searchParams: Promise<{
@@ -13,24 +16,30 @@ export default async function VerifyEmailPage({
   searchParams,
 }: VerifyEmailPageProps) {
   const { email, next } = await searchParams;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user?.email_confirmed_at) {
+    redirect(next ?? "/");
+  }
 
   return (
     <AuthShell
       intent="verify-email"
       title="Verify your email"
       description="We've created your account. Finish setup by confirming your email address before you continue."
-      footer={
+      cardFooter={
         <>
           Already verified your email?{" "}
-          <Link
-            href={next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in"}
-            className="font-medium text-foreground"
-          >
-            Continue to sign in
+          <Link href={next ?? "/"} className="font-medium text-foreground">
+            Continue to dashboard
           </Link>
           .
         </>
       }
+      pageFooter={<AuthPageFooter />}
     >
       <div className="space-y-4">
         <div className="rounded-[1.75rem] border border-border bg-panel-muted p-5">
@@ -49,7 +58,7 @@ export default async function VerifyEmailPage({
               </div>
               <p className="text-sm leading-6 text-muted">
                 Open the email from Registruum and click the verification link. After that, you can
-                come back here and sign in normally.
+                continue straight into your dashboard.
               </p>
             </div>
           </div>
@@ -67,7 +76,7 @@ export default async function VerifyEmailPage({
         </div>
 
         <Link
-          href={next ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in"}
+          href={next ?? "/"}
           className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-[1.3rem] bg-slate-950 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(15,23,42,0.16)] transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_40px_rgba(15,23,42,0.2)]"
         >
           I&apos;ve verified my email

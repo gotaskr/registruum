@@ -30,6 +30,7 @@ export default async function ArchiveRecordPage({
   }
 
   const archiveData = await getArchivePageData({
+    spaceId: details.spaceId,
     folderId: details.folderId,
   });
 
@@ -43,6 +44,9 @@ export default async function ArchiveRecordPage({
           folders={archiveData.folders}
           selectedFolderId={details.folderId}
           defaultFolderId={archiveData.defaultFolderId}
+          basePath="/archive"
+          selectedSpaceId={details.spaceId}
+          allArchiveCount={archiveData.totalCount}
         />
       }
     >

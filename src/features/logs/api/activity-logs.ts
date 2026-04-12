@@ -1,18 +1,15 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parseLogDetails } from "@/features/logs/lib/log-details";
+import {
+  mapActivityLogRow,
+  type ActivityLogProfile,
+} from "@/features/logs/lib/log-entry";
 import { getWorkOrderActorContext } from "@/features/work-orders/api/work-orders";
-import { formatDateTimeLabel } from "@/lib/utils";
 import type { Database } from "@/types/database";
-import type { LogEntry } from "@/types/log";
 
 type ActivityLogRow = Database["public"]["Tables"]["activity_logs"]["Row"];
 type ActivityLogInsert = Database["public"]["Tables"]["activity_logs"]["Insert"];
-type ProfileRow = Pick<
-  Database["public"]["Tables"]["profiles"]["Row"],
-  "id" | "full_name"
->;
 
 type ServerSupabaseClient = SupabaseClient<Database>;
 
@@ -26,34 +23,6 @@ export type CreateActivityLogInput = Readonly<{
   entityId: string | null;
   details?: ActivityLogInsert["details"];
 }>;
-
-function mapLogRow(
-  row: ActivityLogRow,
-  profileById: Map<string, ProfileRow>,
-): LogEntry {
-  const details = parseLogDetails(row.details);
-  const actorName = row.actor_user_id
-    ? (profileById.get(row.actor_user_id)?.full_name ?? "Unknown User")
-    : "System";
-
-  return {
-    id: row.id,
-    workOrderId: row.work_order_id ?? "",
-    actorUserId: row.actor_user_id,
-    actorName,
-    action: row.action,
-    createdAt: formatDateTimeLabel(row.created_at),
-    rawCreatedAt: row.created_at,
-    details: details.summary,
-    change:
-      details.before || details.after
-        ? {
-            before: details.before,
-            after: details.after,
-          }
-        : undefined,
-  };
-}
 
 export async function createActivityLog({
   supabase,
@@ -108,7 +77,7 @@ export async function getWorkOrderLogs(spaceId: string, workOrderId: string) {
   ];
 
   if (actorIds.length === 0) {
-    return rows.map((row) => mapLogRow(row, new Map()));
+    return rows.map((row) => mapActivityLogRow(row, new Map()));
   }
 
   const { data: profileRows, error: profileError } = await context.supabase
@@ -120,8 +89,8 @@ export async function getWorkOrderLogs(spaceId: string, workOrderId: string) {
     throw new Error(profileError.message);
   }
 
-  const profiles = (profileRows ?? []) as ProfileRow[];
+  const profiles = (profileRows ?? []) as ActivityLogProfile[];
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
 
-  return rows.map((row) => mapLogRow(row, profileById));
+  return rows.map((row) => mapActivityLogRow(row, profileById));
 }

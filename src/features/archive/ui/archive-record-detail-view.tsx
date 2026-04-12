@@ -59,6 +59,7 @@ export function ArchiveRecordDetailView({
   details,
 }: ArchiveRecordDetailViewProps) {
   const [activeTab, setActiveTab] = useState<ArchiveDetailsTab>("overview");
+  const archiveHref = `/archive?space=${details.spaceId}&folder=${details.folderId}`;
   const selectedTabDefinition = useMemo(
     () => tabDefinitions.find((tab) => tab.id === activeTab) ?? tabDefinitions[0],
     [activeTab],
@@ -305,7 +306,7 @@ export function ArchiveRecordDetailView({
       }
       actions={
         <Link
-          href={`/archive?folder=${details.folderId}`}
+          href={archiveHref}
           className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-border bg-panel px-4 text-sm font-semibold text-foreground transition-colors hover:bg-panel-muted"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -383,7 +384,7 @@ export function ArchiveRecordDetailView({
               Showing {selectedTabDefinition.label}
             </p>
             <Link
-              href={`/archive?folder=${details.folderId}`}
+              href={archiveHref}
               className="inline-flex items-center gap-2 text-sm font-semibold text-accent"
             >
               Return to folder

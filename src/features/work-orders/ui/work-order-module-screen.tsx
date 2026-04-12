@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { MapPin, MoreHorizontal } from "lucide-react";
 import { MainShell } from "@/components/layout/main-shell";
+import { RealtimeRouteRefresh } from "@/components/realtime/realtime-route-refresh";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ChatPanel } from "@/features/chat/ui/chat-panel";
 import { DocumentPanel } from "@/features/documents/ui/document-panel";
@@ -177,25 +178,36 @@ export function WorkOrderModuleScreen({
   }
 
   return (
-    <MainShell
-      title={workOrder.title}
-      meta={
-        <>
-          <StatusBadge status={workOrder.status} />
-          <span className="inline-flex items-center gap-1 text-sm text-muted">
-            <MapPin className="h-3.5 w-3.5" />
-            {formatWorkOrderLocation(workOrder.locationLabel, workOrder.unitLabel)}
-          </span>
-          <span className="text-sm text-muted">/</span>
-          <span className="text-sm text-muted">{moduleLabel}</span>
-        </>
-      }
-      actions={
-        actions
-      }
-      subheader={subheader}
-    >
-      {content}
-    </MainShell>
+    <>
+      <RealtimeRouteRefresh
+        channelName={`work-order:${workOrder.id}:${module}`}
+        subscriptions={[
+          { table: "work_orders", filter: `id=eq.${workOrder.id}` },
+          { table: "work_order_memberships", filter: `work_order_id=eq.${workOrder.id}` },
+          { table: "documents", filter: `work_order_id=eq.${workOrder.id}` },
+          { table: "activity_logs", filter: `work_order_id=eq.${workOrder.id}` },
+        ]}
+      />
+      <MainShell
+        title={workOrder.title}
+        meta={
+          <>
+            <StatusBadge status={workOrder.status} />
+            <span className="inline-flex items-center gap-1 text-sm text-muted">
+              <MapPin className="h-3.5 w-3.5" />
+              {formatWorkOrderLocation(workOrder.locationLabel, workOrder.unitLabel)}
+            </span>
+            <span className="text-sm text-muted">/</span>
+            <span className="text-sm text-muted">{moduleLabel}</span>
+          </>
+        }
+        actions={
+          actions
+        }
+        subheader={subheader}
+      >
+        {content}
+      </MainShell>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { parseLogDetails } from "@/features/logs/lib/log-details";
+import { mapActivityLogRow } from "@/features/logs/lib/log-entry";
 import {
   mapAttachmentRow,
   mapMessageRow,
@@ -9,7 +9,6 @@ import {
   type ProfileRow,
 } from "@/features/chat/lib/message-mappers";
 import { getWorkOrderActorContext } from "@/features/work-orders/api/work-orders";
-import { formatDateTimeLabel } from "@/lib/utils";
 import { registruumFilesBucket } from "@/lib/supabase/storage";
 import type { Database } from "@/types/database";
 import type { LogEntry } from "@/types/log";
@@ -40,27 +39,7 @@ function mapSystemLogRow(
   row: ActivityLogRow,
   profileById: Map<string, ProfileRow>,
 ): Message {
-  const details = parseLogDetails(row.details);
-  const actorName = row.actor_user_id
-    ? (profileById.get(row.actor_user_id)?.full_name ?? "Unknown User")
-    : "System";
-  const logEntry: LogEntry = {
-    id: row.id,
-    workOrderId: row.work_order_id ?? "",
-    actorUserId: row.actor_user_id,
-    actorName,
-    action: row.action,
-    createdAt: formatDateTimeLabel(row.created_at),
-    rawCreatedAt: row.created_at,
-    details: details.summary,
-    change:
-      details.before || details.after
-        ? {
-            before: details.before,
-            after: details.after,
-          }
-        : undefined,
-  };
+  const logEntry: LogEntry = mapActivityLogRow(row, profileById);
 
   return {
     id: `system-${row.id}`,

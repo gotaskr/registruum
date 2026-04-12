@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { MainShell } from "@/components/layout/main-shell";
+import { RealtimeRouteRefresh } from "@/components/realtime/realtime-route-refresh";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { canCreateWorkOrder } from "@/features/permissions/lib/work-order-permissions";
 import { CreateWorkOrderModal } from "@/features/work-orders/ui/create-work-order-modal";
@@ -26,6 +27,13 @@ export function SpaceWorkOrdersScreen({
 
   return (
     <>
+      <RealtimeRouteRefresh
+        channelName={`space:workorders:${space.id}`}
+        subscriptions={[
+          { table: "work_orders", filter: `space_id=eq.${space.id}` },
+          { table: "work_order_memberships" },
+        ]}
+      />
       <MainShell
         title="Workorders"
         description="Active projects inside this space."

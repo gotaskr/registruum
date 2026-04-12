@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MainShell } from "@/components/layout/main-shell";
+import { RealtimeRouteRefresh } from "@/components/realtime/realtime-route-refresh";
 import { ArchiveCreateFolderModal } from "@/features/archive/ui/archive-create-folder-modal";
 import { ArchiveCustomFolderList } from "@/features/archive/ui/archive-custom-folder-list";
 import { ArchiveFolderNavItem } from "@/features/archive/ui/archive-folder-nav-item";
@@ -190,6 +191,13 @@ export function SpaceArchiveScreen({
         </div>
       ) : null}
     >
+      <RealtimeRouteRefresh
+        channelName={`space:archive:${space.id}`}
+        subscriptions={[
+          { table: "archive_folders", filter: `space_id=eq.${space.id}` },
+          { table: "archived_work_orders", filter: `space_id=eq.${space.id}` },
+        ]}
+      />
       <section className="px-6 py-8 lg:px-8">
         <button
           type="button"

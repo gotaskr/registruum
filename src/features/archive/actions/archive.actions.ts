@@ -22,17 +22,10 @@ import type { Database } from "@/types/database";
 type ArchiveFolderRow = Database["public"]["Tables"]["archive_folders"]["Row"];
 type ArchivedWorkOrderRow = Database["public"]["Tables"]["archived_work_orders"]["Row"];
 type ServerSupabaseClient = SupabaseClient<Database>;
-type ArchiveActionScope =
-  | Readonly<{
-      kind: "personal";
-      ownerUserId: string;
-      actorUserId: string;
-    }>
-  | Readonly<{
-      kind: "space";
-      spaceId: string;
-      actorUserId: string;
-    }>;
+type ArchiveActionScope = Readonly<{
+  spaceId: string;
+  actorUserId: string;
+}>;
 
 function toArchiveActionError(error: unknown) {
   if (isMissingArchiveOwnershipColumnError(error as { message?: string } | null)) {
@@ -50,41 +43,6 @@ function readText(formData: FormData, key: string) {
 function readBoolean(formData: FormData, key: string) {
   const value = formData.get(key);
   return value === "true" || value === "on";
-}
-
-async function getDefaultArchiveFolderForUser(ownerUserId: string) {
-  const adminSupabase = createSupabaseAdminClient();
-  const { data: existingFolder, error: existingFolderError } = await adminSupabase
-    .from("archive_folders")
-    .select("*")
-    .eq("is_system_default", true)
-    .eq("owner_user_id", ownerUserId)
-    .maybeSingle();
-
-  if (existingFolderError) {
-    throw toArchiveActionError(existingFolderError);
-  }
-
-  if (existingFolder) {
-    return existingFolder as ArchiveFolderRow;
-  }
-
-  const { data: createdFolder, error: createdFolderError } = await adminSupabase
-    .from("archive_folders")
-    .insert({
-      name: "Unsorted Archive",
-      is_system_default: true,
-      created_by_user_id: ownerUserId,
-      owner_user_id: ownerUserId,
-    })
-    .select("*")
-    .single();
-
-  if (createdFolderError) {
-    throw toArchiveActionError(createdFolderError);
-  }
-
-  return createdFolder as ArchiveFolderRow;
 }
 
 async function getDefaultArchiveFolderForSpace(spaceId: string, actorUserId: string) {
@@ -128,11 +86,7 @@ async function resolveArchiveActionScope(
   requestedSpaceId: string,
 ): Promise<ArchiveActionScope> {
   if (!requestedSpaceId) {
-    return {
-      kind: "personal",
-      ownerUserId: actorUserId,
-      actorUserId,
-    };
+    throw new Error("A space archive must be selected.");
   }
 
   const spaces = await getSpacesForUser();
@@ -142,33 +96,17 @@ async function resolveArchiveActionScope(
   );
 
   if (!accessibleSpace) {
-    return {
-      kind: "personal",
-      ownerUserId: actorUserId,
-      actorUserId,
-    };
+    throw new Error("You do not have access to this space archive.");
   }
 
   return {
-    kind: "space",
     spaceId: accessibleSpace.id,
     actorUserId,
   };
 }
 
-function getArchiveScopeSupabase(
-  scope: ArchiveActionScope,
-  personalSupabase: ServerSupabaseClient,
-) {
-  return scope.kind === "space" ? createSupabaseAdminClient() : personalSupabase;
-}
-
 async function getDefaultArchiveFolderForScope(scope: ArchiveActionScope) {
-  if (scope.kind === "space") {
-    return getDefaultArchiveFolderForSpace(scope.spaceId, scope.actorUserId);
-  }
-
-  return getDefaultArchiveFolderForUser(scope.ownerUserId);
+  return getDefaultArchiveFolderForSpace(scope.spaceId, scope.actorUserId);
 }
 
 async function createArchiveActivityLog(input: Readonly<{
@@ -200,11 +138,9 @@ async function getArchiveFolderById(
   const query = supabase
     .from("archive_folders")
     .select("*")
-    .eq("id", folderId);
-  const { data, error } =
-    scope.kind === "space"
-      ? await query.eq("space_id", scope.spaceId).maybeSingle()
-      : await query.eq("owner_user_id", scope.ownerUserId).maybeSingle();
+    .eq("id", folderId)
+    .eq("space_id", scope.spaceId);
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     throw toArchiveActionError(error);
@@ -245,8 +181,8 @@ async function resolveTargetArchiveFolder(input: Readonly<{
         name: input.newFolderName,
         parent_id: parentFolder?.id ?? null,
         created_by_user_id: input.scope.actorUserId,
-        owner_user_id: input.scope.kind === "personal" ? input.scope.ownerUserId : null,
-        space_id: input.scope.kind === "space" ? input.scope.spaceId : null,
+        owner_user_id: null,
+        space_id: input.scope.spaceId,
         is_system_default: false,
       })
       .select("*")
@@ -328,7 +264,7 @@ export async function archiveWorkOrderRecord(
   }
 
   const scope = await resolveArchiveActionScope(context.user.id, spaceId);
-  const archiveSupabase = getArchiveScopeSupabase(scope, context.supabase);
+  const archiveSupabase = createSupabaseAdminClient();
   const targetFolder = await resolveTargetArchiveFolder({
     supabase: archiveSupabase,
     scope,
@@ -414,7 +350,7 @@ export async function archiveWorkOrderRecord(
 }
 
 export async function createArchiveFolderAction(formData: FormData) {
-  const { supabase, user } = await requireAuthenticatedAppUser();
+  const { user } = await requireAuthenticatedAppUser();
   const name = readText(formData, "name");
   const parentFolderId = readText(formData, "parentFolderId");
   const spaceId = readText(formData, "spaceId");
@@ -425,7 +361,7 @@ export async function createArchiveFolderAction(formData: FormData) {
   }
 
   const scope = await resolveArchiveActionScope(user.id, spaceId);
-  const archiveSupabase = getArchiveScopeSupabase(scope, supabase);
+  const archiveSupabase = createSupabaseAdminClient();
 
   const parentFolder = await resolveArchiveParentFolder({
     supabase: archiveSupabase,
@@ -439,8 +375,8 @@ export async function createArchiveFolderAction(formData: FormData) {
       name,
       parent_id: parentFolder?.id ?? null,
       created_by_user_id: user.id,
-      owner_user_id: scope.kind === "personal" ? user.id : null,
-      space_id: scope.kind === "space" ? scope.spaceId : null,
+      owner_user_id: null,
+      space_id: scope.spaceId,
       is_system_default: false,
     })
     .select("*")
@@ -465,16 +401,12 @@ export async function createArchiveFolderAction(formData: FormData) {
 
   revalidatePath("/archive");
   revalidatePath("/m/archive");
-  if (scope.kind === "space") {
-    revalidatePath(`/space/${scope.spaceId}/archive`);
-    redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${folder.id}`));
-  }
-
-  redirect(getReturnPath(returnTo, `/archive?folder=${folder.id}`));
+  revalidatePath(`/space/${scope.spaceId}/archive`);
+  redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${folder.id}`));
 }
 
 export async function renameArchiveFolderAction(formData: FormData) {
-  const { supabase, user } = await requireAuthenticatedAppUser();
+  const { user } = await requireAuthenticatedAppUser();
   const folderId = readText(formData, "folderId");
   const name = readText(formData, "name");
   const spaceId = readText(formData, "spaceId");
@@ -485,7 +417,7 @@ export async function renameArchiveFolderAction(formData: FormData) {
   }
 
   const scope = await resolveArchiveActionScope(user.id, spaceId);
-  const archiveSupabase = getArchiveScopeSupabase(scope, supabase);
+  const archiveSupabase = createSupabaseAdminClient();
   const currentFolder = await getArchiveFolderById(archiveSupabase, folderId, scope);
 
   if (!currentFolder || currentFolder.is_system_default) {
@@ -499,9 +431,7 @@ export async function renameArchiveFolderAction(formData: FormData) {
     })
     .eq("id", folderId);
   const { error } =
-    scope.kind === "space"
-      ? await updateQuery.eq("space_id", scope.spaceId)
-      : await updateQuery.eq("owner_user_id", user.id);
+    await updateQuery.eq("space_id", scope.spaceId);
 
   if (error) {
     throw toArchiveActionError(error);
@@ -521,12 +451,8 @@ export async function renameArchiveFolderAction(formData: FormData) {
 
   revalidatePath("/archive");
   revalidatePath("/m/archive");
-  if (scope.kind === "space") {
-    revalidatePath(`/space/${scope.spaceId}/archive`);
-    redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${folderId}`));
-  }
-
-  redirect(getReturnPath(returnTo, `/archive?folder=${folderId}`));
+  revalidatePath(`/space/${scope.spaceId}/archive`);
+  redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${folderId}`));
 }
 
 export async function moveArchivedWorkOrderAction(formData: FormData) {
@@ -539,17 +465,15 @@ export async function moveArchivedWorkOrderAction(formData: FormData) {
     redirect(getReturnPath(returnTo, "/archive"));
   }
 
-  const { supabase, user } = await requireAuthenticatedAppUser();
+  const { user } = await requireAuthenticatedAppUser();
   const scope = await resolveArchiveActionScope(user.id, spaceId);
-  const archiveSupabase = getArchiveScopeSupabase(scope, supabase);
+  const archiveSupabase = createSupabaseAdminClient();
   const archivedQuery = archiveSupabase
     .from("archived_work_orders")
     .select("*")
-    .eq("id", archivedWorkOrderId);
-  const { data: archivedData, error: archivedError } =
-    scope.kind === "space"
-      ? await archivedQuery.eq("space_id", scope.spaceId).maybeSingle()
-      : await archivedQuery.eq("owner_user_id", user.id).maybeSingle();
+    .eq("id", archivedWorkOrderId)
+    .eq("space_id", scope.spaceId);
+  const { data: archivedData, error: archivedError } = await archivedQuery.maybeSingle();
 
   if (archivedError) {
     throw toArchiveActionError(archivedError);
@@ -592,9 +516,7 @@ export async function moveArchivedWorkOrderAction(formData: FormData) {
     })
     .eq("id", archivedWorkOrderId);
   const { error: moveError } =
-    scope.kind === "space"
-      ? await moveQuery.eq("space_id", scope.spaceId)
-      : await moveQuery.eq("owner_user_id", context.user.id);
+    await moveQuery.eq("space_id", scope.spaceId);
 
   if (moveError) {
     throw toArchiveActionError(moveError);
@@ -631,16 +553,12 @@ export async function moveArchivedWorkOrderAction(formData: FormData) {
 
   revalidatePath("/archive");
   revalidatePath("/m/archive");
-  if (scope.kind === "space") {
-    revalidatePath(`/space/${scope.spaceId}/archive`);
-    redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${targetFolder.id}`));
-  }
-
-  redirect(getReturnPath(returnTo, "/archive"));
+  revalidatePath(`/space/${scope.spaceId}/archive`);
+  redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${targetFolder.id}`));
 }
 
 export async function deleteArchiveFolderAction(formData: FormData) {
-  const { supabase, user } = await requireAuthenticatedAppUser();
+  const { user } = await requireAuthenticatedAppUser();
   const folderId = readText(formData, "folderId");
   const forceMoveContents = readBoolean(formData, "forceMoveContents");
   const spaceId = readText(formData, "spaceId");
@@ -651,7 +569,7 @@ export async function deleteArchiveFolderAction(formData: FormData) {
   }
 
   const scope = await resolveArchiveActionScope(user.id, spaceId);
-  const archiveSupabase = getArchiveScopeSupabase(scope, supabase);
+  const archiveSupabase = createSupabaseAdminClient();
 
   const currentFolder = await getArchiveFolderById(archiveSupabase, folderId, scope);
 
@@ -665,9 +583,7 @@ export async function deleteArchiveFolderAction(formData: FormData) {
     .select("id")
     .eq("parent_id", folderId);
   const { data: childFolderData, error: childFolderError } =
-    scope.kind === "space"
-      ? await childFolderQuery.eq("space_id", scope.spaceId)
-      : await childFolderQuery.eq("owner_user_id", user.id);
+    await childFolderQuery.eq("space_id", scope.spaceId);
 
   if (childFolderError) {
     throw toArchiveActionError(childFolderError);
@@ -695,9 +611,7 @@ export async function deleteArchiveFolderAction(formData: FormData) {
     .select("*")
     .eq("archive_folder_id", folderId);
   const { data: archivedData, error: archivedError } =
-    scope.kind === "space"
-      ? await archivedQuery.eq("space_id", scope.spaceId)
-      : await archivedQuery.eq("owner_user_id", user.id);
+    await archivedQuery.eq("space_id", scope.spaceId);
 
   if (archivedError) {
     throw toArchiveActionError(archivedError);
@@ -717,9 +631,7 @@ export async function deleteArchiveFolderAction(formData: FormData) {
       })
       .eq("archive_folder_id", folderId);
     const { error: moveError } =
-      scope.kind === "space"
-        ? await moveQuery.eq("space_id", scope.spaceId)
-        : await moveQuery.eq("owner_user_id", user.id);
+      await moveQuery.eq("space_id", scope.spaceId);
 
     if (moveError) {
       throw toArchiveActionError(moveError);
@@ -747,9 +659,7 @@ export async function deleteArchiveFolderAction(formData: FormData) {
     .delete()
     .eq("id", folderId);
   const { error: deleteError } =
-    scope.kind === "space"
-      ? await deleteQuery.eq("space_id", scope.spaceId)
-      : await deleteQuery.eq("owner_user_id", user.id);
+    await deleteQuery.eq("space_id", scope.spaceId);
 
   if (deleteError) {
     throw toArchiveActionError(deleteError);
@@ -768,12 +678,8 @@ export async function deleteArchiveFolderAction(formData: FormData) {
 
   revalidatePath("/archive");
   revalidatePath("/m/archive");
-  if (scope.kind === "space") {
-    revalidatePath(`/space/${scope.spaceId}/archive`);
-    redirect(
-      getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${defaultFolder.id}`),
-    );
-  }
-
-  redirect(getReturnPath(returnTo, `/archive?folder=${defaultFolder.id}`));
+  revalidatePath(`/space/${scope.spaceId}/archive`);
+  redirect(
+    getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${defaultFolder.id}`),
+  );
 }

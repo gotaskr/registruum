@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MainShell } from "@/components/layout/main-shell";
+import { RealtimeRouteRefresh } from "@/components/realtime/realtime-route-refresh";
 import { Modal } from "@/components/ui/modal";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import {
@@ -574,6 +575,13 @@ export function SpaceTeamScreen({
         </button>
       )}
     >
+      <RealtimeRouteRefresh
+        channelName={`space:team:${space.id}`}
+        subscriptions={[
+          { table: "space_memberships", filter: `space_id=eq.${space.id}` },
+          { table: "invites", filter: `space_id=eq.${space.id}` },
+        ]}
+      />
       <section className="space-y-6 px-6 py-8 lg:px-8">
         <div className="rounded-[2rem] border border-border bg-panel p-6 shadow-[0_18px_36px_rgba(15,23,42,0.05)] dark:shadow-none">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

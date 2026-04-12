@@ -128,6 +128,7 @@ export type Database = {
           name: string
           owner_user_id: string | null
           parent_id: string | null
+          space_id: string | null
           updated_at: string
         }
         Insert: {
@@ -138,6 +139,7 @@ export type Database = {
           name: string
           owner_user_id?: string | null
           parent_id?: string | null
+          space_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -148,6 +150,7 @@ export type Database = {
           name?: string
           owner_user_id?: string | null
           parent_id?: string | null
+          space_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -170,6 +173,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "archive_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_folders_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
             referencedColumns: ["id"]
           },
         ]

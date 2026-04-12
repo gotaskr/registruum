@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight, KeyRound, Mail } from "lucide-react";
 import { useActionState } from "react";
 import { signIn } from "@/features/auth/actions/auth.actions";
@@ -67,32 +66,6 @@ export function SignInForm({ next, message }: SignInFormProps) {
         <ArrowRight className="h-4 w-4" />
       </button>
 
-      <div className="grid gap-3 rounded-[1.4rem] border border-border bg-panel px-4 py-4 text-sm text-muted sm:grid-cols-2">
-        <div>
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-muted">
-            After Sign In
-          </p>
-          <p className="mt-2 leading-6">
-            Your spaces, work orders, team roles, and archive visibility load automatically.
-          </p>
-        </div>
-        <div className="rounded-[1.15rem] border border-border bg-panel-muted px-4 py-3">
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-muted">
-            Workspace Status
-          </p>
-          <p className="mt-2 leading-6 text-foreground">One identity, synced across operations.</p>
-        </div>
-      </div>
-
-      <p className="text-sm leading-7 text-muted">
-        Don&apos;t have an account?{" "}
-        <Link
-          href={next ? `/sign-up?next=${encodeURIComponent(next)}` : "/sign-up"}
-          className="font-semibold text-foreground transition-colors hover:text-accent"
-        >
-          Create one
-        </Link>
-      </p>
     </form>
   );
 }

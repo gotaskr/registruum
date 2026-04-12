@@ -37,6 +37,9 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
           folders={archiveData.folders}
           selectedFolderId={archiveData.selectedFolderId}
           defaultFolderId={archiveData.defaultFolderId}
+          basePath="/archive"
+          selectedSpaceId={archiveData.selectedSpaceId}
+          allArchiveCount={archiveData.totalCount}
         />
       }
     >

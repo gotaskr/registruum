@@ -7,7 +7,8 @@ type AuthShellIntent = "sign-in" | "sign-up" | "verify-email";
 type AuthShellProps = Readonly<{
   title: string;
   description: string;
-  footer: ReactNode;
+  cardFooter?: ReactNode;
+  pageFooter?: ReactNode;
   children: ReactNode;
   intent?: AuthShellIntent;
 }>;
@@ -55,14 +56,15 @@ const shellCopy: Record<
 export function AuthShell({
   title,
   description,
-  footer,
+  cardFooter,
+  pageFooter,
   children,
   intent = "sign-in",
 }: AuthShellProps) {
   const copy = shellCopy[intent];
 
   return (
-    <div className="auth-shell-bg min-h-screen">
+    <div className="auth-shell-bg relative min-h-screen">
       <div className="auth-grid-overlay absolute inset-0 pointer-events-none" />
 
       <div className="relative grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_34rem]">
@@ -135,7 +137,7 @@ export function AuthShell({
           </div>
         </section>
 
-        <section className="flex min-h-screen items-center px-4 py-6 sm:px-8 lg:px-10 xl:px-14">
+        <section className="flex min-h-screen items-start px-4 py-6 sm:px-8 lg:px-10 xl:px-14">
           <div className="mx-auto w-full max-w-[34rem] auth-enter auth-enter-delay">
             <div className="auth-panel-glow relative rounded-[2rem] border border-border/70 bg-panel p-5 shadow-[0_30px_80px_rgba(15,23,42,0.1)] sm:p-7 lg:p-8">
               <div className="mb-8 flex items-center justify-between gap-4">
@@ -184,11 +186,21 @@ export function AuthShell({
                 {children}
               </div>
 
-              <div className="mt-6 text-sm leading-7 text-muted">{footer}</div>
+              {cardFooter ? (
+                <div className="mt-6 border-t border-border/80 pt-5 text-sm leading-7 text-muted">
+                  {cardFooter}
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
       </div>
+
+      {pageFooter ? (
+        <footer className="relative border-t border-border/70 bg-white/70 backdrop-blur-sm">
+          {pageFooter}
+        </footer>
+      ) : null}
     </div>
   );
 }

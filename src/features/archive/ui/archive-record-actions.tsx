@@ -69,36 +69,38 @@ export function ArchiveRecordActions({
             View archived record
           </Link>
 
-          <div className="mt-2 border-t border-border px-3 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-              Move To Folder
-            </p>
-            <form action={moveArchivedWorkOrderAction} className="mt-3 grid gap-2">
-              <input type="hidden" name="archivedWorkOrderId" value={item.id} />
-              <input type="hidden" name="spaceId" value={item.spaceId} />
-              <input type="hidden" name="returnTo" value={returnTo} />
-              <select
-                name="targetFolderId"
-                value={targetFolderId}
-                onChange={(event) => setTargetFolderId(event.target.value)}
-                className="h-10 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
-              >
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {formatArchiveFolderOptionLabel(folder)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                disabled={targetFolderId === item.folderId}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FolderInput className="h-4 w-4" />
-                Move
-              </button>
-            </form>
-          </div>
+          {folders.length > 0 ? (
+            <div className="mt-2 border-t border-border px-3 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+                Move To Folder
+              </p>
+              <form action={moveArchivedWorkOrderAction} className="mt-3 grid gap-2">
+                <input type="hidden" name="archivedWorkOrderId" value={item.id} />
+                <input type="hidden" name="spaceId" value={item.spaceId} />
+                <input type="hidden" name="returnTo" value={returnTo} />
+                <select
+                  name="targetFolderId"
+                  value={targetFolderId}
+                  onChange={(event) => setTargetFolderId(event.target.value)}
+                  className="h-10 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+                >
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {formatArchiveFolderOptionLabel(folder)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  disabled={targetFolderId === item.folderId}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <FolderInput className="h-4 w-4" />
+                  Move
+                </button>
+              </form>
+            </div>
+          ) : null}
 
           <div className="mt-1 border-t border-border pt-2">
             <a
