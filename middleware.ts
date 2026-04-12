@@ -6,6 +6,7 @@ const publicRoutes = new Set([
   "/sign-up",
   "/verify-email",
   "/auth/callback",
+  "/terms-and-conditions",
 ]);
 
 function isPublicRoute(pathname: string) {
