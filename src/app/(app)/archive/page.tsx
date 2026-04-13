@@ -2,6 +2,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getCurrentProfile } from "@/features/auth/api/profiles";
 import { getArchivePageData } from "@/features/archive/api/archive";
 import { ArchiveDashboard } from "@/features/archive/ui/archive-dashboard";
+import { ArchiveHubBottomNav } from "@/features/archive/ui/archive-hub-bottom-nav";
 import { ArchiveSidebar } from "@/features/archive/ui/archive-sidebar";
 import { getSpacesForUser } from "@/features/spaces/api/spaces";
 
@@ -42,13 +43,16 @@ export default async function ArchivePage({ searchParams }: ArchivePageProps) {
           allArchiveCount={archiveData.totalCount}
         />
       }
+      mobileBottomNav={<ArchiveHubBottomNav />}
     >
       <ArchiveDashboard
         items={archiveData.items}
         folders={archiveData.folderOptions}
+        treeFolders={archiveData.folders}
         spaceOptions={archiveData.spaceOptions}
         selectedFolderId={archiveData.selectedFolderId}
         selectedSpaceId={archiveData.selectedSpaceId}
+        defaultFolderId={archiveData.defaultFolderId}
         searchQuery={archiveData.searchQuery}
         sort={archiveData.sort}
         totalCount={archiveData.totalCount}

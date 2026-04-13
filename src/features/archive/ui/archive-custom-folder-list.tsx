@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronRight, FolderClosed, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { deleteArchiveFolderAction } from "@/features/archive/actions/archive.actions";
 import {
@@ -289,7 +290,7 @@ export function ArchiveCustomFolderList({
               <input type="hidden" name="forceMoveContents" value="true" />
             ) : null}
 
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-4">
               <p className="text-sm font-semibold text-rose-700">{selectedFolder.name}</p>
               <p className="mt-2 text-sm leading-6 text-rose-600">
                 Are you sure you want to delete this folder?
@@ -300,18 +301,14 @@ export function ArchiveCustomFolderList({
             </div>
 
             <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-panel px-4 text-sm font-medium text-foreground"
-              >
+              <Button type="button" variant="secondary" onClick={handleCloseModal}>
                 Cancel
-              </button>
+              </Button>
               <button
                 type="submit"
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-4 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100"
               >
-                Delete Folder
+                Delete folder
               </button>
             </div>
           </form>

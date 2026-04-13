@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ContextBottomNav } from "@/components/layout/context-bottom-nav";
 import { ContextSidebar } from "@/components/layout/context-sidebar";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
 import type { ArchiveFolderOption } from "@/features/archive/types/archive";
@@ -34,6 +35,14 @@ export function AppShell({
       space={space}
       sidebar={(
         <ContextSidebar
+          space={space}
+          workOrders={workOrders}
+          archiveFolders={archiveFolders}
+          defaultArchiveFolderId={defaultArchiveFolderId}
+        />
+      )}
+      mobileBottomNav={(
+        <ContextBottomNav
           space={space}
           workOrders={workOrders}
           archiveFolders={archiveFolders}

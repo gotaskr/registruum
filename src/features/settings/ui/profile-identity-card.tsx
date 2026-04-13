@@ -51,8 +51,8 @@ export function ProfileIdentityCard({
       highlighted
     >
       <div className="grid gap-4">
-        <div className="grid gap-5 md:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
-          <div className="flex h-[5.5rem] w-[5.5rem] items-center justify-center overflow-hidden rounded-[1.6rem] border border-border bg-panel-muted text-xl font-semibold text-foreground shadow-[0_12px_24px_rgba(15,23,42,0.05)] dark:shadow-none">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[5.5rem_minmax(0,1fr)_auto] md:items-start md:gap-5">
+          <div className="mx-auto flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-panel-muted text-lg font-semibold text-foreground shadow-sm dark:shadow-none md:mx-0 md:h-[5.5rem] md:w-[5.5rem] md:rounded-[1.6rem] md:text-xl md:shadow-[0_12px_24px_rgba(15,23,42,0.05)]">
             {profile.avatarUrl ? (
               <Image
                 src={profile.avatarUrl}
@@ -66,23 +66,23 @@ export function ProfileIdentityCard({
               getInitials(profile.fullName)
             )}
           </div>
-          <div className="min-w-0 space-y-3">
+          <div className="min-w-0 space-y-3 text-center md:text-left">
             <div className="space-y-1">
-              <h3 className="text-2xl font-semibold tracking-tight text-foreground">
+              <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                 {profile.fullName}
               </h3>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-                <span className="truncate">{profile.email}</span>
-                <span className="text-border-strong">/</span>
+              <div className="flex flex-col items-center gap-1.5 text-sm text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 md:items-start">
+                <span className="max-w-full truncate">{profile.email}</span>
+                <span className="hidden text-border-strong sm:inline">/</span>
                 <span className="inline-flex items-center gap-1 rounded-full border border-border bg-panel px-2.5 py-1 text-[11px] font-medium text-muted">
-                  <CheckCircle2 className="h-3 w-3" />
+                  <CheckCircle2 className="h-3 w-3 shrink-0" />
                   {isVerified ? "Verified" : "Pending"}
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-[#111827] px-3 py-1.5 font-mono text-xs font-semibold tracking-[0.14em] text-white">
+            <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+              <span className="inline-flex max-w-full items-center break-all rounded-full bg-[#111827] px-3 py-1.5 font-mono text-[11px] font-semibold tracking-[0.12em] text-white sm:text-xs sm:tracking-[0.14em]">
                 {profile.userTag}
               </span>
               <button
@@ -105,11 +105,11 @@ export function ProfileIdentityCard({
               </span>
             </div>
           </div>
-          <div className="relative justify-self-start md:justify-self-end" ref={menuRef}>
+          <div className="relative flex justify-end justify-self-end md:justify-self-end" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen((value) => !value)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-panel text-muted transition-colors hover:bg-panel-muted hover:text-foreground"
+              className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl border border-border bg-panel text-muted transition-colors hover:bg-panel-muted hover:text-foreground sm:h-10 sm:w-10 sm:rounded-2xl"
               aria-label="Open identity actions"
             >
               <MoreHorizontal className="h-4 w-4" />
@@ -133,8 +133,8 @@ export function ProfileIdentityCard({
           </div>
         </div>
 
-        <div className="rounded-[1.35rem] border border-border bg-panel-muted px-4 py-4">
-          <p className="text-sm leading-6 text-muted">
+        <div className="rounded-xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.35rem] sm:px-4 sm:py-4">
+          <p className="text-xs leading-relaxed text-muted sm:text-sm sm:leading-6">
             This tag is used for member invites and internal identification.
           </p>
         </div>

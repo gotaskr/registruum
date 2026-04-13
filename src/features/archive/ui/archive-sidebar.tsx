@@ -1,4 +1,6 @@
 import { FolderOpen, FolderTree, Vault } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { archiveControlClass } from "@/features/archive/lib/archive-form-styles";
 import {
   renameArchiveFolderAction,
 } from "@/features/archive/actions/archive.actions";
@@ -151,15 +153,12 @@ export function ArchiveSidebar({
                     name="name"
                     type="text"
                     defaultValue={selectedFolder.name}
-                    className="h-11 w-full rounded-2xl border border-border bg-panel px-4 text-sm text-foreground outline-none transition-colors focus:border-border-strong"
+                    className={archiveControlClass}
                   />
                 </label>
-                <button
-                  type="submit"
-                  className="inline-flex h-11 w-full items-center justify-center rounded-2xl border border-border bg-panel px-4 text-sm font-semibold text-foreground transition-colors hover:bg-panel-muted"
-                >
-                  Save Name
-                </button>
+                <Button type="submit" variant="secondary" className="w-full">
+                  Save name
+                </Button>
               </form>
 
             </div>

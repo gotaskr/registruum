@@ -11,6 +11,7 @@ import {
   createDefaultWorkOrderPermissionMatrix,
   type WorkOrderPermissionKey,
 } from "@/features/permissions/lib/work-order-permission-definitions";
+import { getDefaultWorkOrderInviteRole } from "@/features/permissions/lib/roles";
 import {
   canChangeWorkOrderStatusTo,
   getLockedWorkOrderMessage,
@@ -42,6 +43,13 @@ function readText(formData: FormData, key: string) {
 function readBoolean(formData: FormData, key: string) {
   const value = formData.get(key);
   return value === "on" || value === "true";
+}
+
+function getAssignedMemberIds(formData: FormData) {
+  return formData
+    .getAll("assignedMemberIds")
+    .map((value) => (typeof value === "string" ? value : ""))
+    .filter((value) => value.length > 0);
 }
 
 function getSafeReturnTo(returnTo: string, fallback: string) {
@@ -88,11 +96,13 @@ function isMissingWorkOrderSettingsColumnError(message: string) {
   ].some((columnName) => message.includes(columnName));
 }
 
-export async function createWorkOrder(
-  previousState: WorkOrderActionState = initialWorkOrderActionState,
+export type ExecuteCreateWorkOrderResult =
+  | { ok: true; spaceId: string; workOrderId: string }
+  | { ok: false; error: string };
+
+export async function executeCreateWorkOrder(
   formData: FormData,
-): Promise<WorkOrderActionState> {
-  void previousState;
+): Promise<ExecuteCreateWorkOrderResult> {
   const photoFiles = getValidFiles(formData, "photos");
   const parsed = createWorkOrderSchema.safeParse({
     spaceId: readText(formData, "spaceId"),
@@ -103,11 +113,11 @@ export async function createWorkOrder(
     unitLabel: readText(formData, "unitLabel"),
     description: readText(formData, "description"),
     expirationAt: readText(formData, "expirationAt"),
-    isPostedToJobMarket: readBoolean(formData, "isPostedToJobMarket"),
   });
 
   if (!parsed.success) {
     return {
+      ok: false,
       error: parsed.error.issues[0]?.message ?? "Unable to create work order.",
     };
   }
@@ -118,6 +128,7 @@ export async function createWorkOrder(
     )
   ) {
     return {
+      ok: false,
       error: "Only image files can be uploaded as work order photos.",
     };
   }
@@ -126,6 +137,7 @@ export async function createWorkOrder(
 
   if (!actor) {
     return {
+      ok: false,
       error: "You do not have access to this space.",
     };
   }
@@ -136,39 +148,38 @@ export async function createWorkOrder(
     actor.spaceRole !== "manager"
   ) {
     return {
+      ok: false,
       error: "Only admins, operations managers, and managers can create work orders.",
     };
   }
 
   const adminSupabase = createSupabaseAdminClient();
   const workOrderId = crypto.randomUUID();
-  const { error: createError } = await adminSupabase
-    .from("work_orders")
-    .insert({
-      id: workOrderId,
-      space_id: parsed.data.spaceId,
-      created_by_user_id: actor.user.id,
-      owner_user_id: actor.user.id,
-      title: parsed.data.title,
-      subject_type: parsed.data.subjectType,
-      subject: parsed.data.subject,
-      location_label: parsed.data.locationLabel,
-      unit_label: parsed.data.unitLabel,
-      description: buildWorkOrderDescription(
-        parsed.data.subjectType,
-        parsed.data.subject,
-        parsed.data.description,
-      ),
-      priority: "medium",
-      due_date: parsed.data.expirationAt,
-      expiration_at: parsed.data.expirationAt,
-      status: "open",
-      is_posted_to_job_market: parsed.data.isPostedToJobMarket,
-    })
-    ;
+  const { error: createError } = await adminSupabase.from("work_orders").insert({
+    id: workOrderId,
+    space_id: parsed.data.spaceId,
+    created_by_user_id: actor.user.id,
+    owner_user_id: actor.user.id,
+    title: parsed.data.title,
+    subject_type: parsed.data.subjectType,
+    subject: parsed.data.subject,
+    location_label: parsed.data.locationLabel,
+    unit_label: parsed.data.unitLabel,
+    description: buildWorkOrderDescription(
+      parsed.data.subjectType,
+      parsed.data.subject,
+      parsed.data.description,
+    ),
+    priority: "medium",
+    due_date: parsed.data.expirationAt,
+    expiration_at: parsed.data.expirationAt,
+    status: "open",
+    is_posted_to_job_market: false,
+  });
 
   if (createError) {
     return {
+      ok: false,
       error: createError.message,
     };
   }
@@ -184,11 +195,55 @@ export async function createWorkOrder(
     await adminSupabase.from("work_orders").delete().eq("id", workOrderId);
 
     return {
+      ok: false,
       error:
         error instanceof Error
           ? error.message
           : "Unable to assign the space team to the new work order.",
     };
+  }
+
+  const assignedMemberIds = [...new Set(getAssignedMemberIds(formData))];
+
+  if (assignedMemberIds.length > 0) {
+    const { data: existingMemberRows, error: existingMemberError } = await adminSupabase
+      .from("work_order_memberships")
+      .select("user_id")
+      .eq("work_order_id", workOrderId);
+
+    if (existingMemberError) {
+      await adminSupabase.from("work_orders").delete().eq("id", workOrderId);
+
+      return {
+        ok: false,
+        error: existingMemberError.message,
+      };
+    }
+
+    const existingIds = new Set(
+      (existingMemberRows ?? []).map((row) => (row as { user_id: string }).user_id),
+    );
+    const toAdd = assignedMemberIds.filter((userId) => !existingIds.has(userId));
+
+    if (toAdd.length > 0) {
+      const { error: membershipError } = await adminSupabase.from("work_order_memberships").insert(
+        toAdd.map((userId) => ({
+          work_order_id: workOrderId,
+          user_id: userId,
+          assigned_by_user_id: actor.user.id,
+          role: getDefaultWorkOrderInviteRole(),
+        })),
+      );
+
+      if (membershipError) {
+        await adminSupabase.from("work_orders").delete().eq("id", workOrderId);
+
+        return {
+          ok: false,
+          error: membershipError.message,
+        };
+      }
+    }
   }
 
   if (photoFiles.length > 0) {
@@ -206,6 +261,7 @@ export async function createWorkOrder(
       await adminSupabase.from("work_orders").delete().eq("id", workOrderId);
 
       return {
+        ok: false,
         error: error instanceof Error ? error.message : "Unable to upload work order photos.",
       };
     }
@@ -224,12 +280,34 @@ export async function createWorkOrder(
     },
   });
 
-  revalidatePath(`/space/${parsed.data.spaceId}`);
-  revalidatePath(
-    `/space/${parsed.data.spaceId}/work-order/${workOrderId}/${DEFAULT_MODULE}`,
-  );
+  return {
+    ok: true,
+    spaceId: parsed.data.spaceId,
+    workOrderId,
+  };
+}
+
+function revalidateWorkOrderSurfaces(spaceId: string, workOrderId: string) {
+  revalidatePath(`/space/${spaceId}`);
+  revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/${DEFAULT_MODULE}`);
+}
+
+export async function createWorkOrder(
+  previousState: WorkOrderActionState = initialWorkOrderActionState,
+  formData: FormData,
+): Promise<WorkOrderActionState> {
+  void previousState;
+  const result = await executeCreateWorkOrder(formData);
+
+  if (!result.ok) {
+    return {
+      error: result.error,
+    };
+  }
+
+  revalidateWorkOrderSurfaces(result.spaceId, result.workOrderId);
   redirect(
-    `/space/${parsed.data.spaceId}/work-order/${workOrderId}/${DEFAULT_MODULE}`,
+    `/space/${result.spaceId}/work-order/${result.workOrderId}/${DEFAULT_MODULE}`,
   );
 }
 
@@ -478,10 +556,7 @@ export async function updateWorkOrder(
     });
   }
 
-  revalidatePath(`/space/${parsed.data.spaceId}`);
-  revalidatePath(
-    `/space/${parsed.data.spaceId}/work-order/${parsed.data.workOrderId}/${DEFAULT_MODULE}`,
-  );
+  revalidateWorkOrderSurfaces(parsed.data.spaceId, parsed.data.workOrderId);
 
   if (returnTo.startsWith(`/space/${parsed.data.spaceId}/`)) {
     redirect(returnTo);
@@ -567,6 +642,80 @@ export async function completeWorkOrder(
   revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/logs`);
   revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/settings`);
 
+  redirect(getSafeReturnTo(returnTo, `/space/${spaceId}`));
+}
+
+export async function setWorkOrderLifecycleStatus(
+  previousState: WorkOrderActionState = initialWorkOrderActionState,
+  formData: FormData,
+): Promise<WorkOrderActionState> {
+  void previousState;
+  const workOrderId = readText(formData, "workOrderId");
+  const spaceId = readText(formData, "spaceId");
+  const returnTo = readText(formData, "returnTo");
+  const nextStatus = readText(formData, "status");
+
+  if (
+    nextStatus !== "open" &&
+    nextStatus !== "in_progress" &&
+    nextStatus !== "on_hold"
+  ) {
+    return {
+      error: "Unsupported status update.",
+    };
+  }
+
+  const context = await getWorkOrderActorContextForAction(spaceId, workOrderId);
+
+  if (!context) {
+    return {
+      error: "You do not have access to this work order.",
+    };
+  }
+
+  if (
+    !canChangeWorkOrderStatusTo(
+      context.permissions,
+      context.workOrder.status,
+      nextStatus,
+    )
+  ) {
+    return {
+      error:
+        getLockedWorkOrderMessage(context.workOrder.status) ??
+        "You do not have permission to update this work order status.",
+    };
+  }
+
+  const { error } = await context.supabase
+    .from("work_orders")
+    .update({ status: nextStatus })
+    .eq("id", workOrderId)
+    .eq("space_id", spaceId);
+
+  if (error) {
+    return {
+      error: error.message,
+    };
+  }
+
+  const adminSupabase = createSupabaseAdminClient();
+  await createActivityLog({
+    supabase: adminSupabase,
+    action: "Updated work order status",
+    actorUserId: context.user.id,
+    spaceId,
+    workOrderId,
+    entityType: "work_order",
+    entityId: workOrderId,
+    details: {
+      summary: context.workOrder.title,
+      before: formatStatusLabel(context.workOrder.status),
+      after: formatStatusLabel(nextStatus),
+    },
+  });
+
+  revalidateWorkOrderSurfaces(spaceId, workOrderId);
   redirect(getSafeReturnTo(returnTo, `/space/${spaceId}`));
 }
 

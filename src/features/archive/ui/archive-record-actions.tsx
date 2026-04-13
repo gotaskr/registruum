@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Download, ExternalLink, FolderInput, MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { moveArchivedWorkOrderAction } from "@/features/archive/actions/archive.actions";
+import { archiveControlClass } from "@/features/archive/lib/archive-form-styles";
+import { cn } from "@/lib/utils";
 import { formatArchiveFolderOptionLabel } from "@/features/archive/lib/archive-folder-tree";
 import type { ArchiveFolderOption, ArchivedWorkOrderItem } from "@/features/archive/types/archive";
 
@@ -38,12 +41,20 @@ export function ArchiveRecordActions({
   }, [menuOpen]);
 
   return (
-    <div className="relative flex items-center gap-2" ref={menuRef}>
+    <div
+      className={cn(
+        "relative flex items-center gap-2",
+        "max-sm:w-full max-sm:justify-between",
+      )}
+      ref={menuRef}
+    >
       <Link
         href={item.viewHref}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-panel px-3 text-sm font-medium text-foreground"
+        className={cn(
+          "inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl border border-border bg-panel px-3 text-sm font-medium text-foreground transition-colors hover:bg-panel-muted sm:flex-initial",
+        )}
       >
         View
       </Link>
@@ -51,30 +62,30 @@ export function ArchiveRecordActions({
       <button
         type="button"
         onClick={() => setMenuOpen((current) => !current)}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-panel text-muted transition-colors hover:text-foreground"
+        className="inline-flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-lg border border-border bg-panel text-muted transition-colors hover:bg-panel-muted hover:text-foreground"
         aria-label="Open archive record actions"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
 
       {menuOpen ? (
-        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-72 rounded-2xl border border-border bg-panel p-2 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+        <div className="absolute right-0 top-[calc(100%+0.35rem)] z-30 w-[min(100vw-2rem,18rem)] rounded-lg border border-border bg-panel p-1.5 shadow-sm">
           <Link
             href={item.viewHref}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground transition-colors hover:bg-panel-muted"
+            className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-foreground hover:bg-panel-muted"
           >
-            <ExternalLink className="h-4 w-4" />
-            View archived record
+            <ExternalLink className="h-4 w-4 shrink-0" />
+            Open record
           </Link>
 
           {folders.length > 0 ? (
-            <div className="mt-2 border-t border-border px-3 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                Move To Folder
+            <div className="mt-1 border-t border-border pt-2">
+              <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                Move to folder
               </p>
-              <form action={moveArchivedWorkOrderAction} className="mt-3 grid gap-2">
+              <form action={moveArchivedWorkOrderAction} className="grid gap-2 px-0.5">
                 <input type="hidden" name="archivedWorkOrderId" value={item.id} />
                 <input type="hidden" name="spaceId" value={item.spaceId} />
                 <input type="hidden" name="returnTo" value={returnTo} />
@@ -82,7 +93,8 @@ export function ArchiveRecordActions({
                   name="targetFolderId"
                   value={targetFolderId}
                   onChange={(event) => setTargetFolderId(event.target.value)}
-                  className="h-10 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+                  className={archiveControlClass}
+                  aria-label="Destination folder"
                 >
                   {folders.map((folder) => (
                     <option key={folder.id} value={folder.id}>
@@ -90,25 +102,26 @@ export function ArchiveRecordActions({
                     </option>
                   ))}
                 </select>
-                <button
+                <Button
                   type="submit"
+                  variant="brand"
                   disabled={targetFolderId === item.folderId}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="h-10 w-full gap-1.5 text-sm"
                 >
                   <FolderInput className="h-4 w-4" />
                   Move
-                </button>
+                </Button>
               </form>
             </div>
           ) : null}
 
-          <div className="mt-1 border-t border-border pt-2">
+          <div className="mt-1 border-t border-border pt-1">
             <a
               href={`/api/archive/${item.id}/export`}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-panel-muted"
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-foreground hover:bg-panel-muted"
             >
-              <Download className="h-4 w-4" />
-              Export audit workbook
+              <Download className="h-4 w-4 shrink-0" />
+              Export workbook
             </a>
           </div>
         </div>

@@ -372,7 +372,9 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+# Off locally: avoids the Vector + docker_logs source crash loop on some Docker Desktop
+# (Windows) setups where the daemon socket is "network unreachable" from the container.
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"

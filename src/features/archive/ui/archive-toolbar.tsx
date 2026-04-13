@@ -3,11 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Download, Search, SlidersHorizontal } from "lucide-react";
+import {
+  archiveControlClass,
+  archiveSearchInputClass,
+} from "@/features/archive/lib/archive-form-styles";
 import type {
   ArchiveSortOption,
   ArchiveSpaceFilterOption,
   ArchivedWorkOrderItem,
 } from "@/features/archive/types/archive";
+import { cn } from "@/lib/utils";
 
 type ArchiveToolbarProps = Readonly<{
   items: ArchivedWorkOrderItem[];
@@ -86,15 +91,23 @@ export function ArchiveToolbar({
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
   }
 
+  /** Debounce search text only; full param rebuild was clearing `folder`/`space` when props lagged URL. */
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      const nextParams = buildNextParams({});
+      const nextParams = new URLSearchParams(searchParams.toString());
+      if (query.trim().length > 0) {
+        nextParams.set("query", query.trim());
+      } else {
+        nextParams.delete("query");
+      }
       const nextQuery = nextParams.toString();
-      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+      if (nextQuery !== searchParams.toString()) {
+        router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+      }
     }, 220);
 
     return () => window.clearTimeout(timeout);
-  }, [buildNextParams, pathname, router]);
+  }, [pathname, query, router, searchParams]);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -112,7 +125,13 @@ export function ArchiveToolbar({
   }, [menuOpen]);
 
   function updateSort(nextSort: ArchiveSortOption) {
-    const nextParams = buildNextParams({ nextSort });
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (query.trim().length > 0) {
+      nextParams.set("query", query.trim());
+    } else {
+      nextParams.delete("query");
+    }
+    nextParams.set("sort", nextSort);
     replaceWithParams(nextParams);
     setMenuOpen(false);
   }
@@ -167,7 +186,7 @@ export function ArchiveToolbar({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search archived work orders"
-          className="h-11 w-full rounded-xl border border-border bg-panel pl-10 pr-3 text-sm text-foreground outline-none"
+          className={archiveSearchInputClass}
         />
       </label>
 
@@ -175,7 +194,7 @@ export function ArchiveToolbar({
         <button
           type="button"
           onClick={() => setMenuOpen((current) => !current)}
-          className="inline-flex h-11 min-w-[10rem] items-center justify-center gap-2 rounded-xl border border-border bg-panel px-4 text-sm font-medium text-foreground"
+          className="inline-flex h-10 min-w-[10rem] items-center justify-center gap-2 rounded-lg border border-border bg-panel px-4 text-sm font-medium text-foreground hover:bg-panel-muted"
         >
           <SlidersHorizontal className="h-4 w-4" />
           Options
@@ -183,7 +202,7 @@ export function ArchiveToolbar({
         </button>
 
         {menuOpen ? (
-          <div className="absolute right-0 top-12 z-20 w-64 rounded-2xl border border-border bg-panel p-2 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+          <div className="absolute right-0 top-full z-20 mt-1 w-64 rounded-lg border border-border bg-panel p-2 shadow-md">
             <div className="px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
                 Sort
@@ -195,12 +214,12 @@ export function ArchiveToolbar({
                   key={option.value}
                   type="button"
                   onClick={() => updateSort(option.value)}
-                  className={[
-                    "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors",
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
                     sort === option.value
-                      ? "bg-slate-950 text-white"
+                      ? "bg-panel-muted font-medium text-foreground ring-1 ring-border"
                       : "text-foreground hover:bg-panel-muted",
-                  ].join(" ")}
+                  )}
                 >
                   <span>{option.label}</span>
                   {sort === option.value ? <span className="text-xs">Active</span> : null}
@@ -209,32 +228,34 @@ export function ArchiveToolbar({
             </div>
 
             <div className="mt-2 border-t border-border pt-2">
-              <div className="px-3 py-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                  Filter
-                </p>
-              </div>
-              <div className="px-3 pb-2">
-                <label className="block space-y-2">
-                  <span className="text-xs font-medium text-muted">Space</span>
-                  <select
-                    value={selectedSpaceId ?? ""}
-                    onChange={(event) => updateSpaceFilter(event.target.value)}
-                    className="h-10 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
-                  >
-                    <option value="">All spaces</option>
-                    {spaceOptions.map((space) => (
-                      <option key={space.id} value={space.id}>
-                        {space.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="hidden lg:block">
+                <div className="px-3 py-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+                    Filter
+                  </p>
+                </div>
+                <div className="px-3 pb-2">
+                  <label className="block space-y-2">
+                    <span className="text-xs font-medium text-muted">Space</span>
+                    <select
+                      value={selectedSpaceId ?? ""}
+                      onChange={(event) => updateSpaceFilter(event.target.value)}
+                      className={archiveControlClass}
+                    >
+                      <option value="">All spaces</option>
+                      {spaceOptions.map((space) => (
+                        <option key={space.id} value={space.id}>
+                          {space.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={handleExport}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-panel-muted"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-panel-muted"
               >
                 <Download className="h-4 w-4" />
                 Export current view

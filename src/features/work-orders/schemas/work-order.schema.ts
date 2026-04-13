@@ -52,6 +52,19 @@ const nullableCurrentOrFutureDate = z
     "Expiration date cannot be in the past.",
   );
 
+const requiredCurrentOrFutureDate = z
+  .string()
+  .trim()
+  .min(1, "Expiration date is required.")
+  .refine(
+    (value) => /^\d{4}-\d{2}-\d{2}$/.test(value),
+    "Invalid expiration date.",
+  )
+  .refine(
+    (value) => value >= getTodayDateValue(),
+    "Expiration date cannot be in the past.",
+  );
+
 export const createWorkOrderSchema = z.object({
   spaceId: z.string().uuid("Invalid space id."),
   title: z.string().trim().min(2, "Title must be at least 2 characters.").max(160),
@@ -60,8 +73,7 @@ export const createWorkOrderSchema = z.object({
   locationLabel: nullableShortText,
   unitLabel: nullableShortText,
   description: nullableTrimmedText,
-  expirationAt: nullableCurrentOrFutureDate,
-  isPostedToJobMarket: z.boolean().default(false),
+  expirationAt: requiredCurrentOrFutureDate,
 });
 
 export const updateWorkOrderSchema = z.object({

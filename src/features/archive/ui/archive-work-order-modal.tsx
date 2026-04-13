@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import { archiveWorkOrderRecord } from "@/features/archive/actions/archive.actions";
 import { formatArchiveFolderOptionLabel } from "@/features/archive/lib/archive-folder-tree";
+import { archiveControlClass } from "@/features/archive/lib/archive-form-styles";
 import {
   initialArchiveActionState,
   type ArchiveFolderOption,
@@ -63,7 +64,7 @@ export function ArchiveWorkOrderModal({
 
         <FormMessage message={state.error} />
 
-        <div className="rounded-2xl border border-border bg-panel-muted px-4 py-4">
+        <div className="rounded-xl border border-border bg-panel-muted px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
             Work Order
           </p>
@@ -91,7 +92,7 @@ export function ArchiveWorkOrderModal({
           <select
             name="archiveFolderId"
             defaultValue={defaultFolderId}
-            className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+            className={archiveControlClass}
           >
             {folders.map((folder) => (
               <option key={folder.id} value={folder.id}>
@@ -112,7 +113,7 @@ export function ArchiveWorkOrderModal({
                 name="newArchiveFolderName"
                 type="text"
                 placeholder="Folder name"
-                className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+                className={archiveControlClass}
               />
             </label>
 
@@ -121,7 +122,7 @@ export function ArchiveWorkOrderModal({
               <select
                 name="newArchiveParentFolderId"
                 defaultValue=""
-                className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+                className={archiveControlClass}
               >
                 <option value="">Top level</option>
                 {folders.map((folder) => (

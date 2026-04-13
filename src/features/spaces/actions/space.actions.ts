@@ -151,6 +151,7 @@ export async function createSpace(
 
   revalidatePath("/");
   revalidatePath(`/space/${createdSpace.id}`);
+
   redirect(`/space/${createdSpace.id}`);
 }
 

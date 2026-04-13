@@ -106,8 +106,10 @@ function mapSpaceRow(
   };
 }
 
-export async function getSpacesForUser() {
-  const { supabase, user } = await requireAuthenticatedAppUser();
+type AuthenticatedAppUser = Awaited<ReturnType<typeof requireAuthenticatedAppUser>>;
+
+export async function getSpacesForUser(authenticated?: AuthenticatedAppUser) {
+  const { supabase, user } = authenticated ?? (await requireAuthenticatedAppUser());
   let membershipQuery = await supabase
     .from("space_memberships")
     .select("space_id, role")

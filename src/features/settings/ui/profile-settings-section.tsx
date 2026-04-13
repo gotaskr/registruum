@@ -77,24 +77,27 @@ export function ProfileSettingsSection({
     Boolean(profile.companyName) || Boolean(companyWebsiteHref) || companySocials.length > 0;
 
   return (
-    <div className="space-y-5">
-      <section className="overflow-hidden rounded-[2rem] border border-border bg-panel shadow-[0_18px_36px_rgba(15,23,42,0.05)] dark:shadow-none">
-        <div className="border-b border-border bg-panel-muted px-6 py-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+    <div className="space-y-4 sm:space-y-5">
+      <section className="overflow-hidden rounded-xl border border-border bg-panel shadow-sm sm:rounded-[2rem] sm:shadow-[0_18px_36px_rgba(15,23,42,0.05)] dark:shadow-none dark:sm:shadow-none">
+        <div className="border-b border-border bg-panel-muted px-4 py-4 sm:px-6 sm:py-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-[11px] sm:tracking-[0.24em]">
             Profile
           </p>
-          <h2 className="mt-2 text-[1.6rem] font-semibold tracking-tight text-foreground">
+          <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-foreground sm:mt-2 sm:text-[1.6rem]">
             Registruum identity hub
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+          <p className="mt-2 hidden max-w-2xl text-sm leading-6 text-muted sm:block">
             Manage the identity, company representation, and signature surfaces that follow you across spaces, work orders, and audit history.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted sm:hidden">
+            Identity, company presence, and signatures across spaces and work orders.
           </p>
         </div>
 
-        <div className="grid gap-5 px-6 py-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
-          <div className="rounded-[1.6rem] border border-border bg-panel p-5">
-            <div className="flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[1.5rem] border border-border bg-accent-soft text-xl font-semibold text-accent">
+        <div className="grid gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
+          <div className="rounded-xl border border-border bg-panel p-4 sm:rounded-[1.6rem] sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-accent-soft text-lg font-semibold text-accent sm:h-20 sm:w-20 sm:rounded-[1.5rem] sm:text-xl">
                 {profile.avatarUrl ? (
                   <Image
                     src={profile.avatarUrl}
@@ -109,15 +112,17 @@ export function ProfileSettingsSection({
                 )}
               </div>
 
-              <div className="min-w-0">
-                <h3 className="truncate text-2xl font-semibold text-foreground">{profile.fullName}</h3>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
-                  <span className="inline-flex items-center gap-2 rounded-full bg-panel-muted px-3 py-1.5">
-                    <Mail className="h-4 w-4 text-accent" />
-                    {profile.email}
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-semibold leading-snug text-foreground sm:text-2xl">
+                  {profile.fullName}
+                </h3>
+                <div className="mt-2 flex flex-col gap-2 text-sm text-muted sm:flex-row sm:flex-wrap sm:items-center">
+                  <span className="inline-flex min-w-0 items-center gap-2 rounded-full bg-panel-muted px-3 py-1.5">
+                    <Mail className="h-4 w-4 shrink-0 text-accent" />
+                    <span className="truncate">{profile.email}</span>
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-success-text">
-                    <CheckCircle2 className="h-4 w-4" />
+                  <span className="inline-flex w-fit items-center gap-2 rounded-full bg-success-soft px-3 py-1.5 text-success-text">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
                     {profile.emailVerifiedAt ? "Verified account" : "Verification pending"}
                   </span>
                 </div>
@@ -125,15 +130,15 @@ export function ProfileSettingsSection({
             </div>
 
             {hasCompanyPresence ? (
-              <div className="mt-5 rounded-[1.5rem] border border-border bg-panel-muted p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+              <div className="mt-4 rounded-xl border border-border bg-panel-muted p-3 sm:mt-5 sm:rounded-[1.5rem] sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted sm:text-[11px] sm:tracking-[0.22em]">
                   Company Presence
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3">
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                   {profile.companyName ? (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-panel px-3 py-2 text-sm font-semibold text-foreground shadow-[0_10px_18px_rgba(15,23,42,0.04)] dark:shadow-none">
-                      <Sparkles className="h-4 w-4 text-accent" />
-                      {profile.companyName}
+                    <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-panel px-3 py-2 text-sm font-semibold text-foreground shadow-sm dark:shadow-none">
+                      <Sparkles className="h-4 w-4 shrink-0 text-accent" />
+                      <span className="truncate">{profile.companyName}</span>
                     </span>
                   ) : null}
 
@@ -142,18 +147,18 @@ export function ProfileSettingsSection({
                       href={companyWebsiteHref}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-border bg-panel px-3 py-2 text-sm font-medium text-accent shadow-[0_10px_18px_rgba(15,23,42,0.04)] transition hover:bg-accent-soft dark:shadow-none"
+                      className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-panel px-3 py-2 text-sm font-medium text-accent transition hover:bg-accent-soft dark:shadow-none"
                     >
-                      <Globe className="h-4 w-4" />
-                      <span className="max-w-[15rem] truncate">
+                      <Globe className="h-4 w-4 shrink-0" />
+                      <span className="min-w-0 max-w-[min(100%,15rem)] truncate sm:max-w-[15rem]">
                         {profile.companyWebsite}
                       </span>
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                     </a>
                   ) : null}
 
                   {companySocials.length > 0 ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {companySocials.map((social) => (
                         <a
                           key={social.label}
@@ -162,7 +167,7 @@ export function ProfileSettingsSection({
                           rel="noreferrer"
                           aria-label={social.label}
                           title={social.label}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-panel text-accent shadow-[0_10px_18px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:bg-accent-soft dark:shadow-none"
+                          className="inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-full border border-border bg-panel text-accent shadow-sm transition active:scale-[0.98] hover:bg-accent-soft dark:shadow-none"
                         >
                           {social.icon}
                         </a>
@@ -174,31 +179,31 @@ export function ProfileSettingsSection({
             ) : null}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-            <div className="rounded-[1.5rem] border border-border bg-panel-muted px-4 py-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-1">
+            <div className="rounded-xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.5rem] sm:px-4 sm:py-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.22em]">
                 User Tag
               </p>
-              <p className="mt-3 font-mono text-sm font-semibold tracking-[0.14em] text-foreground">
+              <p className="mt-2 break-all font-mono text-xs font-semibold tracking-[0.12em] text-foreground sm:mt-3 sm:text-sm sm:tracking-[0.14em]">
                 {profile.userTag}
               </p>
             </div>
-            <div className="rounded-[1.5rem] border border-border bg-panel-muted px-4 py-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+            <div className="rounded-xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.5rem] sm:px-4 sm:py-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.22em]">
                 Company Mode
               </p>
-              <p className="mt-3 text-sm font-medium text-foreground">
+              <p className="mt-2 text-sm font-medium text-foreground sm:mt-3">
                 {profile.representsCompany ? "Enabled" : "Personal"}
               </p>
             </div>
-            <div className="rounded-[1.5rem] border border-border bg-panel-muted px-4 py-4">
+            <div className="rounded-xl border border-border bg-panel-muted px-3 py-3 sm:col-span-2 sm:rounded-[1.5rem] sm:px-4 sm:py-4 lg:col-span-1">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-accent" />
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+                <Sparkles className="h-4 w-4 shrink-0 text-accent" />
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.22em]">
                   Presence
                 </p>
               </div>
-              <p className="mt-3 text-sm font-medium text-foreground">
+              <p className="mt-2 text-sm font-medium leading-snug text-foreground sm:mt-3">
                 {profile.companyName ?? "Build out your account identity"}
               </p>
             </div>

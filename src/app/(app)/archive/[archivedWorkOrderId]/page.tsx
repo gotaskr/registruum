@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getCurrentProfile } from "@/features/auth/api/profiles";
@@ -5,6 +6,7 @@ import {
   getArchivedWorkOrderDetails,
   getArchivePageData,
 } from "@/features/archive/api/archive";
+import { ArchiveRecordBottomNav } from "@/features/archive/ui/archive-record-bottom-nav";
 import { ArchiveRecordDetailView } from "@/features/archive/ui/archive-record-detail-view";
 import { ArchiveSidebar } from "@/features/archive/ui/archive-sidebar";
 import { getSpacesForUser } from "@/features/spaces/api/spaces";
@@ -49,8 +51,19 @@ export default async function ArchiveRecordPage({
           allArchiveCount={archiveData.totalCount}
         />
       }
+      mobileBottomNav={
+        <Suspense fallback={null}>
+          <ArchiveRecordBottomNav
+            archivedWorkOrderId={archivedWorkOrderId}
+            spaceId={details.spaceId}
+            folderId={details.folderId}
+          />
+        </Suspense>
+      }
     >
-      <ArchiveRecordDetailView details={details} />
+      <Suspense fallback={null}>
+        <ArchiveRecordDetailView details={details} />
+      </Suspense>
     </DashboardShell>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { MoreHorizontal, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { deleteSpace } from "@/features/spaces/actions/space.actions";
 import {
   initialSpaceActionState,
 } from "@/features/spaces/types/space-action-state";
+import { cn } from "@/lib/utils";
 
 type SpaceDeleteMenuProps = Readonly<{
   spaceId: string;
@@ -33,13 +34,29 @@ export function SpaceDeleteMenu({
     }
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target)) {
+        return;
+      }
+      // Mobile sheet lives outside menuRef; ignore clicks on it (handled by sheet UI).
+      if ((target as HTMLElement).closest?.("[data-space-actions-sheet]")) {
+        return;
+      }
+      setIsMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         setIsMenuOpen(false);
       }
     };
 
     window.addEventListener("mousedown", handlePointerDown);
-    return () => window.removeEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isMenuOpen]);
 
   return (
@@ -48,28 +65,84 @@ export function SpaceDeleteMenu({
         <button
           type="button"
           onClick={() => setIsMenuOpen((current) => !current)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-panel text-muted transition-colors hover:bg-panel-muted hover:text-foreground"
+          className={cn(
+            "inline-flex touch-manipulation items-center justify-center rounded-xl border border-border bg-panel text-muted transition-colors hover:bg-panel-muted hover:text-foreground",
+            "h-11 w-11 min-h-[44px] min-w-[44px] sm:h-10 sm:w-10 sm:min-h-0 sm:min-w-0",
+          )}
+          aria-expanded={isMenuOpen}
+          aria-haspopup="dialog"
           aria-label="Open space actions"
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="h-5 w-5 sm:h-4 sm:w-4" />
         </button>
 
         {isMenuOpen ? (
-          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-20 w-44 rounded-2xl border border-border bg-panel p-1.5 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+          <div
+            className="absolute right-0 top-[calc(100%+0.5rem)] z-20 hidden w-44 rounded-xl border border-border bg-panel p-1.5 shadow-lg lg:block"
+            role="menu"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setIsModalOpen(true);
+                setIsMenuOpen(false);
+              }}
+              className="flex w-full min-h-10 items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50"
+            >
+              <Trash2 className="h-4 w-4 shrink-0" />
+              <span>Delete space</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {isMenuOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden" role="presentation">
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label="Close menu"
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          <div
+            data-space-actions-sheet
+            className="absolute inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-50 rounded-t-2xl border border-border bg-panel px-4 pb-4 pt-3 shadow-[0_-12px_40px_rgba(15,23,42,0.12)]"
+            role="dialog"
+            aria-label="Space actions"
+          >
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden />
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                Space actions
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen(false)}
+                className="inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-lg border border-border bg-panel-muted text-foreground"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => {
                 setIsModalOpen(true);
                 setIsMenuOpen(false);
               }}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50"
+              className="flex w-full min-h-12 items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-left text-base font-medium text-rose-800 transition-colors active:bg-rose-100"
             >
-              <Trash2 className="h-4 w-4 shrink-0" />
-              <span>Delete Space</span>
+              <Trash2 className="h-5 w-5 shrink-0" />
+              <span>Delete this space…</span>
             </button>
+            <p className="mt-2 px-1 text-xs leading-relaxed text-muted">
+              You will confirm on the next step. This cannot be undone.
+            </p>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <Modal
         open={isModalOpen}

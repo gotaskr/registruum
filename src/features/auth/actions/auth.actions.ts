@@ -9,10 +9,50 @@ import {
   type AuthActionState,
 } from "@/features/auth/types/auth-action-state";
 import { syncProfileFromAuthUser } from "@/features/auth/api/profiles";
+import { supabaseUrl } from "@/lib/supabase/env";
 
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+function formatAuthReachabilityError(message: string) {
+  const lower = message.toLowerCase();
+  const looksLikeNetwork =
+    lower === "fetch failed" ||
+    lower.includes("failed to fetch") ||
+    lower.includes("network") ||
+    lower.includes("econnrefused") ||
+    lower.includes("socket") ||
+    lower.includes("und_err_socket");
+
+  if (!looksLikeNetwork) {
+    return message;
+  }
+
+  const target = supabaseUrl;
+  const isLocal =
+    target.includes("127.0.0.1") ||
+    target.includes("localhost") ||
+    target.includes("192.168.") ||
+    target.includes("10.");
+
+  if (isLocal) {
+    return [
+      "The app could not reach your local Supabase API.",
+      `Configured URL: ${target}`,
+      "Restart the stack: npx supabase stop && npx supabase start (needed after changing supabase/config.toml).",
+      "Restart Next.js (npm run dev) so it reloads .env.local.",
+      "Diagnostics: npm run verify:local-supabase — if you see GoTrue JSON, Supabase is healthy inside Docker and the problem is host port publishing.",
+      "On Windows with Docker Desktop: fully quit Docker Desktop and start it again (fixes empty replies / fetch failed to 127.0.0.1:54321). Prefer http://127.0.0.1:54321 over localhost in NEXT_PUBLIC_SUPABASE_URL.",
+    ].join(" ");
+  }
+
+  return [
+    "The app could not reach Supabase (network error).",
+    `Configured URL: ${target}`,
+    "Check the URL, your internet connection, and whether a firewall or VPN is blocking outbound HTTPS.",
+  ].join(" ");
 }
 
 export async function signIn(
@@ -33,14 +73,25 @@ export async function signIn(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
-    password: parsed.data.password,
-  });
 
-  if (error) {
+  let data: Awaited<
+    ReturnType<typeof supabase.auth.signInWithPassword>
+  >["data"];
+  try {
+    const result = await supabase.auth.signInWithPassword({
+      email: parsed.data.email,
+      password: parsed.data.password,
+    });
+    data = result.data;
+    if (result.error) {
+      return {
+        error: formatAuthReachabilityError(result.error.message),
+      };
+    }
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
     return {
-      error: error.message,
+      error: formatAuthReachabilityError(message),
     };
   }
 
@@ -77,20 +128,28 @@ export async function signUp(
     callbackUrl.searchParams.set("next", parsed.data.next);
   }
 
-  const { data, error } = await supabase.auth.signUp({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    options: {
-      emailRedirectTo: callbackUrl.toString(),
-      data: {
-        full_name: parsed.data.fullName,
+  let data: Awaited<ReturnType<typeof supabase.auth.signUp>>["data"];
+  try {
+    const result = await supabase.auth.signUp({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      options: {
+        emailRedirectTo: callbackUrl.toString(),
+        data: {
+          full_name: parsed.data.fullName,
+        },
       },
-    },
-  });
-
-  if (error) {
+    });
+    data = result.data;
+    if (result.error) {
+      return {
+        error: formatAuthReachabilityError(result.error.message),
+      };
+    }
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
     return {
-      error: error.message,
+      error: formatAuthReachabilityError(message),
     };
   }
 

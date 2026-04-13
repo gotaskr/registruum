@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { SettingsBottomNav } from "@/components/layout/settings-bottom-nav";
 import { getCurrentProfile } from "@/features/auth/api/profiles";
 import { getSettingsInvitations } from "@/features/settings/api/invitations";
 import { resolveThemePreference, themeCookieName } from "@/features/settings/lib/preferences";
@@ -25,6 +26,9 @@ export default async function SettingsPage() {
       spaces={spaces}
       profile={profile}
       sidebar={<SettingsSidebar canManagePassword={profile.canManagePassword} />}
+      mobileBottomNav={
+        <SettingsBottomNav canManagePassword={profile.canManagePassword} />
+      }
     >
       <SettingsDashboard
         profile={profile}

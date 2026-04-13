@@ -70,64 +70,68 @@ export function PreferencesSettingsSection({
       title="Workspace defaults"
       description="Choose how Registruum should look and behave every time you come back."
     >
-      <form action={formAction} className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-[1.4rem] border border-border bg-panel-muted px-4 py-4">
+      <form action={formAction} className="space-y-3 sm:space-y-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+          <div className="rounded-xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.4rem] sm:px-4 sm:py-4">
             <div className="flex items-center gap-2">
-              <MoonStar className="h-4 w-4 text-accent" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+              <MoonStar className="h-4 w-4 shrink-0 text-accent" />
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.22em]">
                 Theme
               </p>
             </div>
-            <p className="mt-3 text-sm font-medium capitalize text-foreground">{themePreference}</p>
+            <p className="mt-2 text-sm font-medium capitalize text-foreground sm:mt-3">
+              {themePreference}
+            </p>
           </div>
-          <div className="rounded-[1.4rem] border border-border bg-panel-muted px-4 py-4">
+          <div className="rounded-xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.4rem] sm:px-4 sm:py-4">
             <div className="flex items-center gap-2">
-              <LayoutGrid className="h-4 w-4 text-accent" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+              <LayoutGrid className="h-4 w-4 shrink-0 text-accent" />
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.22em]">
                 Landing
               </p>
             </div>
-            <p className="mt-3 text-sm font-medium text-foreground">
+            <p className="mt-2 text-sm font-medium text-foreground sm:mt-3">
               {landingPageLabels[defaultLandingPage]}
             </p>
           </div>
-          <div className="rounded-[1.4rem] border border-border bg-panel-muted px-4 py-4">
+          <div className="rounded-xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.4rem] sm:px-4 sm:py-4">
             <div className="flex items-center gap-2">
-              <TimerReset className="h-4 w-4 text-accent" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+              <TimerReset className="h-4 w-4 shrink-0 text-accent" />
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.22em]">
                 Timezone
               </p>
             </div>
-            <p className="mt-3 text-sm font-medium text-foreground">{timezone}</p>
+            <p className="mt-2 break-all text-sm font-medium leading-snug text-foreground sm:mt-3">
+              {timezone}
+            </p>
           </div>
         </div>
 
-        <div className="rounded-[1.6rem] border border-border bg-panel-muted px-4 py-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-base font-semibold text-foreground">Theme</p>
-              <p className="mt-1 text-sm leading-6 text-muted">
+        <div className="rounded-2xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.6rem] sm:px-4 sm:py-4">
+          <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground sm:text-base">Theme</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted sm:text-sm sm:leading-6">
                 Switch the application mood across the workspace shell.
               </p>
             </div>
-            <div className="inline-flex rounded-2xl border border-border bg-panel p-1">
+            <div className="flex w-full shrink-0 rounded-xl border border-border bg-panel p-1 sm:w-auto sm:rounded-2xl">
               {(["light", "dark"] as const).map((themeOption) => (
                 <button
                   key={themeOption}
                   type="button"
                   onClick={() => setThemePreference(themeOption)}
                   className={cn(
-                    "inline-flex items-center gap-2 rounded-[1rem] px-4 py-2 text-sm font-medium transition-colors",
+                    "inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:min-h-0 sm:flex-none sm:rounded-[1rem] sm:px-4 sm:py-2",
                     themePreference === themeOption
                       ? "bg-accent text-white shadow-[0_12px_24px_rgba(31,95,255,0.22)]"
                       : "text-muted hover:bg-panel-muted hover:text-foreground",
                   )}
                 >
                   {themeOption === "light" ? (
-                    <SunMedium className="h-4 w-4" />
+                    <SunMedium className="h-4 w-4 shrink-0" />
                   ) : (
-                    <MoonStar className="h-4 w-4" />
+                    <MoonStar className="h-4 w-4 shrink-0" />
                   )}
                   {themeOption === "light" ? "Light" : "Dark"}
                 </button>
@@ -141,10 +145,10 @@ export function PreferencesSettingsSection({
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-2 rounded-[1.6rem] border border-border bg-panel-muted px-4 py-4">
-            <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-              <LayoutGrid className="h-4 w-4 text-accent" />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+          <label className="space-y-2 rounded-2xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.6rem] sm:px-4 sm:py-4">
+            <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.24em]">
+              <LayoutGrid className="h-4 w-4 shrink-0 text-accent" />
               Default Landing Page
             </span>
             <select
@@ -153,7 +157,7 @@ export function PreferencesSettingsSection({
               onChange={(event) =>
                 setDefaultLandingPage(event.target.value as DefaultLandingPage)
               }
-              className="h-12 w-full rounded-2xl border border-border bg-panel px-4 text-sm text-foreground outline-none"
+              className="h-12 w-full rounded-xl border border-border bg-panel px-4 text-sm text-foreground outline-none transition focus:border-accent sm:rounded-2xl"
             >
               {landingPageOptions.map((option) => (
                 <option key={option} value={option}>
@@ -163,16 +167,16 @@ export function PreferencesSettingsSection({
             </select>
           </label>
 
-          <label className="space-y-2 rounded-[1.6rem] border border-border bg-panel-muted px-4 py-4">
-            <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-              <TimerReset className="h-4 w-4 text-accent" />
+          <label className="space-y-2 rounded-2xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.6rem] sm:px-4 sm:py-4">
+            <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.24em]">
+              <TimerReset className="h-4 w-4 shrink-0 text-accent" />
               Timezone
             </span>
             <select
               name="timezone"
               value={timezone}
               onChange={(event) => setTimezone(event.target.value as SupportedTimezone)}
-              className="h-12 w-full rounded-2xl border border-border bg-panel px-4 text-sm text-foreground outline-none"
+              className="h-12 w-full rounded-xl border border-border bg-panel px-4 text-sm text-foreground outline-none transition focus:border-accent sm:rounded-2xl"
             >
               {timezoneOptions.map((option) => (
                 <option key={option} value={option}>
@@ -183,17 +187,17 @@ export function PreferencesSettingsSection({
           </label>
         </div>
 
-        <div className="md:max-w-[26rem]">
-          <label className="block space-y-2 rounded-[1.6rem] border border-border bg-panel-muted px-4 py-4">
-            <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-              <CalendarDays className="h-4 w-4 text-accent" />
+        <div className="w-full md:max-w-[26rem]">
+          <label className="block space-y-2 rounded-2xl border border-border bg-panel-muted px-3 py-3 sm:rounded-[1.6rem] sm:px-4 sm:py-4">
+            <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted sm:text-[11px] sm:tracking-[0.24em]">
+              <CalendarDays className="h-4 w-4 shrink-0 text-accent" />
               Date Format
             </span>
             <select
               name="dateFormat"
               value={dateFormat}
               onChange={(event) => setDateFormat(event.target.value as SupportedDateFormat)}
-              className="h-12 w-full rounded-2xl border border-border bg-panel px-4 text-sm text-foreground outline-none"
+              className="h-12 w-full rounded-xl border border-border bg-panel px-4 text-sm text-foreground outline-none transition focus:border-accent sm:rounded-2xl"
             >
               {dateFormatOptions.map((option) => (
                 <option key={option} value={option}>
@@ -209,11 +213,11 @@ export function PreferencesSettingsSection({
           tone={state.error ? "error" : "info"}
         />
 
-        <div className="flex justify-end border-t border-border pt-4">
+        <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row sm:justify-end sm:pt-4">
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex h-11 items-center justify-center rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60"
+            className="inline-flex h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60 sm:h-11 sm:w-auto sm:rounded-2xl"
           >
             {isPending ? "Saving..." : "Save Preferences"}
           </button>

@@ -4,17 +4,14 @@ import {
   Archive,
   ArrowLeft,
   BriefcaseBusiness,
-  FileText,
-  LayoutDashboard,
-  Logs,
   MapPin,
-  MessageSquareText,
   Settings,
   UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
+import { WORK_ORDER_CONTEXT_NAV } from "@/components/layout/context-nav-config";
 import { SidebarItem } from "@/components/ui/sidebar-item";
 import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 import { getWorkOrderPermissionSet } from "@/features/permissions/lib/work-order-permissions";
@@ -37,7 +34,7 @@ import {
 } from "@/lib/route-utils";
 import { formatWorkOrderLocation } from "@/lib/utils";
 import type { Space } from "@/types/space";
-import type { WorkOrder, WorkOrderModule } from "@/types/work-order";
+import type { WorkOrder } from "@/types/work-order";
 
 type ContextSidebarProps = Readonly<{
   space: Space;
@@ -45,19 +42,6 @@ type ContextSidebarProps = Readonly<{
   archiveFolders: ArchiveFolderOption[];
   defaultArchiveFolderId: string;
 }>;
-
-const workOrderNavigation: ReadonlyArray<{
-  slug: WorkOrderModule;
-  label: string;
-  icon: typeof LayoutDashboard;
-}> = [
-  { slug: "overview", label: "Overview", icon: LayoutDashboard },
-  { slug: "chat", label: "Chats", icon: MessageSquareText },
-  { slug: "members", label: "Members", icon: UsersRound },
-  { slug: "documents", label: "Documents", icon: FileText },
-  { slug: "logs", label: "Logs", icon: Logs },
-  { slug: "settings", label: "Settings", icon: Settings },
-];
 
 export function ContextSidebar({
   space,
@@ -109,9 +93,14 @@ export function ContextSidebar({
             </p>
           </div>
 
-          {(permissions.canChangeLifecycleStatus || permissions.canArchiveWorkOrder) &&
-          archiveFolders.length > 0 &&
-          defaultArchiveFolderId ? (
+          {(permissions.canChangeLifecycleStatus &&
+            !permissions.isCompleted &&
+            !permissions.isArchived) ||
+          (permissions.canArchiveWorkOrder &&
+            permissions.isCompleted &&
+            !permissions.isArchived &&
+            archiveFolders.length > 0 &&
+            defaultArchiveFolderId) ? (
             <div className="mt-5 flex flex-wrap gap-2">
               {permissions.canChangeLifecycleStatus &&
               !permissions.isCompleted &&
@@ -125,7 +114,9 @@ export function ContextSidebar({
               ) : null}
               {permissions.canArchiveWorkOrder &&
               permissions.isCompleted &&
-              !permissions.isArchived ? (
+              !permissions.isArchived &&
+              archiveFolders.length > 0 &&
+              defaultArchiveFolderId ? (
                 <WorkOrderSidebarArchiveAction
                   workOrderId={currentWorkOrder.id}
                   spaceId={space.id}
@@ -145,7 +136,7 @@ export function ContextSidebar({
             </p>
           </div>
           <div className="space-y-2">
-          {workOrderNavigation.map((item) => (
+          {WORK_ORDER_CONTEXT_NAV.map((item) => (
             <SidebarItem
               key={item.slug}
               label={item.label}

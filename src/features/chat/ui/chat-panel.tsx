@@ -25,6 +25,7 @@ import { createWorkOrderMessageSchema } from "@/features/chat/schemas/chat.schem
 import { ChatEmptyState } from "@/features/chat/ui/chat-empty-state";
 import { ChatHeader } from "@/features/chat/ui/chat-header";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 import { getValidFiles } from "@/lib/supabase/storage";
 import type { Message } from "@/types/message";
 import type { WorkOrderStatus } from "@/types/work-order";
@@ -40,6 +41,8 @@ type ChatPanelProps = Readonly<{
   actorName: string;
   canSendMessage: boolean;
   lockedMessage?: string;
+  /** When true, skip the in-panel title row (work order shell already shows name + status). */
+  embeddedInWorkOrderShell?: boolean;
 }>;
 
 const BOTTOM_THRESHOLD_PX = 32;
@@ -160,6 +163,7 @@ export function ChatPanel({
   actorName,
   canSendMessage,
   lockedMessage,
+  embeddedInWorkOrderShell = false,
 }: ChatPanelProps) {
   const [renderedMessages, setRenderedMessages] = useState<Message[]>(() => messages);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -377,22 +381,34 @@ export function ChatPanel({
   };
 
   return (
-    <section className="grid h-full min-h-0 grid-rows-[auto_1fr_auto]">
-      <ChatHeader
-        workOrderName={workOrderName}
-        status={status}
-        memberCount={memberCount}
-      />
+    <section
+      className={
+        embeddedInWorkOrderShell
+          ? "flex h-full min-h-0 min-w-0 flex-col"
+          : "grid h-full min-h-0 grid-rows-[auto_1fr_auto]"
+      }
+    >
+      {embeddedInWorkOrderShell ? null : (
+        <ChatHeader
+          workOrderName={workOrderName}
+          status={status}
+          memberCount={memberCount}
+        />
+      )}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="min-h-0 overflow-y-auto px-6 py-5"
+        className={cn(
+          "min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain",
+          "px-3 pt-2 pb-2 sm:px-5 sm:pt-4 sm:pb-3",
+        )}
       >
         <FormMessage
           message={error ?? chatDisabledReason}
           tone={error ? "error" : "info"}
+          className="mb-2 rounded-xl px-3 py-2.5 text-xs leading-snug shadow-none sm:mb-3 sm:rounded-[1.1rem] sm:px-4 sm:py-3 sm:text-sm sm:leading-6"
         />
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {renderedMessages.length > 0 ? (
             renderedMessages.map((message) => (
               <ChatMessageItem key={message.id} message={message} />

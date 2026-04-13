@@ -31,7 +31,7 @@ export function MessageAttachmentList({
   isCurrentUser,
 }: MessageAttachmentListProps) {
   return (
-    <div className="mt-3 space-y-2">
+    <div className="mt-2 space-y-2 sm:mt-3">
       {attachments.map((attachment) => (
         <a
           key={attachment.id}
@@ -52,7 +52,7 @@ export function MessageAttachmentList({
               width={720}
               height={288}
               unoptimized
-              className="h-36 w-full object-cover"
+              className="h-32 w-full object-cover sm:h-36"
             />
           ) : null}
           <div className="flex items-center gap-3 px-3 py-3 text-xs">

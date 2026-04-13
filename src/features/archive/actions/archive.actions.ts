@@ -340,7 +340,6 @@ export async function archiveWorkOrderRecord(
   });
 
   revalidatePath("/archive");
-  revalidatePath("/m/archive");
   revalidatePath(`/space/${spaceId}`);
   revalidatePath(`/space/${spaceId}/archive`);
   revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/overview`);
@@ -400,7 +399,6 @@ export async function createArchiveFolderAction(formData: FormData) {
   });
 
   revalidatePath("/archive");
-  revalidatePath("/m/archive");
   revalidatePath(`/space/${scope.spaceId}/archive`);
   redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${folder.id}`));
 }
@@ -450,7 +448,6 @@ export async function renameArchiveFolderAction(formData: FormData) {
   });
 
   revalidatePath("/archive");
-  revalidatePath("/m/archive");
   revalidatePath(`/space/${scope.spaceId}/archive`);
   redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${folderId}`));
 }
@@ -552,7 +549,6 @@ export async function moveArchivedWorkOrderAction(formData: FormData) {
   });
 
   revalidatePath("/archive");
-  revalidatePath("/m/archive");
   revalidatePath(`/space/${scope.spaceId}/archive`);
   redirect(getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${targetFolder.id}`));
 }
@@ -677,7 +673,6 @@ export async function deleteArchiveFolderAction(formData: FormData) {
   });
 
   revalidatePath("/archive");
-  revalidatePath("/m/archive");
   revalidatePath(`/space/${scope.spaceId}/archive`);
   redirect(
     getReturnPath(returnTo, `/space/${scope.spaceId}/archive?folder=${defaultFolder.id}`),

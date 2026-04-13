@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getVisibleSettingsSections,
+  SETTINGS_BILLING_SECTION_ENABLED,
   settingsSections,
   type SettingsSectionId,
 } from "@/features/settings/lib/settings-sections";
@@ -49,7 +50,9 @@ export function SettingsSectionView({
   const activeSection =
     requestedSection === "security" && !canManagePassword
       ? "profile"
-      : requestedSection;
+      : requestedSection === "subscription" && !SETTINGS_BILLING_SECTION_ENABLED
+        ? "profile"
+        : requestedSection;
 
   const activeSectionMeta = useMemo(
     () =>
@@ -69,26 +72,26 @@ export function SettingsSectionView({
       <PreferencesSettingsSection profile={profile} currentTheme={currentTheme} />
     ) : activeSection === "notifications" ? (
       <NotificationsSettingsSection profile={profile} />
-    ) : activeSection === "subscription" ? (
+    ) : activeSection === "subscription" && SETTINGS_BILLING_SECTION_ENABLED ? (
       <SubscriptionSettingsSection />
     ) : (
       <SessionSettingsSection session={session} />
     );
 
   return (
-    <section className="px-6 py-6 lg:px-8">
-      <div className="mb-5 rounded-[1.75rem] border border-border bg-panel px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+    <section className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+      <div className="mb-4 rounded-xl border border-border bg-panel px-4 py-4 shadow-sm sm:mb-5 sm:rounded-[1.75rem] sm:px-6 sm:py-5 sm:shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted sm:text-[11px] sm:tracking-[0.24em]">
           {activeSectionMeta?.label ?? "Profile"}
         </p>
-        <p className="mt-2 text-sm leading-6 text-muted">
+        <p className="mt-1.5 text-sm leading-6 text-muted sm:mt-2">
           Configure how your Registruum identity and account surfaces behave.
         </p>
       </div>
 
       <div
         key={activeSection}
-        className="grid gap-4 animate-in fade-in-0 duration-200"
+        className="grid gap-3 animate-in fade-in-0 duration-200 sm:gap-4"
       >
         {activeSectionContent}
       </div>

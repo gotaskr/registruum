@@ -26,7 +26,12 @@ import type {
   ArchivedWorkOrderItem,
 } from "@/features/archive/types/archive";
 import { getSpaceTypeLabel } from "@/features/spaces/lib/space-types";
+import {
+  archiveControlClass,
+  archiveSearchInputClass,
+} from "@/features/archive/lib/archive-form-styles";
 import { getArchiveRecordHref } from "@/lib/route-utils";
+import { cn } from "@/lib/utils";
 import type { Space } from "@/types/space";
 
 type SpaceArchiveScreenProps = Readonly<{
@@ -62,9 +67,8 @@ export function SpaceArchiveScreen({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchQuery);
-  const [isArchiveOpen, setIsArchiveOpen] = useState(
-    Boolean(selectedFolderId || searchQuery),
-  );
+  /** Default open so mobile users reach folders and records without an extra tap. */
+  const [isArchiveOpen, setIsArchiveOpen] = useState(true);
 
   const customFolders = useMemo(
     () => folders.filter((folder) => !folder.isSystemDefault),
@@ -87,10 +91,50 @@ export function SpaceArchiveScreen({
   );
   const spaceTypeLabel = getSpaceTypeLabel(space.spaceType);
 
+  /** Custom folders in tree order for the mobile folder picker. */
+  const mobileCustomFolderOrder = useMemo(() => {
+    if (customFolders.length === 0) {
+      return [];
+    }
+
+    const folderById = new Map(customFolders.map((folder) => [folder.id, folder]));
+    const childrenByParent = new Map<string | null, typeof customFolders>();
+
+    for (const folder of customFolders) {
+      const parentId =
+        folder.parentId && folderById.has(folder.parentId) ? folder.parentId : null;
+      const siblings = childrenByParent.get(parentId) ?? [];
+
+      siblings.push(folder);
+      childrenByParent.set(parentId, siblings);
+    }
+
+    for (const [, siblings] of childrenByParent) {
+      siblings.sort((left, right) => left.name.localeCompare(right.name));
+    }
+
+    const ordered: typeof customFolders = [];
+
+    function visit(parentId: string | null) {
+      const children = childrenByParent.get(parentId) ?? [];
+
+      for (const child of children) {
+        ordered.push(child);
+        visit(child.id);
+      }
+    }
+
+    visit(null);
+    return ordered;
+  }, [customFolders]);
+
   useEffect(() => {
     setQuery(searchQuery);
   }, [searchQuery]);
 
+  /** Debounce search text into the URL. Do not rewrite `folder` or `sort` from props here — after
+   * `router.push`, `useSearchParams()` updates immediately but `selectedFolderId` / `sort` from the
+   * server can lag one frame, which was clearing `folder` and resetting the folder dropdown. */
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       const nextParams = new URLSearchParams(searchParams.toString());
@@ -101,19 +145,14 @@ export function SpaceArchiveScreen({
         nextParams.delete("query");
       }
 
-      if (selectedFolderId) {
-        nextParams.set("folder", selectedFolderId);
-      } else {
-        nextParams.delete("folder");
-      }
-
-      nextParams.set("sort", sort);
       const nextQuery = nextParams.toString();
-      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+      if (nextQuery !== searchParams.toString()) {
+        router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+      }
     }, 220);
 
     return () => window.clearTimeout(timeout);
-  }, [pathname, query, router, searchParams, selectedFolderId, sort]);
+  }, [pathname, query, router, searchParams]);
 
   function updateSort(nextSort: ArchiveSortOption) {
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -122,12 +161,6 @@ export function SpaceArchiveScreen({
       nextParams.set("query", query.trim());
     } else {
       nextParams.delete("query");
-    }
-
-    if (selectedFolderId) {
-      nextParams.set("folder", selectedFolderId);
-    } else {
-      nextParams.delete("folder");
     }
 
     nextParams.set("sort", nextSort);
@@ -150,7 +183,10 @@ export function SpaceArchiveScreen({
       nextParams.delete("query");
     }
 
-    nextParams.set("sort", sort);
+    if (!nextParams.get("sort")) {
+      nextParams.set("sort", sort);
+    }
+
     const nextQuery = nextParams.toString();
     return nextQuery ? `${pathname}?${nextQuery}` : pathname;
   }
@@ -158,38 +194,21 @@ export function SpaceArchiveScreen({
   return (
     <MainShell
       title="Archive"
-      description="Open this space archive to browse folders, subfolders, and archived records."
+      description="Browse folders and archived work orders for this space."
       meta={
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-panel-muted px-3 py-1.5 text-sm font-medium text-accent">
-          <Archive className="h-4 w-4" />
-          {items.length} visible / {totalCount} archived in {space.name}
-        </span>
+        <>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-panel-muted px-2.5 py-1 text-xs font-semibold text-foreground sm:hidden">
+            <Archive className="h-3.5 w-3.5 text-accent" aria-hidden />
+            <span className="tabular-nums">{items.length}</span>
+            <span className="text-muted">/</span>
+            <span className="tabular-nums">{totalCount}</span>
+          </span>
+          <span className="hidden items-center gap-2 rounded-full border border-border bg-panel-muted px-3 py-1.5 text-sm font-medium text-accent sm:inline-flex">
+            <Archive className="h-4 w-4" aria-hidden />
+            {items.length} visible / {totalCount} archived in {space.name}
+          </span>
+        </>
       }
-      actions={isArchiveOpen ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="relative block w-full sm:w-[20rem]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search archived workorders"
-              className="h-11 w-full rounded-2xl border border-border bg-panel pl-10 pr-3 text-sm text-foreground outline-none"
-            />
-          </label>
-          <select
-            value={sort}
-            onChange={(event) => updateSort(event.target.value as ArchiveSortOption)}
-            className="h-11 rounded-2xl border border-border bg-panel px-4 text-sm text-foreground outline-none"
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : null}
     >
       <RealtimeRouteRefresh
         channelName={`space:archive:${space.id}`}
@@ -198,15 +217,51 @@ export function SpaceArchiveScreen({
           { table: "archived_work_orders", filter: `space_id=eq.${space.id}` },
         ]}
       />
-      <section className="px-6 py-8 lg:px-8">
+      <section className="px-3 pb-10 pt-2 sm:px-5 sm:pb-6 sm:pt-4 lg:px-8 lg:py-6">
+        {/* Desktop: search only while archive panel is open. Mobile: always (no collapsible hero). */}
+        <div
+          className={cn(
+            "mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:gap-3",
+            !isArchiveOpen && "lg:hidden",
+          )}
+        >
+          <label className="relative block min-w-0 flex-1">
+            <span className="sr-only">Search archived work orders</span>
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search archived work orders"
+              className={archiveSearchInputClass}
+              enterKeyHint="search"
+            />
+          </label>
+          <select
+            value={sort}
+            onChange={(event) => updateSort(event.target.value as ArchiveSortOption)}
+            className={cn(archiveControlClass, "w-full shrink-0 sm:w-auto sm:min-w-[11rem]")}
+            aria-label="Sort archived records"
+          >
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button
           type="button"
           onClick={() => setIsArchiveOpen((current) => !current)}
-          className="w-full rounded-[2rem] border border-border bg-panel p-6 text-left shadow-[0_18px_36px_rgba(15,23,42,0.05)] transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-[0_22px_44px_rgba(15,23,42,0.08)]"
+          className="hidden w-full rounded-xl border border-border bg-panel p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-colors hover:bg-panel-muted sm:rounded-2xl sm:p-5 lg:block lg:rounded-[2rem] lg:p-6 lg:shadow-[0_18px_36px_rgba(15,23,42,0.05)] lg:hover:-translate-y-0.5 lg:hover:shadow-[0_22px_44px_rgba(15,23,42,0.08)]"
         >
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex min-w-0 items-start gap-4">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.6rem] border border-border bg-panel-muted text-lg font-semibold text-foreground">
+          <div className="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-panel-muted text-sm font-semibold text-foreground sm:h-16 sm:w-16 sm:rounded-[1.25rem] lg:h-20 lg:w-20 lg:rounded-[1.6rem] lg:text-lg">
                 {space.photoUrl ? (
                   <Image
                     src={space.photoUrl}
@@ -227,76 +282,120 @@ export function SpaceArchiveScreen({
               </div>
 
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-muted">
-                  Space Archive
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-[11px] sm:tracking-[0.26em]">
+                  Space archive
                 </p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+                <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-foreground sm:mt-2 sm:text-2xl lg:mt-3 lg:text-3xl">
                   {space.name}
                 </h2>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:mt-3 sm:gap-2">
                   {spaceTypeLabel ? (
-                    <span className="inline-flex rounded-full border border-border bg-panel-muted px-3 py-1 text-xs font-semibold text-foreground">
+                    <span className="inline-flex rounded-full border border-border bg-panel-muted px-2 py-0.5 text-[11px] font-semibold text-foreground sm:px-3 sm:py-1 sm:text-xs">
                       {spaceTypeLabel}
                     </span>
                   ) : null}
-                  <span className="inline-flex rounded-full border border-border bg-panel-muted px-3 py-1 text-xs font-semibold text-foreground">
-                    {totalCount} archived records
+                  <span className="inline-flex rounded-full border border-border bg-panel-muted px-2 py-0.5 text-[11px] font-semibold text-foreground sm:px-3 sm:py-1 sm:text-xs">
+                    {totalCount} records
                   </span>
-                  <span className="inline-flex rounded-full border border-border bg-panel-muted px-3 py-1 text-xs font-semibold text-foreground">
+                  <span className="inline-flex rounded-full border border-border bg-panel-muted px-2 py-0.5 text-[11px] font-semibold text-foreground sm:px-3 sm:py-1 sm:text-xs">
                     {folders.length} folders
                   </span>
                 </div>
                 {space.address ? (
-                  <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-border bg-panel px-3 py-1.5 text-sm text-muted">
-                    <MapPin className="h-4 w-4 text-accent" />
-                    {space.address}
+                  <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-panel px-2.5 py-1 text-xs text-muted sm:mt-3 sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm">
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-accent sm:h-4 sm:w-4" aria-hidden />
+                    <span className="truncate">{space.address}</span>
                   </p>
                 ) : null}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 self-start xl:self-center">
-              <div className="rounded-2xl border border-border bg-panel-muted px-4 py-3 text-right">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
-                  Archive View
+            <div className="flex items-center justify-between gap-3 sm:justify-start xl:self-center">
+              <div className="hidden rounded-2xl border border-border bg-panel-muted px-3 py-2 text-left sm:block sm:px-4 sm:py-3 sm:text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-[11px] sm:tracking-[0.22em]">
+                  Archive view
                 </p>
-                <p className="mt-2 text-sm font-medium text-foreground">
+                <p className="mt-1 text-xs font-medium text-foreground sm:mt-2 sm:text-sm">
                   {isArchiveOpen ? "Hide folders and records" : "Open folders and records"}
                 </p>
               </div>
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-panel text-foreground">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-panel text-foreground sm:h-12 sm:w-12 sm:rounded-2xl">
                 {isArchiveOpen ? (
-                  <ChevronDown className="h-5 w-5" />
+                  <ChevronDown className="h-5 w-5" aria-hidden />
                 ) : (
-                  <ChevronRight className="h-5 w-5" />
+                  <ChevronRight className="h-5 w-5" aria-hidden />
                 )}
               </span>
             </div>
           </div>
         </button>
 
-        {isArchiveOpen ? (
-          <div className="mt-6 grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
-            <aside className="rounded-[2rem] border border-border bg-panel shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
-              <div className="border-b border-border px-5 py-5">
+        <div
+          className={cn(
+            "mt-3 grid gap-3 sm:mt-4 sm:gap-4 lg:mt-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]",
+            !isArchiveOpen && "lg:hidden",
+          )}
+        >
+            <div className="lg:hidden">
+              <div className="flex flex-row items-end gap-2">
+                <label className="grid min-w-0 flex-1 gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                    Folder
+                  </span>
+                  <select
+                    className={archiveControlClass}
+                    value={selectedFolderId ?? ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      router.push(buildFolderHref(value.length > 0 ? value : null));
+                    }}
+                    aria-label="Choose archive folder"
+                  >
+                    <option value="">
+                      All archive ({allArchiveCount})
+                    </option>
+                    {defaultFolder ? (
+                      <option key={defaultFolder.id} value={defaultFolder.id}>
+                        {defaultFolder.name} ({defaultFolder.archivedCount})
+                      </option>
+                    ) : null}
+                    {mobileCustomFolderOrder.map((folder) => (
+                      <option key={folder.id} value={folder.id}>
+                        {`${"\u2014 ".repeat(Math.max(0, folder.depth))}${folder.name} (${folder.archivedCount})`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <ArchiveCreateFolderModal
+                  returnTo={pathname}
+                  folders={folders}
+                  defaultParentFolderId={selectedFolderId}
+                  spaceId={space.id}
+                  triggerClassName="h-10 w-auto shrink-0 touch-manipulation px-3"
+                />
+              </div>
+            </div>
+
+            <aside className="hidden rounded-2xl border border-border bg-panel shadow-[0_18px_36px_rgba(15,23,42,0.05)] lg:block lg:rounded-[2rem]">
+              <div className="border-b border-border px-4 py-4 sm:px-5 sm:py-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-panel-muted text-accent">
-                    <FolderTree className="h-5 w-5" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-panel-muted text-accent sm:h-11 sm:w-11 sm:rounded-2xl">
+                    <FolderTree className="h-5 w-5" aria-hidden />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                      Folder Tree
+                      Folder tree
                     </p>
-                    <p className="mt-1 text-sm text-muted">
-                      Browse folders and collapse subfolders as needed.
+                    <p className="mt-1 text-xs text-muted sm:text-sm">
+                      Browse folders and subfolders.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="px-4 py-4">
+              <div className="px-3 py-3 sm:px-4 sm:py-4">
                 <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                  System Folders
+                  System folders
                 </p>
                 <div className="mt-3 space-y-2">
                   <ArchiveFolderNavItem
@@ -327,7 +426,7 @@ export function SpaceArchiveScreen({
                 />
               </div>
 
-              <div className="border-t border-border px-5 py-4">
+              <div className="border-t border-border px-4 py-3 sm:px-5 sm:py-4">
                 <ArchiveCreateFolderModal
                   returnTo={pathname}
                   folders={folders}
@@ -337,91 +436,110 @@ export function SpaceArchiveScreen({
               </div>
             </aside>
 
-            <div className="space-y-4">
-              <div className="rounded-[2rem] border border-border bg-panel p-5 shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                      Current View
+            <div className="min-w-0 space-y-3 sm:space-y-4">
+              <div className="rounded-lg border border-border bg-panel p-3 shadow-sm sm:rounded-xl sm:p-4 sm:shadow-[0_8px_24px_rgba(15,23,42,0.04)] lg:rounded-[2rem] lg:p-5 lg:shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+                {/* Mobile: one compact row — full folder title + count (no duplicate subcopy). */}
+                <div className="flex items-start justify-between gap-3 lg:hidden">
+                  <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground break-words">
+                    {selectedFolder ? selectedFolder.pathLabel : `${space.name} archive`}
+                  </h3>
+                  <p className="shrink-0 pt-0.5 text-right text-xs tabular-nums text-muted">
+                    <span className="font-medium text-foreground">{items.length}</span>
+                    {query.trim() ? (
+                      <span className="block text-[10px] font-normal leading-tight">filtered</span>
+                    ) : (
+                      <span className="block text-[10px] font-normal leading-tight">shown</span>
+                    )}
+                  </p>
+                </div>
+
+                <div className="hidden flex-col gap-3 sm:gap-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-[11px] sm:tracking-[0.24em]">
+                      Current view
                     </p>
-                    <h3 className="mt-3 text-2xl font-semibold text-foreground">
+                    <h3 className="mt-1.5 truncate text-lg font-semibold text-foreground sm:mt-2 sm:text-xl lg:text-2xl">
                       {selectedFolder ? selectedFolder.pathLabel : `${space.name} archive`}
                     </h3>
-                    <p className="mt-2 text-sm text-muted">
+                    <p className="mt-1 text-xs text-muted sm:mt-2 sm:text-sm">
                       {selectedFolder
-                        ? `Browsing archived records inside ${selectedFolder.pathLabel}.`
-                        : `Browsing all archived folders and records for ${space.name}.`}
+                        ? `Records in ${selectedFolder.pathLabel}.`
+                        : `All archived records for ${space.name}.`}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-border bg-panel-muted px-4 py-3 text-sm text-muted">
-                    <p className="font-medium text-foreground">{items.length} visible records</p>
-                    <p className="mt-1">Use the tree to move deeper into subfolders.</p>
+                  <div className="rounded-xl border border-border bg-panel-muted px-3 py-2 text-xs text-muted sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm lg:max-w-xs">
+                    <p className="font-medium text-foreground">
+                      {items.length} visible
+                    </p>
+                    <p className="mt-0.5 hidden sm:mt-1 sm:block">
+                      Use the folder list to switch views.
+                    </p>
                   </div>
                 </div>
               </div>
 
               {items.length === 0 ? (
-                <section className="grid min-h-[28rem] place-items-center rounded-[2rem] border border-border bg-panel px-6 py-10 shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
-                  <div className="max-w-2xl text-center">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.75rem] border border-border bg-panel-muted text-accent">
-                      <Archive className="h-7 w-7" />
+                <section className="grid min-h-[11rem] place-items-center rounded-lg border border-border bg-panel px-4 py-6 shadow-sm sm:min-h-[18rem] sm:rounded-xl sm:px-6 sm:py-8 sm:shadow-[0_8px_24px_rgba(15,23,42,0.04)] lg:min-h-[28rem] lg:rounded-[2rem] lg:py-10 lg:shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+                  <div className="max-w-md text-center">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-panel-muted text-accent sm:h-14 sm:w-14 sm:rounded-xl">
+                      <Archive className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
                     </div>
-                    <h2 className="mt-6 text-3xl font-semibold text-foreground">
-                      Nothing archived in this view yet
+                    <h2 className="mt-3 text-base font-semibold text-foreground sm:mt-4 sm:text-xl lg:text-3xl">
+                      Nothing here yet
                     </h2>
-                    <p className="mt-3 text-base text-muted">
+                    <p className="mt-1.5 text-xs text-muted sm:mt-2 sm:text-sm lg:text-base">
                       {selectedFolder
-                        ? `There are no archived records inside ${selectedFolder.pathLabel} yet.`
-                        : `Archived workorders for ${space.name} will appear here once records are stored in this space archive.`}
+                        ? "Try another folder or clear search."
+                        : `Archived work orders for ${space.name} appear here.`}
                     </p>
                   </div>
                 </section>
               ) : (
-                <div className="space-y-4">
+                <ul className="space-y-2 sm:space-y-4" role="list">
                   {items.map((item) => (
-                    <article
-                      key={item.id}
-                      className="rounded-[2rem] border border-border bg-panel p-5 shadow-[0_18px_36px_rgba(15,23,42,0.05)]"
-                    >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex rounded-full border border-border bg-panel-muted px-3 py-1 text-xs font-semibold text-accent">
-                              Archived
-                            </span>
-                            <h2 className="truncate text-lg font-semibold text-foreground">
-                              {item.title}
-                            </h2>
+                    <li key={item.id}>
+                      <article className="rounded-xl border border-border bg-panel p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:rounded-2xl sm:p-5 lg:rounded-[2rem] lg:shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex rounded-full border border-border bg-panel-muted px-2 py-0.5 text-[10px] font-semibold text-accent sm:px-3 sm:py-1 sm:text-xs">
+                                Archived
+                              </span>
+                              <h2 className="min-w-0 truncate text-base font-semibold text-foreground sm:text-lg">
+                                {item.title}
+                              </h2>
+                            </div>
+                            <p className="mt-1.5 text-xs text-muted sm:mt-2 sm:text-sm">
+                              {item.archivedAtLabel} · {item.archivedByName}
+                            </p>
+                            <p className="mt-0.5 truncate text-xs text-muted sm:mt-1 sm:text-sm">
+                              {item.folderName}
+                            </p>
                           </div>
-                          <p className="mt-2 text-sm text-muted">
-                            Archived {item.archivedAtLabel} by {item.archivedByName}
-                          </p>
-                          <p className="mt-1 text-sm text-muted">
-                            Folder path: {item.folderName}
-                          </p>
-                        </div>
 
-                        <Link
-                          href={getArchiveRecordHref(item.id)}
-                          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-2xl border border-border bg-panel-muted px-4 text-sm font-semibold text-foreground"
-                        >
-                          Open record
-                          <ArrowUpRight className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </article>
+                          <Link
+                            href={getArchiveRecordHref(item.id)}
+                            className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-transparent bg-[#2f5fd4] px-4 text-sm font-medium text-white touch-manipulation hover:bg-[#274fbf] sm:w-auto dark:bg-[#3d6fd9] dark:hover:bg-[#5285e8]"
+                          >
+                            Open record
+                            <ArrowUpRight className="h-4 w-4" aria-hidden />
+                          </Link>
+                        </div>
+                      </article>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="mt-6 rounded-[2rem] border border-dashed border-border bg-panel px-6 py-10 text-center">
+        </div>
+
+        {!isArchiveOpen ? (
+          <div className="mt-4 hidden rounded-xl border border-dashed border-border bg-panel px-4 py-6 text-center sm:rounded-2xl sm:px-6 sm:py-10 lg:block">
             <p className="text-sm font-medium text-foreground">
-              Click the {space.name} archive card to open this space’s folders and archived records.
+              Tap above to open folders and archived records for {space.name}.
             </p>
           </div>
-        )}
+        ) : null}
       </section>
     </MainShell>
   );

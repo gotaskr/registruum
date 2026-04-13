@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MoreHorizontal, PencilLine, Settings, Trash2 } from "lucide-react";
+import { MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
 import { EditWorkOrderModal } from "@/features/work-orders/ui/edit-work-order-modal";
 import { DeleteWorkOrderModal } from "@/features/work-orders/ui/delete-work-order-modal";
 import {
@@ -23,7 +22,6 @@ export function WorkOrderSidebarActions({
   actorRole,
   returnTo,
 }: WorkOrderSidebarActionsProps) {
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -63,21 +61,6 @@ export function WorkOrderSidebarActions({
         </button>
         {menuOpen ? (
           <div className="absolute right-0 top-10 z-20 min-w-40 rounded-lg border border-border bg-panel p-1 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
-            {canEdit ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  router.push(
-                    `/space/${workOrder.spaceId}/work-order/${workOrder.id}/settings`,
-                  );
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-panel-muted"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </button>
-            ) : null}
             {canEdit ? (
               <button
                 type="button"

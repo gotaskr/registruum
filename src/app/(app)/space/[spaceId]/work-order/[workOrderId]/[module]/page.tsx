@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getArchiveFolderOptions } from "@/features/archive/api/archive";
 import { getWorkOrderMessages } from "@/features/chat/api/messages";
 import { getWorkOrderDocuments } from "@/features/documents/api/documents";
 import { getWorkOrderLogs } from "@/features/logs/api/activity-logs";
@@ -53,6 +54,10 @@ export default async function WorkOrderModulePage({
     module === "overview"
       ? await getWorkOrderOverviewData(spaceId, workOrderId)
       : undefined;
+  const archiveFolderData =
+    module === "overview"
+      ? await getArchiveFolderOptions(spaceId)
+      : { folders: [], defaultFolderId: "" as const };
   const settingsData =
     module === "settings"
       ? await getWorkOrderSettingsData(spaceId, workOrderId)
@@ -75,6 +80,8 @@ export default async function WorkOrderModulePage({
       documents={documentData.documents}
       overview={overview}
       settingsData={settingsData}
+      archiveFolders={archiveFolderData.folders}
+      defaultArchiveFolderId={archiveFolderData.defaultFolderId}
     />
   );
 }

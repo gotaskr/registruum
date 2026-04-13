@@ -24,7 +24,7 @@ export function WorkOrderPhotoCarousel({
   const canSlide = photos.length > 1;
 
   return (
-    <aside className="w-full max-w-sm rounded-2xl border border-border bg-panel-muted/70 p-4">
+    <aside className="w-full max-w-none rounded-xl border border-border bg-panel-muted/60 p-3 sm:max-w-sm sm:rounded-2xl sm:bg-panel-muted/70 sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">

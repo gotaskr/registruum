@@ -62,15 +62,15 @@ export function ProfileCompanyCard({
           name="representsCompany"
           value={representsCompany ? "true" : "false"}
         />
-        <div className="flex items-start justify-between gap-4 rounded-[1.5rem] border border-border bg-panel-muted px-5 py-4">
-          <div className="space-y-2">
+        <div className="flex flex-row items-start justify-between gap-3 rounded-xl border border-border bg-panel-muted px-4 py-4 sm:gap-4 sm:rounded-[1.5rem] sm:px-5">
+          <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-accent" />
-              <p className="text-sm font-medium text-foreground">
+              <Building2 className="h-4 w-4 shrink-0 text-accent" />
+              <p className="text-sm font-medium leading-snug text-foreground">
                 Representing a company
               </p>
             </div>
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-xs leading-relaxed text-muted sm:text-sm sm:leading-6">
               Add organization details, website, and social links when acting on behalf of a company.
             </p>
           </div>
@@ -82,14 +82,14 @@ export function ProfileCompanyCard({
               aria-checked={representsCompany}
               onClick={() => setRepresentsCompany((value) => !value)}
               className={[
-                "relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors duration-150",
+                "relative inline-flex h-8 w-14 shrink-0 touch-manipulation rounded-full transition-colors duration-150 sm:h-7 sm:w-12",
                 representsCompany ? "bg-accent" : "bg-border-strong",
               ].join(" ")}
             >
               <span
                 className={[
                   "absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-panel shadow-sm transition-transform duration-150 dark:shadow-none",
-                  representsCompany ? "translate-x-5" : "translate-x-0",
+                  representsCompany ? "translate-x-7 sm:translate-x-5" : "translate-x-0",
                 ].join(" ")}
               />
             </button>
@@ -97,14 +97,14 @@ export function ProfileCompanyCard({
             <div
               aria-hidden="true"
               className={[
-                "relative inline-flex h-7 w-12 shrink-0 rounded-full",
+                "relative inline-flex h-8 w-14 shrink-0 rounded-full sm:h-7 sm:w-12",
                 profile.representsCompany ? "bg-accent" : "bg-border-strong",
               ].join(" ")}
             >
               <span
                 className={[
                   "absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-panel shadow-sm dark:shadow-none",
-                  profile.representsCompany ? "translate-x-5" : "translate-x-0",
+                  profile.representsCompany ? "translate-x-7 sm:translate-x-5" : "translate-x-0",
                 ].join(" ")}
               />
             </div>
@@ -118,7 +118,7 @@ export function ProfileCompanyCard({
           ].join(" ")}
         >
           <div className="overflow-hidden">
-            <div className="rounded-[1.6rem] border border-border bg-panel p-5 shadow-[0_12px_24px_rgba(15,23,42,0.04)] dark:shadow-none">
+            <div className="rounded-xl border border-border bg-panel p-4 shadow-sm dark:shadow-none sm:rounded-[1.6rem] sm:p-5 sm:shadow-[0_12px_24px_rgba(15,23,42,0.04)]">
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 md:col-span-2">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
@@ -242,12 +242,12 @@ export function ProfileCompanyCard({
           tone={state.error ? "error" : "info"}
         />
 
-        <div className="flex justify-end border-t border-border pt-4">
+        <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
           <button
             type="submit"
             disabled={isPending}
             suppressHydrationWarning
-            className="inline-flex h-11 items-center justify-center rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60 dark:shadow-none"
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60 dark:shadow-none sm:h-11 sm:w-auto sm:rounded-2xl"
           >
             {isPending ? "Saving..." : "Save Company Details"}
           </button>

@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-type ButtonVariant = "primary" | "secondary";
+type ButtonVariant = "primary" | "secondary" | "brand";
 
 type ButtonProps = Readonly<{
   children: ReactNode;
@@ -12,6 +12,8 @@ type ButtonProps = Readonly<{
 const variantClasses: Record<ButtonVariant, string> = {
   primary: "border-transparent bg-slate-950 text-white hover:bg-slate-800",
   secondary: "border-border bg-panel text-foreground hover:bg-panel-muted",
+  brand:
+    "border-transparent bg-[#2f5fd4] text-white shadow-[0_2px_10px_rgba(47,95,212,0.3)] hover:bg-[#274fbf] hover:shadow-[0_4px_14px_rgba(47,95,212,0.38)] disabled:bg-[#2f5fd4]/55 disabled:shadow-none dark:bg-[#3d6fd9] dark:hover:bg-[#5285e8] dark:disabled:bg-[#3d6fd9]/50",
 };
 
 export function Button({

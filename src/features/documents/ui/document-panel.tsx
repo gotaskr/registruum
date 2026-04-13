@@ -1,14 +1,11 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Link2, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { FileUploadField } from "@/components/ui/file-upload-field";
 import { FormMessage } from "@/features/auth/ui/form-message";
-import {
-  createDocumentLink,
-  deleteDocumentItem,
-  uploadWorkOrderDocuments,
-} from "@/features/documents/actions/document.actions";
+import { deleteDocumentItem, uploadWorkOrderDocuments } from "@/features/documents/actions/document.actions";
 import { initialDocumentActionState } from "@/features/documents/types/document-action-state";
 import { DocumentFolderList } from "@/features/documents/ui/document-folder-list";
 import { DocumentItemGrid } from "@/features/documents/ui/document-item-grid";
@@ -44,16 +41,12 @@ export function DocumentPanel({
     uploadWorkOrderDocuments,
     initialDocumentActionState,
   );
-  const [linkState, linkFormAction] = useActionState(
-    createDocumentLink,
-    initialDocumentActionState,
-  );
   const [deleteState, deleteFormAction] = useActionState(
     deleteDocumentItem,
     initialDocumentActionState,
   );
   const selectedFolder = folders.find((folder) => folder.systemKey === selectedFolderKey) ?? folders[0];
-  const actionMessage = uploadState.error ?? linkState.error ?? deleteState.error;
+  const actionMessage = uploadState.error ?? deleteState.error;
 
   return (
     <section className="min-h-0">
@@ -62,62 +55,37 @@ export function DocumentPanel({
         selectedFolderKey={selectedFolderKey}
         onSelect={setSelectedFolderKey}
       />
-      <div className="grid gap-0 border-b border-border xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <div className="border-b border-border px-6 py-4 xl:border-r xl:border-b-0">
-          <form action={uploadFormAction} className="space-y-3">
-            <input type="hidden" name="spaceId" value={spaceId} />
-            <input type="hidden" name="workOrderId" value={workOrderId} />
-            <FileUploadField
-              name="files"
-              buttonLabel="Select Files"
-              helperText="Photos, videos, and files are sorted into system folders automatically."
-              disabled={!canUploadDocuments}
-              accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,.mp4,.mov,.webm,.avi,.mkv"
-              onFilesChange={setSelectedFileCount}
-            />
-            <button
-              type="submit"
-              disabled={!canUploadDocuments || selectedFileCount === 0}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#2b6ef3] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload to Documents
-            </button>
-          </form>
-        </div>
-        <div className="px-6 py-4">
-          <form action={linkFormAction} className="grid gap-3 lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto]">
-            <input type="hidden" name="spaceId" value={spaceId} />
-            <input type="hidden" name="workOrderId" value={workOrderId} />
-            <input
-              name="title"
-              type="text"
-              disabled={!canUploadDocuments}
-              placeholder="Link title"
-              className="h-10 rounded-lg border border-border bg-panel px-3 text-sm text-foreground outline-none disabled:bg-panel-muted"
-            />
-            <input
-              name="url"
-              type="url"
-              disabled={!canUploadDocuments}
-              placeholder="https://example.com"
-              className="h-10 rounded-lg border border-border bg-panel px-3 text-sm text-foreground outline-none disabled:bg-panel-muted"
-            />
-            <button
-              type="submit"
-              disabled={!canUploadDocuments}
-              className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              <Link2 className="mr-2 h-4 w-4" />
-              Add Link
-            </button>
-          </form>
-        </div>
+      <div className="border-b border-border px-4 py-2.5 sm:px-5 lg:px-6 lg:py-4">
+        <form action={uploadFormAction} className="space-y-2 lg:space-y-4">
+          <input type="hidden" name="spaceId" value={spaceId} />
+          <input type="hidden" name="workOrderId" value={workOrderId} />
+          <FileUploadField
+            name="files"
+            buttonLabel="Select files"
+            helperText="Photos, videos, and files are sorted into system folders automatically."
+            helperTextClassName="hidden text-slate-600 dark:text-slate-400 lg:block"
+            disabled={!canUploadDocuments}
+            accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.txt,.mp4,.mov,.webm,.avi,.mkv"
+            onFilesChange={setSelectedFileCount}
+            buttonClassName="h-10 min-h-10 w-full justify-center touch-manipulation max-lg:rounded-xl sm:w-auto sm:justify-start lg:min-h-11"
+          />
+          <Button
+            type="submit"
+            variant="brand"
+            disabled={!canUploadDocuments || selectedFileCount === 0}
+            className="h-10 w-full touch-manipulation max-lg:text-sm max-lg:font-semibold lg:h-11 lg:w-auto"
+          >
+            <Upload className="mr-2 h-4 w-4 shrink-0" />
+            <span className="lg:hidden">Upload</span>
+            <span className="hidden lg:inline">Upload to Documents</span>
+          </Button>
+        </form>
       </div>
-      <div className="px-6 pt-4">
+      <div className="px-4 pt-2 sm:px-5 sm:pt-3 lg:px-6 lg:pt-4">
         <FormMessage
           message={actionMessage ?? (!canUploadDocuments ? lockedMessage : undefined)}
           tone={actionMessage ? "error" : "info"}
+          className="text-xs sm:text-sm"
         />
       </div>
       <DocumentItemGrid

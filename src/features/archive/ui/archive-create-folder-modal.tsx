@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { createArchiveFolderAction } from "@/features/archive/actions/archive.actions";
+import {
+  archiveControlClass,
+  archiveLabelClass,
+} from "@/features/archive/lib/archive-form-styles";
 import { formatArchiveFolderOptionLabel } from "@/features/archive/lib/archive-folder-tree";
 import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 
@@ -12,6 +17,8 @@ type ArchiveCreateFolderModalProps = Readonly<{
   defaultParentFolderId?: string | null;
   spaceId?: string | null;
   disabled?: boolean;
+  /** Override trigger button layout (e.g. compact row next to folder select on mobile). */
+  triggerClassName?: string;
 }>;
 
 export function ArchiveCreateFolderModal({
@@ -20,6 +27,7 @@ export function ArchiveCreateFolderModal({
   defaultParentFolderId = null,
   spaceId = null,
   disabled = false,
+  triggerClassName,
 }: ArchiveCreateFolderModalProps) {
   const [open, setOpen] = useState(false);
 
@@ -29,14 +37,15 @@ export function ArchiveCreateFolderModal({
 
   return (
     <>
-      <button
+      <Button
         type="button"
-        onClick={() => setOpen(true)}
+        variant="secondary"
         disabled={disabled}
-        className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => setOpen(true)}
+        className={triggerClassName ?? "h-10 w-full touch-manipulation"}
       >
-        Add Folder
-      </button>
+        Add folder
+      </Button>
 
       <Modal
         open={open}
@@ -44,27 +53,27 @@ export function ArchiveCreateFolderModal({
         title="Create Archive Folder"
         description="Add a folder or subfolder to organize archived work orders."
       >
-        <form action={createArchiveFolderAction} className="space-y-4 px-5 py-4">
+        <form action={createArchiveFolderAction} className="space-y-3 px-4 py-4">
           <input type="hidden" name="returnTo" value={returnTo} />
           <input type="hidden" name="spaceId" value={spaceId ?? ""} />
 
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-foreground">Folder Name</span>
+          <label className="grid gap-1.5">
+            <span className={archiveLabelClass}>Folder name</span>
             <input
               name="name"
               type="text"
               placeholder="Folder name"
               autoFocus
-              className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+              className={archiveControlClass}
             />
           </label>
 
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-foreground">Parent Folder</span>
+          <label className="grid gap-1.5">
+            <span className={archiveLabelClass}>Parent folder</span>
             <select
               name="parentFolderId"
               defaultValue={defaultParentFolderId ?? ""}
-              className="h-11 w-full rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
+              className={archiveControlClass}
             >
               <option value="">Top level</option>
               {folders.map((folder) => (
@@ -75,20 +84,13 @@ export function ArchiveCreateFolderModal({
             </select>
           </label>
 
-          <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-panel px-4 text-sm font-medium text-foreground"
-            >
+          <div className="flex flex-col-reverse gap-2 border-t border-border pt-3 sm:flex-row sm:justify-end">
+            <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={handleClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white"
-            >
-              Create Folder
-            </button>
+            </Button>
+            <Button type="submit" variant="brand" className="w-full sm:w-auto">
+              Create
+            </Button>
           </div>
         </form>
       </Modal>

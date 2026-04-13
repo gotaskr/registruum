@@ -364,14 +364,28 @@ export function LogAuditExportButton({
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Button variant="secondary" onClick={handleCsvExport}>
-        <FileSpreadsheet className="mr-2 h-4 w-4" />
-        Export CSV
+    <div
+      className="flex w-full max-w-md gap-1.5 sm:max-w-none sm:inline-flex sm:w-auto"
+      role="group"
+      aria-label="Export audit log"
+    >
+      <Button
+        variant="secondary"
+        onClick={handleCsvExport}
+        className="h-8 flex-1 touch-manipulation gap-1 border-border-strong px-2 text-xs font-semibold text-foreground sm:min-w-[5.5rem] sm:flex-initial sm:px-2.5 sm:text-sm"
+        aria-label="Export audit log as CSV"
+      >
+        <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 text-foreground sm:h-4 sm:w-4" />
+        CSV
       </Button>
-      <Button variant="secondary" onClick={handleExport}>
-        <Download className="mr-2 h-4 w-4" />
-        Download PDF
+      <Button
+        variant="secondary"
+        onClick={handleExport}
+        className="h-8 flex-1 touch-manipulation gap-1 border-border-strong px-2 text-xs font-semibold text-foreground sm:min-w-[5.5rem] sm:flex-initial sm:px-2.5 sm:text-sm"
+        aria-label="Download audit log as PDF"
+      >
+        <Download className="h-3.5 w-3.5 shrink-0 text-foreground sm:h-4 sm:w-4" />
+        PDF
       </Button>
     </div>
   );

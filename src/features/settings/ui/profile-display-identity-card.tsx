@@ -48,12 +48,12 @@ export function ProfileDisplayIdentityCard({
             type="text"
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
-            className="h-12 w-full rounded-2xl border border-border bg-panel-muted px-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel"
+            className="h-12 w-full rounded-xl border border-border bg-panel-muted px-4 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:bg-panel sm:rounded-2xl"
           />
           <p className="text-sm text-muted">
             Used in chat, logs, and work orders.
           </p>
-          <div className="rounded-[1.35rem] border border-border bg-panel-muted px-4 py-3 text-sm text-foreground">
+          <div className="rounded-xl border border-border bg-panel-muted px-3 py-2.5 text-sm text-foreground sm:rounded-[1.35rem] sm:px-4 sm:py-3">
             <span className="text-muted">Preview:</span> {displayName || profile.fullName}
           </div>
         </label>
@@ -63,11 +63,11 @@ export function ProfileDisplayIdentityCard({
           tone={state.error ? "error" : "info"}
         />
 
-        <div className="flex justify-end border-t border-border pt-4">
+        <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex h-11 items-center justify-center rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60 dark:shadow-none"
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] disabled:opacity-60 dark:shadow-none sm:h-11 sm:w-auto sm:rounded-2xl"
           >
             {isPending ? "Saving..." : "Save Display Name"}
           </button>

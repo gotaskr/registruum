@@ -7,12 +7,14 @@ import { completeWorkOrder } from "@/features/work-orders/actions/work-order.act
 import {
   initialWorkOrderActionState,
 } from "@/features/work-orders/types/work-order-action-state";
+import { cn } from "@/lib/utils";
 
 type WorkOrderSidebarCompleteActionProps = Readonly<{
   workOrderId: string;
   spaceId: string;
   workOrderTitle: string;
   returnTo: string;
+  buttonClassName?: string;
 }>;
 
 export function WorkOrderSidebarCompleteAction({
@@ -20,6 +22,7 @@ export function WorkOrderSidebarCompleteAction({
   spaceId,
   workOrderTitle,
   returnTo,
+  buttonClassName,
 }: WorkOrderSidebarCompleteActionProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(
@@ -32,7 +35,10 @@ export function WorkOrderSidebarCompleteAction({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex h-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+        className={cn(
+          "inline-flex h-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100",
+          buttonClassName,
+        )}
       >
         Complete
       </button>

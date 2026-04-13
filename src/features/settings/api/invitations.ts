@@ -1,9 +1,16 @@
 import "server-only";
 
-import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
+import type { User } from "@supabase/supabase-js";
+import {
+  requireAuthenticatedAppUser,
+} from "@/features/auth/api/profiles";
 import type { SettingsInvitation } from "@/features/settings/types/invitation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDateTimeLabel } from "@/lib/utils";
 import type { Database } from "@/types/database";
+import type { Profile } from "@/types/profile";
+
+type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 type InviteRow = Database["public"]["Tables"]["invites"]["Row"];
 type ProfileRow = Pick<
@@ -13,8 +20,16 @@ type ProfileRow = Pick<
 type SpaceRow = Pick<Database["public"]["Tables"]["spaces"]["Row"], "id" | "name">;
 type WorkOrderRow = Pick<Database["public"]["Tables"]["work_orders"]["Row"], "id" | "title">;
 
-export async function getSettingsInvitations(): Promise<SettingsInvitation[]> {
-  const { supabase, user, profile } = await requireAuthenticatedAppUser();
+type PendingInvitationsContext = Readonly<{
+  supabase: ServerSupabaseClient;
+  user: User;
+  profile: Profile;
+}>;
+
+export async function listPendingInvitationsForUser(
+  ctx: PendingInvitationsContext,
+): Promise<SettingsInvitation[]> {
+  const { supabase, user, profile } = ctx;
 
   const inviteQuery = profile.email
     ? supabase
@@ -89,4 +104,9 @@ export async function getSettingsInvitations(): Promise<SettingsInvitation[]> {
       .map((workOrderId) => workOrderById.get(workOrderId))
       .filter((title): title is string => Boolean(title)),
   }));
+}
+
+export async function getSettingsInvitations(): Promise<SettingsInvitation[]> {
+  const ctx = await requireAuthenticatedAppUser();
+  return listPendingInvitationsForUser(ctx);
 }

@@ -58,7 +58,7 @@ export function DocumentItemCard({
             width={720}
             height={360}
             unoptimized
-            className="h-40 w-full object-cover"
+            className="h-36 w-full object-cover sm:h-40"
           />
         </a>
       ) : (
@@ -74,19 +74,21 @@ export function DocumentItemCard({
           </span>
         </div>
       )}
-      <div className="space-y-3 px-4 py-4">
-        <div className="flex items-start justify-between gap-3">
+      <div className="space-y-2.5 px-3 py-3 sm:space-y-3 sm:px-4 sm:py-4">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">{document.title}</p>
-            <p className="mt-1 text-xs text-muted">{getItemMeta(document)}</p>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400 sm:mt-1">
+              {getItemMeta(document)}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             {href ? (
               <a
                 href={href}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:text-foreground"
+                className="inline-flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-border text-slate-600 hover:text-foreground sm:h-8 sm:w-8 dark:text-slate-400"
               >
                 <ExternalLink className="h-4 w-4" />
               </a>
@@ -98,7 +100,7 @@ export function DocumentItemCard({
                 <input type="hidden" name="documentId" value={document.id} />
                 <button
                   type="submit"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:text-foreground"
+                  className="inline-flex h-9 w-9 touch-manipulation items-center justify-center rounded-lg border border-border text-slate-600 hover:text-foreground sm:h-8 sm:w-8 dark:text-slate-400"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -106,9 +108,13 @@ export function DocumentItemCard({
             ) : null}
           </div>
         </div>
-        <div className="space-y-1 text-xs text-muted">
+        <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400">
           <p className="truncate">{document.kind === "link" ? document.externalUrl : document.fileName}</p>
-          <p className={cn(document.source === "chat" ? "text-foreground" : "text-muted")}>
+          <p
+            className={cn(
+              document.source === "chat" ? "text-slate-900 dark:text-slate-100" : "text-slate-600 dark:text-slate-400",
+            )}
+          >
             {document.uploadedByName} / {document.sentAt}
           </p>
         </div>

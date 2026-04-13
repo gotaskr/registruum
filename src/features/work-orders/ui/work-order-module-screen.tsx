@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { MapPin, MoreHorizontal } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { MainShell } from "@/components/layout/main-shell";
 import { RealtimeRouteRefresh } from "@/components/realtime/realtime-route-refresh";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ChatPanel } from "@/features/chat/ui/chat-panel";
 import { DocumentPanel } from "@/features/documents/ui/document-panel";
+import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 import type {
   WorkOrderDocumentFolder,
   WorkOrderDocumentRecord,
@@ -46,6 +47,8 @@ type WorkOrderModuleScreenProps = Readonly<{
   documents?: WorkOrderDocumentRecord[];
   overview?: WorkOrderOverviewData;
   settingsData?: WorkOrderSettingsData;
+  archiveFolders?: ArchiveFolderOption[];
+  defaultArchiveFolderId?: string;
 }>;
 
 export function WorkOrderModuleScreen({
@@ -64,6 +67,8 @@ export function WorkOrderModuleScreen({
   documents = [],
   overview,
   settingsData,
+  archiveFolders = [],
+  defaultArchiveFolderId = "",
 }: WorkOrderModuleScreenProps) {
   const moduleLabel = module.charAt(0).toUpperCase() + module.slice(1);
   const lockedMessage = getLockedWorkOrderMessage(workOrder.status);
@@ -78,19 +83,22 @@ export function WorkOrderModuleScreen({
   };
   let content: ReactNode;
   let subheader: ReactNode | undefined;
-  let actions: ReactNode = (
-    <button
-      type="button"
-      className="inline-flex h-9 w-9 items-center justify-center rounded-[8px] text-muted transition-colors hover:bg-panel-muted hover:text-foreground"
-    >
-      <MoreHorizontal className="h-4 w-4" />
-    </button>
-  );
+  let actions: ReactNode | undefined;
 
   switch (module) {
     case "overview":
-      content = <WorkOrderOverview workOrder={workOrder} overview={overviewData} />;
-      subheader = <p className="text-sm text-muted">Overview</p>;
+      content = (
+        <WorkOrderOverview
+          workOrder={workOrder}
+          overview={overviewData}
+          permissions={permissions}
+          archiveFolders={archiveFolders}
+          defaultArchiveFolderId={defaultArchiveFolderId}
+        />
+      );
+      subheader = (
+        <p className="text-xs font-medium text-muted sm:text-sm">Overview</p>
+      );
       break;
     case "chat":
       content = (
@@ -105,9 +113,16 @@ export function WorkOrderModuleScreen({
           actorName={actorName}
           canSendMessage={permissions.canSendMessage}
           lockedMessage={lockedMessage}
+          embeddedInWorkOrderShell
         />
       );
-      subheader = undefined;
+      subheader = (
+        <p className="text-xs text-muted sm:text-sm">
+          {chatMemberCount === 1
+            ? "1 member in this chat"
+            : `${chatMemberCount} members in this chat`}
+        </p>
+      );
       break;
     case "documents":
       content = (
@@ -122,7 +137,7 @@ export function WorkOrderModuleScreen({
         />
       );
       subheader = (
-        <p className="text-sm text-muted">
+        <p className="text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
           {documentFolders.length} folders / {documents.length} items
         </p>
       );
@@ -144,9 +159,18 @@ export function WorkOrderModuleScreen({
         />
       );
       subheader = (
-        <p className="text-sm text-muted">
-          {members.length} assigned members / You are acting as {formatRoleLabel(actorRole)}
-        </p>
+        <div className="flex flex-col gap-0.5 text-xs leading-snug text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:text-sm sm:leading-normal">
+          <span>
+            {members.length} assigned member{members.length === 1 ? "" : "s"}
+          </span>
+          <span className="hidden sm:inline" aria-hidden>
+            /
+          </span>
+          <span>
+            Acting as{" "}
+            <span className="font-medium text-foreground">{formatRoleLabel(actorRole)}</span>
+          </span>
+        </div>
       );
       break;
     case "logs":
@@ -154,10 +178,10 @@ export function WorkOrderModuleScreen({
       actions = <LogAuditExportButton workOrder={workOrder} logs={logs} />;
       subheader = (
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted sm:text-xs sm:tracking-[0.24em]">
             Work order summary
           </p>
-          <p className="mt-2 max-w-3xl text-sm text-muted">
+          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-foreground sm:mt-2">
             {workOrder.description ?? "No description has been added yet."}
           </p>
         </div>
@@ -190,6 +214,7 @@ export function WorkOrderModuleScreen({
       />
       <MainShell
         title={workOrder.title}
+        contentClassName={module === "chat" ? "overflow-hidden" : undefined}
         meta={
           <>
             <StatusBadge status={workOrder.status} />

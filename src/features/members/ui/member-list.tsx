@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { Clock3, ShieldCheck, UserPlus2, UsersRound } from "lucide-react";
+import { Clock3, UserPlus2, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkOrderInviteMemberModal } from "@/features/members/ui/work-order-invite-member-modal";
 import { WorkOrderMemberRowActions } from "@/features/members/ui/work-order-member-row-actions";
@@ -39,11 +39,15 @@ const roleClasses: Record<string, string> = {
   worker: "border-border bg-panel-muted text-muted",
 };
 
-function MemberRolePill({ role }: Readonly<{ role: WorkOrderMember["role"] }>) {
+export function MemberRolePill({
+  role,
+  compact = false,
+}: Readonly<{ role: WorkOrderMember["role"]; compact?: boolean }>) {
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium",
+        "inline-flex max-w-full items-center truncate rounded-full border font-medium",
+        compact ? "px-2 py-0.5 text-[10px] sm:px-2.5 sm:text-[11px]" : "px-3 py-1 text-xs",
         roleClasses[role] ?? "border-border bg-panel text-foreground",
       ].join(" ")}
     >
@@ -52,106 +56,40 @@ function MemberRolePill({ role }: Readonly<{ role: WorkOrderMember["role"] }>) {
   );
 }
 
-function AssignMembersCard({
-  spaceId,
-  workOrderId,
-  canInvitePeople,
-  membersCount,
-  pendingInviteCount,
-  lockedMessage,
-}: Readonly<{
-  spaceId: string;
-  workOrderId: string;
-  canInvitePeople: boolean;
-  membersCount: number;
-  pendingInviteCount: number;
-  lockedMessage?: string;
-}>) {
-  const [inviteModalOpen, setInviteModalOpen] = useState(false);
-
-  const helperText = !canInvitePeople
-    ? lockedMessage ?? "You can review the member list, but this role cannot invite new people into the work order."
-    : "Invite someone with a shareable link or add an existing Registruum user by their user tag.";
-
-  return (
-    <section className="rounded-3xl border border-border bg-panel shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-      <div className="border-b border-border px-6 py-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-          Members
-        </p>
-        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
-          Assign people to this work order
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted">{helperText}</p>
-      </div>
-
-      <div className="grid gap-4 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="rounded-2xl border border-border bg-panel-muted px-4 py-4">
-          <p className="text-sm text-muted">
-            New people can join this work order through an invite link. Existing users can be
-            added immediately by user tag.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Button
-              onClick={() => setInviteModalOpen(true)}
-              disabled={!canInvitePeople}
-              className="h-11 rounded-2xl px-5"
-            >
-              <UserPlus2 className="mr-2 h-4 w-4" />
-              Invite Member
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3">
-          <div className="rounded-2xl border border-border bg-panel-muted px-4 py-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-              Members
-            </p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-              {membersCount}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-panel-muted px-4 py-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-              Pending
-            </p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-              {pendingInviteCount}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <WorkOrderInviteMemberModal
-        open={inviteModalOpen}
-        onClose={() => setInviteModalOpen(false)}
-        spaceId={spaceId}
-        workOrderId={workOrderId}
-      />
-    </section>
-  );
-}
-
 function MembersEmptyState({
   canManageMembers,
+  canInvitePeople,
   lockedMessage,
+  onInvite,
 }: Readonly<{
   canManageMembers: boolean;
+  canInvitePeople: boolean;
   lockedMessage?: string;
+  onInvite: () => void;
 }>) {
   return (
-    <section className="rounded-3xl border border-dashed border-border bg-panel px-6 py-14 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-panel-muted text-muted">
-        <UsersRound className="h-6 w-6" />
+    <div className="rounded-xl border border-dashed border-border bg-panel-muted/40 px-4 py-8 text-center sm:rounded-2xl sm:py-10">
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-panel text-muted">
+        <UsersRound className="h-5 w-5" />
       </div>
-      <h3 className="mt-5 text-xl font-semibold text-foreground">No members assigned yet</h3>
-      <p className="mx-auto mt-2 max-w-xl text-sm text-muted">
+      <h3 className="mt-3 text-base font-semibold text-foreground">No members yet</h3>
+      <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-slate-600 dark:text-slate-300">
         {canManageMembers
-          ? "Invite someone to this work order to start building the team list."
+          ? "Invite someone to start the team list."
           : lockedMessage ?? "No members have been assigned to this work order yet."}
       </p>
-    </section>
+      {canManageMembers && canInvitePeople ? (
+        <Button
+          type="button"
+          variant="brand"
+          onClick={onInvite}
+          className="mt-4 h-9 px-4 text-sm"
+        >
+          <UserPlus2 className="mr-2 h-3.5 w-3.5" />
+          Invite member
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -182,40 +120,36 @@ function AssignedMemberRow({
   const showActionMenu = isWorkOrderAssignmentRole(member.role);
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-panel-muted px-5 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.03)] transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.06)] lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex min-w-0 items-center gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-panel text-sm font-semibold text-foreground">
-          {member.avatarUrl ? (
-            <Image
-              src={member.avatarUrl}
-              alt={member.name}
-              width={44}
-              height={44}
-              unoptimized
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            member.initials
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-base font-semibold text-foreground">{member.name}</p>
-          <p className="mt-1 truncate text-sm text-muted">{member.email}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              {formatRoleLabel(member.role)}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Clock3 className="h-3.5 w-3.5" />
-              Assigned {member.assignedAt}
-            </span>
-          </div>
-        </div>
+    <div className="flex items-center gap-2.5 rounded-lg border border-border bg-panel px-2.5 py-2 sm:gap-3 sm:rounded-xl sm:px-3 sm:py-2.5">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-panel-muted text-xs font-semibold text-foreground sm:h-10 sm:w-10">
+        {member.avatarUrl ? (
+          <Image
+            src={member.avatarUrl}
+            alt={member.name}
+            width={40}
+            height={40}
+            unoptimized
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          member.initials
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold leading-tight text-foreground">{member.name}</p>
+        <p className="mt-0.5 truncate text-xs leading-tight text-slate-600 dark:text-slate-300">
+          {member.email}
+        </p>
+        <p className="mt-1 hidden text-[11px] leading-tight text-slate-600 dark:text-slate-400 sm:block">
+          <span className="inline-flex items-center gap-1">
+            <Clock3 className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+            Assigned {member.assignedAt}
+          </span>
+        </p>
       </div>
 
-      <div className="flex items-center gap-3 self-start lg:self-center">
-        <MemberRolePill role={member.role} />
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <MemberRolePill role={member.role} compact />
         {showActionMenu ? (
           <WorkOrderMemberRowActions
             memberId={member.id}
@@ -247,58 +181,94 @@ export function MemberList({
   actorUserId,
   lockedMessage,
 }: MemberListProps) {
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const pendingCount = pendingInvites.length;
+  const showToolbarInvite =
+    members.length > 0 || !canInvitePeople || !canManageMembers;
+
   return (
-    <section className="space-y-6 px-6 py-6 lg:px-8">
-      <AssignMembersCard
+    <section className="px-3 pb-4 pt-2 sm:px-5 sm:pb-6 sm:pt-4 lg:px-8 lg:py-6">
+      <WorkOrderInviteMemberModal
+        open={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
         spaceId={spaceId}
         workOrderId={workOrderId}
-        canInvitePeople={canInvitePeople}
-        membersCount={members.length}
-        pendingInviteCount={pendingInvites.length}
-        lockedMessage={lockedMessage}
       />
 
-      <section className="rounded-3xl border border-border bg-panel shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-        <div className="border-b border-border px-6 py-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                Members List
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
-                People currently on this work order
-              </h2>
-              <p className="mt-2 text-sm text-muted">
-                Keep the team list clear and focused so everyone knows who belongs here.
-              </p>
-            </div>
-            <span className="inline-flex rounded-full border border-border bg-panel-muted px-3 py-1.5 text-sm font-medium text-foreground">
-              {members.length} assigned
-            </span>
+      <section className="rounded-xl border border-border bg-panel shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:rounded-2xl sm:shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-col gap-3 border-b border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4 sm:py-3.5 lg:px-5">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+              People on this work order
+            </h2>
+            <p className="mt-0.5 hidden text-xs text-slate-600 dark:text-slate-300 sm:block">
+              Everyone assigned can see this work order according to their role.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              <span className="font-semibold text-slate-900 dark:text-slate-100">{members.length}</span>
+              <span className="font-medium"> member{members.length === 1 ? "" : "s"}</span>
+              {pendingCount > 0 ? (
+                <>
+                  <span className="mx-1.5 text-slate-400 dark:text-slate-500" aria-hidden>
+                    ·
+                  </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{pendingCount}</span>
+                  <span className="font-medium"> pending</span>
+                </>
+              ) : null}
+            </p>
+            {showToolbarInvite ? (
+              <Button
+                type="button"
+                variant="brand"
+                disabled={!canInvitePeople}
+                title={
+                  !canInvitePeople
+                    ? (lockedMessage ?? "You cannot invite people with your current role.")
+                    : "Invite by link or user tag"
+                }
+                onClick={() => setInviteModalOpen(true)}
+                className="h-9 shrink-0 touch-manipulation px-3 text-xs font-medium sm:text-sm"
+              >
+                <UserPlus2 className="h-3.5 w-3.5 sm:mr-1.5" />
+                Invite
+              </Button>
+            ) : null}
           </div>
         </div>
 
-        <div className="px-6 py-6">
+        {!canInvitePeople && lockedMessage ? (
+          <p className="border-b border-border px-3 py-2 text-xs leading-snug text-muted sm:px-4">
+            {lockedMessage}
+          </p>
+        ) : null}
+
+        <div className="px-3 py-3 sm:px-4 sm:py-4 lg:px-5">
           {members.length === 0 ? (
             <MembersEmptyState
               canManageMembers={canManageMembers}
+              canInvitePeople={canInvitePeople}
               lockedMessage={lockedMessage}
+              onInvite={() => setInviteModalOpen(true)}
             />
           ) : (
-            <div className="space-y-3">
+            <ul className="space-y-2" role="list">
               {members.map((member) => (
-                <AssignedMemberRow
-                  key={member.id}
-                  member={member}
-                  canChangeRole={canChangeMemberRoles}
-                  actorRole={actorRole}
-                  actorUserId={actorUserId}
-                  spaceId={spaceId}
-                  workOrderId={workOrderId}
-                  canRemovePeople={canRemovePeople}
-                />
+                <li key={member.id}>
+                  <AssignedMemberRow
+                    member={member}
+                    canChangeRole={canChangeMemberRoles}
+                    actorRole={actorRole}
+                    actorUserId={actorUserId}
+                    spaceId={spaceId}
+                    workOrderId={workOrderId}
+                    canRemovePeople={canRemovePeople}
+                  />
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
       </section>

@@ -139,6 +139,26 @@ export async function requireAuthenticatedAppUser() {
   };
 }
 
+/** Same session payload as {@link requireAuthenticatedAppUser} without redirecting (for Route Handlers). */
+export async function getAuthenticatedAppUserOrNull() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const profile = await syncProfileFromAuthUser(supabase, user);
+
+  return {
+    supabase,
+    user,
+    profile,
+  };
+}
+
 export async function getCurrentProfile() {
   const { profile } = await requireAuthenticatedAppUser();
   return profile;

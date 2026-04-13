@@ -16,6 +16,10 @@ type RealtimeRouteRefreshProps = Readonly<{
   enabled?: boolean;
 }>;
 
+/** Set `NEXT_PUBLIC_REALTIME_ROUTE_REFRESH=false` to skip browser realtime when Supabase is unreachable (avoids dev overlay noise). */
+const realtimeRouteRefreshGloballyEnabled =
+  process.env.NEXT_PUBLIC_REALTIME_ROUTE_REFRESH !== "false";
+
 export function RealtimeRouteRefresh({
   channelName,
   subscriptions,
@@ -40,7 +44,7 @@ export function RealtimeRouteRefresh({
   });
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !realtimeRouteRefreshGloballyEnabled) {
       return;
     }
 
@@ -52,7 +56,13 @@ export function RealtimeRouteRefresh({
       return;
     }
 
-    const supabase = createSupabaseBrowserClient();
+    let supabase: ReturnType<typeof createSupabaseBrowserClient>;
+    try {
+      supabase = createSupabaseBrowserClient();
+    } catch {
+      return;
+    }
+
     const channel = supabase.channel(channelName);
 
     for (const subscription of parsedSubscriptions) {
@@ -70,7 +80,23 @@ export function RealtimeRouteRefresh({
       );
     }
 
-    channel.subscribe();
+    let loggedSubscribeIssue = false;
+    channel.subscribe((status, err) => {
+      if (status === "SUBSCRIBED") {
+        return;
+      }
+
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        // Never call `removeChannel` from inside this callback — Supabase can re-enter it and overflow the stack.
+        if (process.env.NODE_ENV === "development" && !loggedSubscribeIssue) {
+          loggedSubscribeIssue = true;
+          console.warn(
+            `[RealtimeRouteRefresh] ${channelName} (${status})`,
+            err?.message ?? "",
+          );
+        }
+      }
+    });
 
     return () => {
       if (refreshTimeoutRef.current !== null) {

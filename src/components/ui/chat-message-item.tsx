@@ -10,10 +10,10 @@ type ChatMessageItemProps = Readonly<{
 function ChatMessageItemComponent({ message }: ChatMessageItemProps) {
   if (message.kind === "system") {
     return (
-      <div className="flex justify-center">
-        <div className="max-w-2xl rounded-full border border-border bg-panel-muted px-4 py-2 text-center text-xs text-muted">
+      <div className="flex justify-center px-0.5">
+        <div className="max-w-[calc(100%-0.25rem)] rounded-2xl border border-border/80 bg-panel-muted/90 px-3 py-2 text-center text-[11px] leading-snug text-muted sm:max-w-2xl sm:rounded-full sm:px-4 sm:text-xs">
           <span className="font-medium text-foreground">{message.body}</span>
-          <span className="ml-2">{message.createdAt}</span>
+          <span className="mt-0.5 block text-muted sm:ml-2 sm:mt-0 sm:inline">{message.createdAt}</span>
         </div>
       </div>
     );
@@ -35,7 +35,7 @@ function ChatMessageItemComponent({ message }: ChatMessageItemProps) {
     >
       <div
         className={cn(
-          "max-w-xl rounded-2xl border px-4 py-3",
+          "max-w-[min(85%,20rem)] rounded-[1.1rem] border px-3 py-2.5 sm:max-w-xl sm:rounded-2xl sm:px-4 sm:py-3",
           message.isCurrentUser
             ? message.status === "failed"
               ? "border-rose-700 bg-rose-950 text-white"
@@ -43,7 +43,7 @@ function ChatMessageItemComponent({ message }: ChatMessageItemProps) {
             : "border-border bg-panel",
         )}
       >
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] sm:text-xs">
           <span className="font-semibold">{message.senderName}</span>
           <span className={message.isCurrentUser ? "text-slate-300" : "text-muted"}>
             {message.createdAt}
@@ -64,7 +64,9 @@ function ChatMessageItemComponent({ message }: ChatMessageItemProps) {
             </span>
           ) : null}
         </div>
-        {message.body ? <p className="mt-2 text-sm leading-6">{message.body}</p> : null}
+        {message.body ? (
+          <p className="mt-1.5 text-[15px] leading-relaxed sm:mt-2 sm:text-sm sm:leading-6">{message.body}</p>
+        ) : null}
         {message.attachments.length > 0 ? (
           <MessageAttachmentList
             attachments={message.attachments}
