@@ -18,7 +18,7 @@ export const termsSections: readonly TermsSection[] = [
     id: "intro",
     heading: "Overview",
     paragraphs: [
-      'These Terms of Service ("Terms") govern access to and use of the Registruum platform, website, software, applications, dashboards, records, messaging tools, storage tools, work order systems, bidding tools, and related services (collectively, the "Platform" or "Services") provided by Registruum Technologies Inc. ("Registruum," "we," "us," or "our").',
+      'These Terms of Service ("Terms") govern access to and use of the Registruum platform, website, software, applications, dashboards, records, messaging tools, storage tools, work order systems, bidding tools, and related services (collectively, the "Platform" or "Services") provided by Hightech Elevator Solutions ("Registruum," "we," "us," or "our").',
       "By accessing, registering for, or using Registruum, you agree to be bound by these Terms.",
     ],
   },
@@ -403,7 +403,7 @@ export const policySections: readonly TermsSection[] = [
     id: "privacy-policy",
     heading: "Privacy Policy",
     paragraphs: [
-      'Registruum Technologies Inc. ("Registruum", "we", "us") respects your privacy and is committed to protecting your personal and business information.',
+      'Hightech Elevator Solutions ("Registruum", "we", "us") respects your privacy and is committed to protecting your personal and business information.',
       "This Privacy Policy explains how we collect, use, store, and protect your data when you use the Registruum platform.",
       "We may collect account information such as your name, email address, phone number, company details, and role; platform data such as work orders, messages, chats, photos, files, bids, pricing data, logs, timestamps, and activity records; and technical data such as your IP address, device type, browser, and usage analytics.",
       "We use your data to operate and improve the platform, manage accounts and access, store and organize records, provide customer support, monitor security and prevent fraud, and comply with legal obligations.",

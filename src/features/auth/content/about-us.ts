@@ -7,7 +7,7 @@ export type AboutUsSection = Readonly<{
 export const aboutUsIntro = {
   title: "About Registruum",
   summary:
-    "Registruum Technologies Inc. is a Canadian-based technology company focused on transforming how businesses manage operations, records, and communication.",
+    "Registruum is a modern platform built by Hightech Elevator Solution Inc. to simplify operations, records, and communication for businesses, teams, and individuals.",
   purpose:
     "We built Registruum with one clear goal: to bring structure, clarity, and control to businesses overwhelmed by scattered workflows and lost information.",
 } as const;
@@ -83,5 +83,5 @@ export const founderMessage = {
   quote:
     "Registruum was built during a time when managing everything felt overwhelming, from connecting with people, handling operations, tracking work, to keeping records safe. I realized that many businesses go through the same struggle. Instead of accepting the chaos, we built a system to fix it. Registruum is more than a platform. It's a solution to help people stay organized, protected, and in control of their work.",
   author: "Ruzyl Earl Cabarles",
-  title: "Founder, Registruum Technologies Inc.",
+  title: "Founder of Registruum (by Hightech Elevator Solution Inc.)",
 } as const;
