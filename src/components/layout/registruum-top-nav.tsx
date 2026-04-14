@@ -157,9 +157,15 @@ export function RegistruumTopNav({
           className="shrink-0 touch-manipulation"
           aria-label="Registruum home"
         >
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-[0.85rem] bg-[#2f5fd4] text-sm font-semibold text-white shadow-[0_8px_20px_rgba(47,95,212,0.2)] lg:h-11 lg:w-11 lg:rounded-2xl lg:text-base lg:shadow-[0_10px_24px_rgba(47,95,212,0.22)]">
-            R
-          </span>
+          <Image
+            src="/logo.png"
+            alt="Registruum"
+            width={44}
+            height={44}
+            unoptimized
+            className="h-10 w-10 lg:h-11 lg:w-11"
+            priority
+          />
         </Link>
 
         <div className="relative min-w-0 flex-1 lg:max-w-none lg:flex-none" ref={spaceMenuRef}>

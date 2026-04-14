@@ -75,9 +75,13 @@ export function AuthShell({
           <div className="relative flex w-full flex-col justify-between px-12 py-12 xl:px-16">
             <div className="auth-enter space-y-10">
               <Link href="/" className="inline-flex items-center gap-4">
-                <span className="inline-flex h-16 w-16 items-center justify-center rounded-[1.45rem] bg-[#4d8dff] text-2xl font-semibold text-white shadow-[0_22px_44px_rgba(77,141,255,0.28)]">
-                  R
-                </span>
+                <img
+                  src="/logo.png"
+                  alt="Registruum"
+                  width={64}
+                  height={64}
+                  className="h-16 w-16"
+                />
                 <div>
                   <p className="text-[0.75rem] font-semibold uppercase tracking-[0.32em] text-muted">
                     Registruum
@@ -142,9 +146,13 @@ export function AuthShell({
             <div className="auth-panel-glow relative rounded-[2rem] border border-border/70 bg-panel p-5 shadow-[0_30px_80px_rgba(15,23,42,0.1)] sm:p-7 lg:p-8">
               <div className="mb-8 flex items-center justify-between gap-4">
                 <Link href="/" className="inline-flex items-center gap-3">
-                  <span className="inline-flex h-14 w-14 items-center justify-center rounded-[1.35rem] bg-[#4d8dff] text-xl font-semibold text-white shadow-[0_16px_36px_rgba(77,141,255,0.28)]">
-                    R
-                  </span>
+                  <img
+                    src="/logo.png"
+                    alt="Registruum"
+                    width={56}
+                    height={56}
+                    className="h-14 w-14"
+                  />
                   <div>
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.32em] text-muted">
                       Registruum
