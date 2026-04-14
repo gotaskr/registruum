@@ -12,6 +12,7 @@ export type WorkOrderInviteDetails = Readonly<{
   role: string;
   workOrderId: string | null;
   workOrderTitle: string | null;
+  invitedByUserId: string;
   invitedByName: string;
   expiresAt: string;
 }>;
@@ -72,6 +73,7 @@ export async function getWorkOrderInviteByToken(
     role: invite.role,
     workOrderId: workOrderResult.data?.id ?? invite.assigned_work_order_ids[0] ?? null,
     workOrderTitle: workOrderResult.data?.title ?? null,
+    invitedByUserId: invite.invited_by_user_id,
     invitedByName: inviterResult.data?.full_name ?? "Unknown User",
     expiresAt: formatDateTimeLabel(invite.expires_at),
   };

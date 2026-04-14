@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
+import {
+  getAuthenticatedAppUserOrNull,
+  requireAuthenticatedAppUser,
+} from "@/features/auth/api/profiles";
 import { createActivityLog } from "@/features/logs/api/activity-logs";
 import {
   initialInvitationActionState,
@@ -22,6 +25,25 @@ type InviteRow = Database["public"]["Tables"]["invites"]["Row"];
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+function normalizeEmail(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function canDeclineInvite(
+  user: { id: string; email?: string | null },
+  invite: InviteRow,
+) {
+  if (user.id === invite.invited_by_user_id) {
+    return true;
+  }
+  if (invite.target_user_id && user.id === invite.target_user_id) {
+    return true;
+  }
+  const inviteEmail = normalizeEmail(invite.email);
+  const userEmail = normalizeEmail(user.email ?? undefined);
+  return Boolean(inviteEmail && userEmail && inviteEmail === userEmail);
 }
 
 async function getPendingLinkInvite(token: string) {
@@ -65,6 +87,11 @@ export async function acceptWorkOrderInviteLink(
   try {
     const { user, profile } = await requireAuthenticatedAppUser();
     const { adminSupabase, invite } = await getPendingLinkInvite(token);
+
+    if (user.id === invite.invited_by_user_id) {
+      return { error: "You cannot accept an invitation you created." };
+    }
+
     const workOrderId = invite.assigned_work_order_ids[0];
     const defaultAssignedRole = workOrderId ? getDefaultWorkOrderInviteRole() : invite.role;
 
@@ -218,7 +245,19 @@ export async function declineWorkOrderInviteLink(
   }
 
   try {
+    const auth = await getAuthenticatedAppUserOrNull();
+    if (!auth) {
+      return { error: "Sign in to decline or revoke this invitation." };
+    }
+    const { user } = auth;
     const { adminSupabase, invite } = await getPendingLinkInvite(token);
+
+    if (!canDeclineInvite(user, invite)) {
+      return {
+        error: "Sign in as the invited person or the teammate who sent this link to respond.",
+      };
+    }
+
     const workOrderId = invite.assigned_work_order_ids[0] ?? null;
 
     const { error } = await adminSupabase
@@ -236,7 +275,7 @@ export async function declineWorkOrderInviteLink(
     await createActivityLog({
       supabase: adminSupabase,
       action: workOrderId ? "Declined a work order invite" : "Declined a space invite",
-      actorUserId: null,
+      actorUserId: user.id,
       spaceId: invite.space_id,
       workOrderId,
       entityType: "invite",

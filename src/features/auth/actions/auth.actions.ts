@@ -153,7 +153,9 @@ export async function signUp(
     };
   }
 
-  if (data.session && data.user) {
+  const emailConfirmed = !!data.user?.email_confirmed_at;
+
+  if (data.session && data.user && emailConfirmed) {
     await syncProfileFromAuthUser(supabase, data.user);
     redirect(parsed.data.next ?? "/");
   }

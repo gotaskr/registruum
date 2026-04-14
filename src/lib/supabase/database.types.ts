@@ -1309,6 +1309,10 @@ export type Database = {
         Args: { object_name: string }
         Returns: string
       }
+      email_verification_status: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
     }
     Enums: {
       activity_log_entity_type:
