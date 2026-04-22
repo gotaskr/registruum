@@ -292,6 +292,7 @@ export async function removeSpaceTeamMember(
 
     revalidatePath(`/space/${parsed.data.spaceId}/team`);
     revalidatePath(`/space/${parsed.data.spaceId}`);
+    revalidatePath("/");
 
     return {
       success: `${targetProfile?.full_name ?? "Team member"} removed from the space team.`,

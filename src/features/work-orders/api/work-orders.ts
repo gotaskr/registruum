@@ -1,6 +1,6 @@
 import "server-only";
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getArchiveFolderOptions } from "@/features/archive/api/archive";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import {
@@ -363,11 +363,29 @@ export async function getWorkOrderActorContext(
 ) {
   const context = await resolveWorkOrderActorContext(spaceId, workOrderId);
 
-  if (!context) {
-    notFound();
+  if (context) {
+    return context;
   }
 
-  return context;
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: workOrderRow } = await adminSupabase
+    .from("work_orders")
+    .select("status")
+    .eq("space_id", spaceId)
+    .eq("id", workOrderId)
+    .maybeSingle();
+
+  const status = workOrderRow?.status as string | undefined;
+  const isActivePipeline =
+    status === "open" ||
+    status === "in_progress" ||
+    status === "on_hold";
+
+  if (isActivePipeline) {
+    redirect("/");
+  }
+
+  notFound();
 }
 
 export async function getWorkOrderActorContextForAction(

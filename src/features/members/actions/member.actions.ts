@@ -763,6 +763,7 @@ export async function removeWorkOrderMember(formData: FormData) {
   revalidatePath(
     getWorkOrderMembersPath(parsed.data.spaceId, parsed.data.workOrderId),
   );
+  revalidatePath("/");
 }
 
 export async function updateWorkOrderMemberRole(

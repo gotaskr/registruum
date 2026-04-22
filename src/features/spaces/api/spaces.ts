@@ -1,6 +1,6 @@
 import "server-only";
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import {
   mapActivityLogRow,
@@ -234,11 +234,22 @@ export async function getSpaceByIdForUser(spaceId: string) {
   const spaces = await getSpacesForUser();
   const space = spaces.find((candidate) => candidate.id === spaceId);
 
-  if (!space) {
-    notFound();
+  if (space) {
+    return space;
   }
 
-  return space;
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: spaceRow } = await adminSupabase
+    .from("spaces")
+    .select("id")
+    .eq("id", spaceId)
+    .maybeSingle();
+
+  if (spaceRow) {
+    redirect("/");
+  }
+
+  notFound();
 }
 
 export async function getInitialSpaceForUser() {

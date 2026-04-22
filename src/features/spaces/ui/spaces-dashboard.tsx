@@ -28,6 +28,7 @@ export function SpacesDashboard({
         subscriptions={[
           { table: "spaces" },
           { table: "space_memberships" },
+          { table: "work_order_memberships" },
           { table: "invites" },
         ]}
       />

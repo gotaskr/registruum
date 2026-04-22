@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { MapPin } from "lucide-react";
 import { MainShell } from "@/components/layout/main-shell";
+import { ActiveWorkOrderPresence } from "@/components/realtime/active-work-order-presence";
 import { RealtimeRouteRefresh } from "@/components/realtime/realtime-route-refresh";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ChatPanel } from "@/features/chat/ui/chat-panel";
@@ -203,6 +204,11 @@ export function WorkOrderModuleScreen({
 
   return (
     <>
+      <ActiveWorkOrderPresence
+        spaceId={workOrder.spaceId}
+        workOrderId={workOrder.id}
+        status={workOrder.status}
+      />
       <RealtimeRouteRefresh
         channelName={`work-order:${workOrder.id}:${module}`}
         subscriptions={[
