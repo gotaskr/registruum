@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -14,14 +14,12 @@ import { initialInvitationActionState } from "@/features/settings/types/invitati
 type WorkOrderInviteResponseProps = Readonly<{
   token: string;
   isAuthenticated: boolean;
-  autoAccept: boolean;
   isOwnInvite: boolean;
 }>;
 
 export function WorkOrderInviteResponse({
   token,
   isAuthenticated,
-  autoAccept,
   isOwnInvite,
 }: WorkOrderInviteResponseProps) {
   const router = useRouter();
@@ -33,15 +31,9 @@ export function WorkOrderInviteResponse({
     declineWorkOrderInviteLink,
     initialInvitationActionState,
   );
-  const autoAcceptFormRef = useRef<HTMLFormElement | null>(null);
-  const acceptNext = `/invite/${token}?intent=accept`;
+  /** After sign-in, land on this page so the user explicitly taps Accept (no auto-submit). */
+  const acceptNext = `/invite/${token}`;
   const inviteReturnUrl = `/invite/${token}`;
-
-  useEffect(() => {
-    if (isAuthenticated && autoAccept && !isOwnInvite) {
-      autoAcceptFormRef.current?.requestSubmit();
-    }
-  }, [autoAccept, isAuthenticated, isOwnInvite]);
 
   useEffect(() => {
     if (declineState.success) {
@@ -79,7 +71,7 @@ export function WorkOrderInviteResponse({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         {isAuthenticated ? (
-          <form ref={autoAcceptFormRef} action={acceptAction} className="contents">
+          <form action={acceptAction} className="contents">
             <input type="hidden" name="token" value={token} />
             <Button
               type="submit"

@@ -31,12 +31,18 @@ export async function listPendingInvitationsForUser(
 ): Promise<SettingsInvitation[]> {
   const { supabase, user, profile } = ctx;
 
+  /** PostgREST: quote email so `.` and `@` in the value are not parsed as filter syntax. */
+  const emailOrFilter =
+    profile.email != null && profile.email.length > 0
+      ? `target_user_id.eq.${user.id},email.eq."${profile.email.replace(/"/g, '\\"')}"`
+      : `target_user_id.eq.${user.id}`;
+
   const inviteQuery = profile.email
     ? supabase
         .from("invites")
         .select("*")
         .eq("status", "pending")
-        .or(`target_user_id.eq.${user.id},email.eq.${profile.email}`)
+        .or(emailOrFilter)
         .order("created_at", { ascending: false })
     : supabase
         .from("invites")

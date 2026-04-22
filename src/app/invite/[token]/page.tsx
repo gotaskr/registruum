@@ -9,17 +9,10 @@ type InvitePageProps = Readonly<{
   params: Promise<{
     token: string;
   }>;
-  searchParams: Promise<{
-    intent?: string;
-  }>;
 }>;
 
-export default async function InvitePage({
-  params,
-  searchParams,
-}: InvitePageProps) {
+export default async function InvitePage({ params }: InvitePageProps) {
   const { token } = await params;
-  const { intent } = await searchParams;
   const invite = await getWorkOrderInviteByToken(token);
 
   if (!invite) {
@@ -85,7 +78,6 @@ export default async function InvitePage({
               <WorkOrderInviteResponse
                 token={token}
                 isAuthenticated={Boolean(user)}
-                autoAccept={Boolean(user) && intent === "accept" && !isOwnInvite}
                 isOwnInvite={isOwnInvite}
               />
             </div>

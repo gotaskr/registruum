@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { recordCompletedWorkOrderHistoryForCompletion } from "@/features/history/lib/record-completion-history";
 import { createActivityLog } from "@/features/logs/api/activity-logs";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
@@ -634,7 +635,20 @@ export async function completeWorkOrder(
     },
   });
 
+  try {
+    await recordCompletedWorkOrderHistoryForCompletion({
+      spaceId,
+      workOrderId,
+      completedAtIso: new Date().toISOString(),
+      workOrderTitle: context.workOrder.title,
+      ownerUserId: context.workOrder.ownerUserId,
+    });
+  } catch (historyError) {
+    console.error("Failed to record completed work order history:", historyError);
+  }
+
   revalidatePath(`/space/${spaceId}`);
+  revalidatePath("/history");
   revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/overview`);
   revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/chat`);
   revalidatePath(`/space/${spaceId}/work-order/${workOrderId}/documents`);

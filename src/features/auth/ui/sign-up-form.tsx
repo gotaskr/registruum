@@ -1,22 +1,104 @@
 "use client";
 
 import { ArrowRight, KeyRound, Mail, User2 } from "lucide-react";
-import { useActionState } from "react";
-import { signUp } from "@/features/auth/actions/auth.actions";
+import { useRouter } from "next/navigation";
+import { useCallback, useState, type FormEvent } from "react";
+import { syncProfileFromCurrentSession } from "@/features/auth/actions/auth.actions";
+import { formatAuthReachabilityError } from "@/features/auth/lib/format-auth-reachability-error";
 import { FormMessage } from "@/features/auth/ui/form-message";
-import { initialAuthActionState } from "@/features/auth/types/auth-action-state";
+import { signUpSchema } from "@/features/auth/schemas/auth.schema";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type SignUpFormProps = Readonly<{
   next?: string;
 }>;
 
 export function SignUpForm({ next }: SignUpFormProps) {
-  const [state, formAction, isPending] = useActionState(signUp, initialAuthActionState);
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
+
+  const onSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setError(null);
+
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+
+      const parsed = signUpSchema.safeParse({
+        fullName: String(formData.get("fullName") ?? ""),
+        email: String(formData.get("email") ?? ""),
+        password: String(formData.get("password") ?? ""),
+        confirmPassword: String(formData.get("confirmPassword") ?? ""),
+        next: next || undefined,
+      });
+
+      if (!parsed.success) {
+        setError(parsed.error.issues[0]?.message ?? "Unable to create your account.");
+        return;
+      }
+
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const callbackUrl = new URL("/auth/callback", origin || "http://localhost:3000");
+
+      if (parsed.data.next) {
+        callbackUrl.searchParams.set("next", parsed.data.next);
+      }
+
+      setIsPending(true);
+
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const result = await supabase.auth.signUp({
+          email: parsed.data.email,
+          password: parsed.data.password,
+          options: {
+            emailRedirectTo: callbackUrl.toString(),
+            data: {
+              full_name: parsed.data.fullName,
+            },
+          },
+        });
+
+        if (result.error) {
+          setError(formatAuthReachabilityError(result.error.message));
+          setIsPending(false);
+          return;
+        }
+
+        const emailConfirmed = !!result.data.user?.email_confirmed_at;
+
+        if (result.data.session && result.data.user && emailConfirmed) {
+          await syncProfileFromCurrentSession();
+          router.replace(parsed.data.next ?? "/");
+          router.refresh();
+          return;
+        }
+
+        const verifyUrl = new URL("/verify-email", origin || "http://localhost:3000");
+        verifyUrl.searchParams.set("email", parsed.data.email);
+
+        if (parsed.data.next) {
+          verifyUrl.searchParams.set("next", parsed.data.next);
+        }
+
+        router.push(verifyUrl.toString());
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause);
+        setError(formatAuthReachabilityError(message));
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [next, router],
+  );
 
   return (
-    <form action={formAction} className="space-y-5">
-      {next ? <input type="hidden" name="next" value={next} /> : null}
-      <FormMessage message={state.error} />
+    <form onSubmit={onSubmit} className="space-y-5">
+      {next ? <input type="hidden" name="next" value={next} readOnly /> : null}
+      <FormMessage message={error ?? undefined} />
 
       <div className="grid gap-4">
         <label className="block space-y-2.5">
@@ -94,7 +176,6 @@ export function SignUpForm({ next }: SignUpFormProps) {
         {isPending ? "Creating account..." : "Create Account"}
         <ArrowRight className="h-4 w-4" />
       </button>
-
     </form>
   );
 }

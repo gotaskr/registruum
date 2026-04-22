@@ -94,7 +94,7 @@ export function ArchiveFolderNavItem({
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
             isActive
-              ? "border-slate-200 bg-slate-50 text-slate-900"
+              ? "border-accent/35 bg-accent-soft text-accent"
               : isSystem
                 ? "border-slate-200 bg-slate-50 text-slate-700"
                 : "border-slate-200 bg-white text-slate-600 group-hover:text-slate-900",
@@ -109,7 +109,7 @@ export function ArchiveFolderNavItem({
         className={cn(
           "ml-3 inline-flex min-w-8 items-center justify-center rounded-full border px-2.5 py-1 text-xs font-semibold",
           isActive
-            ? "border-slate-200 bg-slate-100 text-slate-800"
+            ? "border-accent/30 bg-accent-soft text-accent"
             : "border-slate-200 bg-white text-slate-600",
         )}
       >
@@ -125,7 +125,7 @@ export function ArchiveFolderNavItem({
       className={cn(
         "group flex items-center justify-between rounded-xl border px-3 py-2.5 transition-colors",
         isActive
-          ? "border-slate-300 bg-white text-slate-950 shadow-[0_4px_12px_rgba(15,23,42,0.04)]"
+          ? "border-accent/40 bg-accent-soft/80 text-foreground shadow-sm"
           : "border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950",
       )}
       style={

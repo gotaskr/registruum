@@ -265,6 +265,64 @@ export type Database = {
           },
         ]
       }
+      completed_work_order_history: {
+        Row: {
+          completed_at: string
+          created_at: string
+          id: string
+          role_snapshot: string
+          space_id: string | null
+          space_name_snapshot: string
+          user_id: string
+          work_order_id: string | null
+          work_order_title_snapshot: string
+        }
+        Insert: {
+          completed_at: string
+          created_at?: string
+          id?: string
+          role_snapshot: string
+          space_id?: string | null
+          space_name_snapshot: string
+          user_id: string
+          work_order_id?: string | null
+          work_order_title_snapshot: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          role_snapshot?: string
+          space_id?: string | null
+          space_name_snapshot?: string
+          user_id?: string
+          work_order_id?: string | null
+          work_order_title_snapshot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "completed_work_order_history_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "spaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "completed_work_order_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "completed_work_order_history_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_folders: {
         Row: {
           created_at: string

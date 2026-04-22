@@ -17,6 +17,8 @@ type ArchiveCustomFolderListProps = Readonly<{
   selectedFolderId: string | null;
   basePath?: string;
   spaceId?: string | null;
+  /** Tighter block when nested in a space-archive sidebar rail. */
+  listStyle?: "default" | "sidebar";
 }>;
 
 type ArchiveFolderTreeRow = Readonly<{
@@ -31,7 +33,9 @@ export function ArchiveCustomFolderList({
   selectedFolderId,
   basePath = "/archive",
   spaceId = null,
+  listStyle = "default",
 }: ArchiveCustomFolderListProps) {
+  const isSidebar = listStyle === "sidebar";
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedFolderIdForDelete, setSelectedFolderIdForDelete] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -155,11 +159,15 @@ export function ArchiveCustomFolderList({
   }
 
   return (
-    <div className="mt-5 border-t border-border pt-4">
+    <div
+      className={cn(
+        isSidebar ? "mt-3 border-t border-border/80 pt-3" : "mt-5 border-t border-border pt-4",
+      )}
+    >
       <div className="flex items-center justify-between gap-3 px-2">
         <div className="flex items-center gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-            Custom Folders
+            {isSidebar ? "Your folders" : "Custom Folders"}
           </p>
           <span className="rounded-full border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-muted">
             {folders.length}

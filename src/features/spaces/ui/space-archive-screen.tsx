@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Archive,
   ArrowUpRight,
@@ -90,6 +90,25 @@ export function SpaceArchiveScreen({
     [folders],
   );
   const spaceTypeLabel = getSpaceTypeLabel(space.spaceType);
+
+  /** Root → leaf for breadcrumbs and parent jumps (excludes virtual “all” view). */
+  const selectedFolderTrail = useMemo(() => {
+    if (!selectedFolderId) {
+      return [];
+    }
+
+    const byId = new Map(folders.map((folder) => [folder.id, folder]));
+    const trail: ArchiveFolder[] = [];
+    let current = byId.get(selectedFolderId);
+
+    while (current) {
+      trail.unshift(current);
+      const parentId = current.parentId;
+      current = parentId ? byId.get(parentId) : undefined;
+    }
+
+    return trail;
+  }, [folders, selectedFolderId]);
 
   /** Custom folders in tree order for the mobile folder picker. */
   const mobileCustomFolderOrder = useMemo(() => {
@@ -191,6 +210,15 @@ export function SpaceArchiveScreen({
     return nextQuery ? `${pathname}?${nextQuery}` : pathname;
   }
 
+  function jumpDestinationClass(isActive: boolean) {
+    return cn(
+      "inline-flex shrink-0 items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors touch-manipulation",
+      isActive
+        ? "border-accent bg-accent-soft text-accent"
+        : "border-border bg-panel text-foreground hover:bg-panel-muted",
+    );
+  }
+
   return (
     <MainShell
       title="Archive"
@@ -222,7 +250,7 @@ export function SpaceArchiveScreen({
         <div
           className={cn(
             "mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:gap-3",
-            !isArchiveOpen && "lg:hidden",
+            !isArchiveOpen && "max-lg:hidden",
           )}
         >
           <label className="relative block min-w-0 flex-1">
@@ -254,10 +282,50 @@ export function SpaceArchiveScreen({
           </select>
         </div>
 
+        <div className="mb-3 hidden items-center gap-3 border-b border-border pb-3 lg:flex">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-panel-muted text-xs font-semibold text-foreground">
+            {space.photoUrl ? (
+              <Image
+                src={space.photoUrl}
+                alt={space.name}
+                width={40}
+                height={40}
+                unoptimized
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              space.name
+                .split(" ")
+                .map((part) => part.charAt(0))
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+              Space archive
+            </p>
+            <h2 className="truncate text-lg font-semibold tracking-tight text-foreground">
+              {space.name}
+            </h2>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+              {spaceTypeLabel ? (
+                <span className="rounded-full border border-border bg-panel-muted px-2 py-0.5 font-medium text-foreground">
+                  {spaceTypeLabel}
+                </span>
+              ) : null}
+              <span className="tabular-nums">{totalCount} archived</span>
+              <span aria-hidden>·</span>
+              <span className="tabular-nums">{folders.length} folders</span>
+            </div>
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={() => setIsArchiveOpen((current) => !current)}
-          className="hidden w-full rounded-xl border border-border bg-panel p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-colors hover:bg-panel-muted sm:rounded-2xl sm:p-5 lg:block lg:rounded-[2rem] lg:p-6 lg:shadow-[0_18px_36px_rgba(15,23,42,0.05)] lg:hover:-translate-y-0.5 lg:hover:shadow-[0_22px_44px_rgba(15,23,42,0.08)]"
+          className="w-full rounded-xl border border-border bg-panel p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-colors hover:bg-panel-muted sm:rounded-2xl sm:p-5 lg:hidden"
         >
           <div className="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 items-start gap-3 sm:gap-4">
@@ -332,10 +400,11 @@ export function SpaceArchiveScreen({
 
         <div
           className={cn(
-            "mt-3 grid gap-3 sm:mt-4 sm:gap-4 lg:mt-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]",
-            !isArchiveOpen && "lg:hidden",
+            "mt-3 flex flex-col gap-3 sm:mt-4 sm:gap-4 lg:mt-0 lg:min-h-[min(32rem,calc(100vh-14rem))] lg:flex lg:flex-1 lg:flex-col lg:gap-0 lg:overflow-hidden lg:rounded-xl lg:border lg:border-border lg:bg-panel lg:shadow-sm",
+            !isArchiveOpen && "max-lg:hidden",
           )}
         >
+          <div className="flex min-h-0 flex-1 flex-col gap-3 lg:min-h-0 lg:flex-row lg:gap-0">
             <div className="lg:hidden">
               <div className="flex flex-row items-end gap-2">
                 <label className="grid min-w-0 flex-1 gap-1">
@@ -352,7 +421,7 @@ export function SpaceArchiveScreen({
                     aria-label="Choose archive folder"
                   >
                     <option value="">
-                      All archive ({allArchiveCount})
+                      All records ({allArchiveCount})
                     </option>
                     {defaultFolder ? (
                       <option key={defaultFolder.id} value={defaultFolder.id}>
@@ -374,32 +443,42 @@ export function SpaceArchiveScreen({
                   triggerClassName="h-10 w-auto shrink-0 touch-manipulation px-3"
                 />
               </div>
+              <div
+                className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                aria-label="Quick folder jumps"
+              >
+                <Link
+                  href={buildFolderHref(null)}
+                  className={jumpDestinationClass(!selectedFolderId)}
+                >
+                  All records
+                </Link>
+                {defaultFolder ? (
+                  <Link
+                    href={buildFolderHref(defaultFolder.id)}
+                    className={jumpDestinationClass(selectedFolderId === defaultFolder.id)}
+                  >
+                    {defaultFolder.name}
+                  </Link>
+                ) : null}
+              </div>
             </div>
 
-            <aside className="hidden rounded-2xl border border-border bg-panel shadow-[0_18px_36px_rgba(15,23,42,0.05)] lg:block lg:rounded-[2rem]">
-              <div className="border-b border-border px-4 py-4 sm:px-5 sm:py-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-panel-muted text-accent sm:h-11 sm:w-11 sm:rounded-2xl">
-                    <FolderTree className="h-5 w-5" aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                      Folder tree
-                    </p>
-                    <p className="mt-1 text-xs text-muted sm:text-sm">
-                      Browse folders and subfolders.
-                    </p>
-                  </div>
+            <aside className="hidden w-full shrink-0 border-border bg-panel-muted/40 lg:flex lg:min-h-0 lg:w-[min(100%,18rem)] lg:flex-col lg:border-r xl:w-72">
+              <div className="shrink-0 border-b border-border px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <FolderTree className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                  <p className="text-xs font-semibold text-foreground">Folders</p>
                 </div>
               </div>
 
-              <div className="px-3 py-3 sm:px-4 sm:py-4">
-                <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                  System folders
+              <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2 sm:px-3 sm:py-3">
+                <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  Start here
                 </p>
-                <div className="mt-3 space-y-2">
+                <div className="mt-2 space-y-1.5">
                   <ArchiveFolderNavItem
-                    label="All Archive"
+                    label="All records"
                     count={allArchiveCount}
                     href={buildFolderHref(null)}
                     icon={Vault}
@@ -423,10 +502,11 @@ export function SpaceArchiveScreen({
                   selectedFolderId={selectedFolderId}
                   basePath={pathname}
                   spaceId={space.id}
+                  listStyle="sidebar"
                 />
               </div>
 
-              <div className="border-t border-border px-4 py-3 sm:px-5 sm:py-4">
+              <div className="shrink-0 border-t border-border bg-panel px-2 py-2 sm:px-3 sm:py-2.5">
                 <ArchiveCreateFolderModal
                   returnTo={pathname}
                   folders={folders}
@@ -436,8 +516,8 @@ export function SpaceArchiveScreen({
               </div>
             </aside>
 
-            <div className="min-w-0 space-y-3 sm:space-y-4">
-              <div className="rounded-lg border border-border bg-panel p-3 shadow-sm sm:rounded-xl sm:p-4 sm:shadow-[0_8px_24px_rgba(15,23,42,0.04)] lg:rounded-[2rem] lg:p-5 lg:shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-3 sm:space-y-4 lg:space-y-0">
+              <div className="rounded-lg border border-border bg-panel p-3 shadow-sm sm:rounded-xl sm:p-4 sm:shadow-[0_8px_24px_rgba(15,23,42,0.04)] lg:rounded-none lg:border-0 lg:border-b lg:shadow-none lg:px-4 lg:py-3">
                 {/* Mobile: one compact row — full folder title + count (no duplicate subcopy). */}
                 <div className="flex items-start justify-between gap-3 lg:hidden">
                   <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground break-words">
@@ -453,33 +533,85 @@ export function SpaceArchiveScreen({
                   </p>
                 </div>
 
-                <div className="hidden flex-col gap-3 sm:gap-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-[11px] sm:tracking-[0.24em]">
-                      Current view
-                    </p>
-                    <h3 className="mt-1.5 truncate text-lg font-semibold text-foreground sm:mt-2 sm:text-xl lg:text-2xl">
-                      {selectedFolder ? selectedFolder.pathLabel : `${space.name} archive`}
-                    </h3>
-                    <p className="mt-1 text-xs text-muted sm:mt-2 sm:text-sm">
-                      {selectedFolder
-                        ? `Records in ${selectedFolder.pathLabel}.`
-                        : `All archived records for ${space.name}.`}
-                    </p>
+                <div className="hidden flex-col gap-2.5 lg:flex">
+                  <div className="flex items-start justify-between gap-3">
+                    <nav
+                      className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-0.5 text-sm text-muted"
+                      aria-label="Archive location"
+                    >
+                      <Link
+                        href={buildFolderHref(null)}
+                        className="shrink-0 font-medium text-accent hover:underline"
+                      >
+                        Archive
+                      </Link>
+                      <ChevronRight className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
+                      {selectedFolderTrail.length === 0 ? (
+                        <span className="min-w-0 font-semibold text-foreground">All records</span>
+                      ) : (
+                        selectedFolderTrail.map((folder, index) => {
+                          const isLast = index === selectedFolderTrail.length - 1;
+
+                          return (
+                            <Fragment key={folder.id}>
+                              {index > 0 ? (
+                                <ChevronRight
+                                  className="h-4 w-4 shrink-0 opacity-50"
+                                  aria-hidden
+                                />
+                              ) : null}
+                              {isLast ? (
+                                <span
+                                  className="min-w-0 truncate font-semibold text-foreground"
+                                  title={folder.pathLabel}
+                                >
+                                  {folder.name}
+                                </span>
+                              ) : (
+                                <Link
+                                  href={buildFolderHref(folder.id)}
+                                  className="max-w-[min(12rem,45%)] shrink truncate font-medium text-accent hover:underline"
+                                  title={folder.pathLabel}
+                                >
+                                  {folder.name}
+                                </Link>
+                              )}
+                            </Fragment>
+                          );
+                        })
+                      )}
+                    </nav>
+                    <div className="shrink-0 text-right text-xs tabular-nums text-muted">
+                      <span className="font-medium text-foreground">{items.length}</span>
+                      {query.trim() ? (
+                        <span className="ml-1">filtered</span>
+                      ) : (
+                        <span className="ml-1">shown</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-border bg-panel-muted px-3 py-2 text-xs text-muted sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm lg:max-w-xs">
-                    <p className="font-medium text-foreground">
-                      {items.length} visible
-                    </p>
-                    <p className="mt-0.5 hidden sm:mt-1 sm:block">
-                      Use the folder list to switch views.
-                    </p>
+                  <div className="flex flex-wrap gap-2" aria-label="Quick folder jumps">
+                    <Link
+                      href={buildFolderHref(null)}
+                      className={jumpDestinationClass(!selectedFolderId)}
+                    >
+                      All records
+                    </Link>
+                    {defaultFolder ? (
+                      <Link
+                        href={buildFolderHref(defaultFolder.id)}
+                        className={jumpDestinationClass(selectedFolderId === defaultFolder.id)}
+                      >
+                        {defaultFolder.name}
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
               </div>
 
+              <div className="min-h-0 flex-1 space-y-3 sm:space-y-4 lg:overflow-y-auto lg:px-2 lg:pb-3 lg:pt-1">
               {items.length === 0 ? (
-                <section className="grid min-h-[11rem] place-items-center rounded-lg border border-border bg-panel px-4 py-6 shadow-sm sm:min-h-[18rem] sm:rounded-xl sm:px-6 sm:py-8 sm:shadow-[0_8px_24px_rgba(15,23,42,0.04)] lg:min-h-[28rem] lg:rounded-[2rem] lg:py-10 lg:shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
+                <section className="grid min-h-[11rem] place-items-center rounded-lg border border-border bg-panel px-4 py-6 shadow-sm sm:min-h-[18rem] sm:rounded-xl sm:px-6 sm:py-8 sm:shadow-[0_8px_24px_rgba(15,23,42,0.04)] lg:min-h-[20rem] lg:rounded-xl lg:py-10 lg:shadow-sm">
                   <div className="max-w-md text-center">
                     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-panel-muted text-accent sm:h-14 sm:w-14 sm:rounded-xl">
                       <Archive className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
@@ -530,11 +662,13 @@ export function SpaceArchiveScreen({
                   ))}
                 </ul>
               )}
+              </div>
             </div>
+          </div>
         </div>
 
         {!isArchiveOpen ? (
-          <div className="mt-4 hidden rounded-xl border border-dashed border-border bg-panel px-4 py-6 text-center sm:rounded-2xl sm:px-6 sm:py-10 lg:block">
+          <div className="mt-4 rounded-xl border border-dashed border-border bg-panel px-4 py-6 text-center sm:rounded-2xl sm:px-6 sm:py-10 lg:hidden">
             <p className="text-sm font-medium text-foreground">
               Tap above to open folders and archived records for {space.name}.
             </p>

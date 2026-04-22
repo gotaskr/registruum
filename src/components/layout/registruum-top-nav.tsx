@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ChevronsUpDown,
   CreditCard,
+  History,
   Inbox,
   LogOut,
   Settings,
@@ -444,6 +445,14 @@ export function RegistruumTopNav({
                 >
                   <Settings className="h-4 w-4 text-muted" />
                   <span>Settings</span>
+                </Link>
+                <Link
+                  href="/history"
+                  className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-panel-muted"
+                  onClick={() => setIsProfileMenuOpen(false)}
+                >
+                  <History className="h-4 w-4 text-muted" />
+                  <span>History</span>
                 </Link>
                 <form action={signOut}>
                   <button

@@ -11,6 +11,7 @@ const roleLabelByValue: Record<string, string> = {
   worker: "Worker",
   member: "Member",
   viewer: "Viewer",
+  Owner: "Owner",
 };
 
 export function cn(...inputs: ClassValue[]) {
