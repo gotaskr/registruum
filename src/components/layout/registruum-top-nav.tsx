@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { signOut } from "@/features/auth/actions/auth.actions";
 import { GlobalSearchPopover } from "@/components/layout/global-search-popover";
+import { RegistruumLogo } from "@/components/ui/registruum-logo";
 import { SETTINGS_BILLING_SECTION_ENABLED } from "@/features/settings/lib/settings-sections";
 import { SpaceAvatar } from "@/features/spaces/ui/space-avatar";
 import type { SettingsInvitation } from "@/features/settings/types/invitation";
@@ -157,15 +158,7 @@ export function RegistruumTopNav({
           className="shrink-0 touch-manipulation"
           aria-label="Registruum home"
         >
-          <Image
-            src="/logo.png"
-            alt="Registruum"
-            width={44}
-            height={44}
-            unoptimized
-            className="h-10 w-10 lg:h-11 lg:w-11"
-            priority
-          />
+          <RegistruumLogo variant="nav" />
         </Link>
 
         <div className="relative min-w-0 flex-1 lg:max-w-none lg:flex-none" ref={spaceMenuRef}>

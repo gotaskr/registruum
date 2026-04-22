@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FolderTree, ShieldCheck, Sparkles, Workflow } from "lucide-react";
+import { RegistruumLogo } from "@/components/ui/registruum-logo";
 import type { ReactNode } from "react";
 
 type AuthShellIntent = "sign-in" | "sign-up" | "verify-email";
@@ -75,13 +76,7 @@ export function AuthShell({
           <div className="relative flex w-full flex-col justify-between px-12 py-12 xl:px-16">
             <div className="auth-enter space-y-10">
               <Link href="/" className="inline-flex items-center gap-4">
-                <img
-                  src="/logo.png"
-                  alt="Registruum"
-                  width={64}
-                  height={64}
-                  className="h-16 w-16"
-                />
+                <RegistruumLogo variant="authHero" />
                 <div>
                   <p className="text-[0.75rem] font-semibold uppercase tracking-[0.32em] text-muted">
                     Registruum
@@ -146,13 +141,7 @@ export function AuthShell({
             <div className="auth-panel-glow relative rounded-[2rem] border border-border/70 bg-panel p-5 shadow-[0_30px_80px_rgba(15,23,42,0.1)] sm:p-7 lg:p-8">
               <div className="mb-8 flex items-center justify-between gap-4">
                 <Link href="/" className="inline-flex items-center gap-3">
-                  <img
-                    src="/logo.png"
-                    alt="Registruum"
-                    width={56}
-                    height={56}
-                    className="h-14 w-14"
-                  />
+                  <RegistruumLogo variant="authCompact" />
                   <div>
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.32em] text-muted">
                       Registruum
