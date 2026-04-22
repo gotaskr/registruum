@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export function MembershipRemovalListener() {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const pathnameRef = useRef(pathname);
+  const routerRef = useRef(router);
 
   const [notice, setNotice] = useState<RemovalNotice | null>(null);
 
@@ -42,63 +43,13 @@ export function MembershipRemovalListener() {
   const pendingWoRemovalRef = useRef<string | null>(null);
   const membershipChannelRef = useRef<RealtimeChannel | null>(null);
 
-  const scheduleRefresh = useEffectEvent(() => {
-    if (refreshTimeoutRef.current !== null) {
-      window.clearTimeout(refreshTimeoutRef.current);
-    }
-    refreshTimeoutRef.current = window.setTimeout(() => {
-      router.refresh();
-    }, 250);
-  });
-
-  const flushPendingWoRemoval = useEffectEvent(() => {
-    const workOrderId = pendingWoRemovalRef.current;
-    pendingWoRemovalRef.current = null;
-    if (!workOrderId) {
-      return;
-    }
-
-    const path = pathnameRef.current;
-    const presence = readActiveWorkOrderPresence();
-    const onThisWorkOrder = parseSegment(path, "work-order") === workOrderId;
-    const knownTerminal =
-      presence?.workOrderId === workOrderId &&
-      isTerminalWorkOrderStatus(presence.status);
-
-    if (knownTerminal) {
-      if (onThisWorkOrder) {
-        router.replace("/");
-      }
-      return;
-    }
-
-    setNotice({
-      title: "Removed from work order",
-      description:
-        "Your access to this work order was removed. You have been returned to your dashboard.",
-    });
-
-    if (onThisWorkOrder) {
-      router.replace("/");
-    }
-  });
-
-  const scheduleWoRemovalModal = useEffectEvent(() => {
-    if (modalTimeoutRef.current !== null) {
-      window.clearTimeout(modalTimeoutRef.current);
-    }
-    modalTimeoutRef.current = window.setTimeout(() => {
-      flushPendingWoRemoval();
-      modalTimeoutRef.current = null;
-    }, 320);
-  });
-
   useEffect(() => {
     pathnameRef.current = pathname;
+    routerRef.current = router;
     if (!pathname.includes("/work-order/")) {
       clearActiveWorkOrderPresence();
     }
-  }, [pathname]);
+  }, [pathname, router]);
 
   useEffect(() => {
     if (!realtimeGloballyEnabled) {
@@ -113,6 +64,57 @@ export function MembershipRemovalListener() {
     }
 
     let cancelled = false;
+
+    const scheduleRefresh = () => {
+      if (refreshTimeoutRef.current !== null) {
+        window.clearTimeout(refreshTimeoutRef.current);
+      }
+      refreshTimeoutRef.current = window.setTimeout(() => {
+        routerRef.current.refresh();
+      }, 250);
+    };
+
+    const flushPendingWoRemoval = () => {
+      const workOrderId = pendingWoRemovalRef.current;
+      pendingWoRemovalRef.current = null;
+      if (!workOrderId) {
+        return;
+      }
+
+      const path = pathnameRef.current;
+      const presence = readActiveWorkOrderPresence();
+      const onThisWorkOrder = parseSegment(path, "work-order") === workOrderId;
+      const knownTerminal =
+        presence?.workOrderId === workOrderId &&
+        isTerminalWorkOrderStatus(presence.status);
+
+      if (knownTerminal) {
+        if (onThisWorkOrder) {
+          routerRef.current.replace("/");
+        }
+        return;
+      }
+
+      setNotice({
+        title: "Removed from work order",
+        description:
+          "Your access to this work order was removed. You have been returned to your dashboard.",
+      });
+
+      if (onThisWorkOrder) {
+        routerRef.current.replace("/");
+      }
+    };
+
+    const scheduleWoRemovalModal = () => {
+      if (modalTimeoutRef.current !== null) {
+        window.clearTimeout(modalTimeoutRef.current);
+      }
+      modalTimeoutRef.current = window.setTimeout(() => {
+        flushPendingWoRemoval();
+        modalTimeoutRef.current = null;
+      }, 320);
+    };
 
     void (async () => {
       const { data } = await supabase.auth.getSession();
@@ -184,7 +186,7 @@ export function MembershipRemovalListener() {
 
           const onSpace = parseSegment(pathnameRef.current, "space") === next.space_id;
           if (onSpace) {
-            router.replace("/");
+            routerRef.current.replace("/");
           }
         },
       );
@@ -218,7 +220,7 @@ export function MembershipRemovalListener() {
         void supabase.removeChannel(ch);
       }
     };
-  }, [router]);
+  }, []);
 
   return (
     <Modal
