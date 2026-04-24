@@ -3,7 +3,7 @@ import { FolderTree, ShieldCheck, Sparkles, Workflow } from "lucide-react";
 import { RegistruumLogo } from "@/components/ui/registruum-logo";
 import type { ReactNode } from "react";
 
-type AuthShellIntent = "sign-in" | "sign-up" | "verify-email";
+type AuthShellIntent = "sign-in" | "sign-up";
 
 type AuthShellProps = Readonly<{
   title: string;
@@ -42,15 +42,6 @@ const shellCopy: Record<
     note: "",
     statLabel: "Launch Ready",
     statValue: "Spaces, teams, archive",
-  },
-  "verify-email": {
-    label: "Account Checkpoint",
-    headline: "One final confirmation keeps the rest of the system secure.",
-    summary:
-      "Email verification protects invitations, team roles, and sensitive workspace access before you step inside.",
-    note: "",
-    statLabel: "Protection Layer",
-    statValue: "Verified access only",
   },
 };
 

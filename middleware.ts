@@ -4,7 +4,6 @@ import { updateSession } from "@/lib/supabase/middleware";
 const publicRoutes = new Set([
   "/sign-in",
   "/sign-up",
-  "/verify-email",
   "/auth/callback",
   "/terms-and-conditions",
 ]);

@@ -68,23 +68,21 @@ export function SignUpForm({ next }: SignUpFormProps) {
           return;
         }
 
-        const emailConfirmed = !!result.data.user?.email_confirmed_at;
-
-        if (result.data.session && result.data.user && emailConfirmed) {
+        if (result.data.session && result.data.user) {
           await syncProfileFromCurrentSession();
           router.replace(parsed.data.next ?? "/");
           router.refresh();
           return;
         }
 
-        const verifyUrl = new URL("/verify-email", origin || "http://localhost:3000");
-        verifyUrl.searchParams.set("email", parsed.data.email);
-
-        if (parsed.data.next) {
-          verifyUrl.searchParams.set("next", parsed.data.next);
+        if (result.data.user) {
+          router.replace(
+            `/sign-in?message=${encodeURIComponent("Account created. Sign in to continue.")}`,
+          );
+          return;
         }
 
-        router.push(verifyUrl.toString());
+        setError("Unable to create your account.");
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : String(cause);
         setError(formatAuthReachabilityError(message));

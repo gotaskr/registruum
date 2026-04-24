@@ -62,7 +62,7 @@ export async function signIn(
   redirect(parsed.data.next ?? "/");
 }
 
-/** Sync profile from the current session (cookies). Used after browser `signUp` when email is already confirmed. */
+/** Sync profile from the current session (cookies). Used after browser `signUp` when a session is returned. */
 export async function syncProfileFromCurrentSession() {
   const supabase = await createSupabaseServerClient();
   const {
