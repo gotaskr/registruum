@@ -117,93 +117,102 @@ export function MembershipRemovalListener() {
     };
 
     void (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (cancelled) {
-        return;
-      }
-
-      const userId = data.session?.user.id;
-      if (!userId) {
-        return;
-      }
-
-      const filter = `user_id=eq.${userId}`;
-      const channel = supabase.channel(`membership-removal:${userId}`);
-      membershipChannelRef.current = channel;
-
-      channel.on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "work_order_memberships",
-          filter,
-        },
-        (payload) => {
-          const oldRow = payload.old as { work_order_id?: string } | null;
-          const workOrderId = oldRow?.work_order_id;
-          if (!workOrderId) {
-            return;
-          }
-
-          scheduleRefresh();
-
-          if (Date.now() - spaceRemovalAtRef.current < 2800) {
-            return;
-          }
-
-          pendingWoRemovalRef.current = workOrderId;
-          scheduleWoRemovalModal();
-        },
-      );
-
-      channel.on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "space_memberships",
-          filter,
-        },
-        (payload) => {
-          const next = payload.new as { status?: string; space_id?: string } | null;
-          const prev = payload.old as { status?: string } | null;
-          if (!next?.space_id || next.status !== "removed") {
-            return;
-          }
-          if (prev?.status === "removed") {
-            return;
-          }
-
-          scheduleRefresh();
-          spaceRemovalAtRef.current = Date.now();
-
-          setNotice({
-            title: "Removed from space",
-            description:
-              "Your membership in this space was removed. Spaces and work orders from that space will disappear from your dashboard.",
-          });
-
-          const onSpace = parseSegment(pathnameRef.current, "space") === next.space_id;
-          if (onSpace) {
-            routerRef.current.replace("/");
-          }
-        },
-      );
-
-      if (cancelled) {
-        void supabase.removeChannel(channel);
-        membershipChannelRef.current = null;
-        return;
-      }
-
-      channel.subscribe((status, err) => {
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          if (process.env.NODE_ENV === "development") {
-            console.warn("[MembershipRemovalListener]", status, err?.message ?? "");
-          }
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error || cancelled) {
+          return;
         }
-      });
+
+        const userId = data.session?.user.id;
+        if (!userId) {
+          return;
+        }
+
+        const filter = `user_id=eq.${userId}`;
+        const channel = supabase.channel(`membership-removal:${userId}`);
+        membershipChannelRef.current = channel;
+
+        channel.on(
+          "postgres_changes",
+          {
+            event: "DELETE",
+            schema: "public",
+            table: "work_order_memberships",
+            filter,
+          },
+          (payload) => {
+            const oldRow = payload.old as { work_order_id?: string } | null;
+            const workOrderId = oldRow?.work_order_id;
+            if (!workOrderId) {
+              return;
+            }
+
+            scheduleRefresh();
+
+            if (Date.now() - spaceRemovalAtRef.current < 2800) {
+              return;
+            }
+
+            pendingWoRemovalRef.current = workOrderId;
+            scheduleWoRemovalModal();
+          },
+        );
+
+        channel.on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "space_memberships",
+            filter,
+          },
+          (payload) => {
+            const next = payload.new as { status?: string; space_id?: string } | null;
+            const prev = payload.old as { status?: string } | null;
+            if (!next?.space_id || next.status !== "removed") {
+              return;
+            }
+            if (prev?.status === "removed") {
+              return;
+            }
+
+            scheduleRefresh();
+            spaceRemovalAtRef.current = Date.now();
+
+            setNotice({
+              title: "Removed from space",
+              description:
+                "Your membership in this space was removed. Spaces and work orders from that space will disappear from your dashboard.",
+            });
+
+            const onSpace = parseSegment(pathnameRef.current, "space") === next.space_id;
+            if (onSpace) {
+              routerRef.current.replace("/");
+            }
+          },
+        );
+
+        if (cancelled) {
+          void supabase.removeChannel(channel);
+          membershipChannelRef.current = null;
+          return;
+        }
+
+        channel.subscribe((status, err) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("[MembershipRemovalListener]", status, err?.message ?? "");
+            }
+          }
+        });
+      } catch (cause) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            "[MembershipRemovalListener] Supabase unreachable; membership realtime disabled.",
+            cause,
+          );
+        }
+      }
     })();
 
     return () => {

@@ -14,29 +14,44 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
     request,
   });
 
-  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
+  try {
+    const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          response = NextResponse.next({
+            request,
+          });
+
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
       },
-      setAll(cookiesToSet) {
-        response = NextResponse.next({
-          request,
-        });
+    });
 
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
-      },
-    },
-  });
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    if (error) {
+      return {
+        response,
+        user: null,
+      };
+    }
 
-  return {
-    response,
-    user,
-  };
+    return {
+      response,
+      user,
+    };
+  } catch {
+    return {
+      response,
+      user: null,
+    };
+  }
 }

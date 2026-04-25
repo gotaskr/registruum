@@ -48,16 +48,6 @@ export function CreateSpaceModal({
     if (!open) {
       return;
     }
-    dragOffsetRef.current = 0;
-    setDragOffsetY(0);
-    setIsDraggingSheet(false);
-    isDraggingSheetRef.current = false;
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {

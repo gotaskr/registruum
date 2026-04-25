@@ -222,6 +222,7 @@ export function WorkOrderSidebar({
         </div>
       </aside>
       <CreateWorkOrderModal
+        key={isCreateModalOpen ? "sidebar-create-wo-open" : "sidebar-create-wo-closed"}
         open={isCreateModalOpen}
         spaceId={space.id}
         onClose={() => setIsCreateModalOpen(false)}

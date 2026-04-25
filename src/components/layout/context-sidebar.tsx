@@ -74,11 +74,15 @@ export function ContextSidebar({
           <Link
             href={getSpaceWorkOrdersHref(space.id)}
             className="inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+            data-workorder-tour="workorder-nav-back"
           >
             <ArrowLeft className="h-4 w-4" />
             All workorders
           </Link>
-          <div className="mt-5 rounded-[1.5rem] border border-border bg-panel-muted px-4 py-4">
+          <div
+            className="mt-5 rounded-[1.5rem] border border-border bg-panel-muted px-4 py-4"
+            data-workorder-tour="workorder-project-card"
+          >
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
               Project
             </p>
@@ -137,14 +141,19 @@ export function ContextSidebar({
           </div>
           <div className="space-y-2">
           {WORK_ORDER_CONTEXT_NAV.map((item) => (
-            <SidebarItem
+            <span
               key={item.slug}
-              label={item.label}
-              href={getWorkOrderModuleHref(space.id, currentWorkOrder.id, item.slug)}
-              icon={item.icon}
-              isActive={route.workOrderId === currentWorkOrder.id && route.module === item.slug}
-              className="w-full text-[15px]"
-            />
+              className="block"
+              data-workorder-tour={`workorder-module-${item.slug}`}
+            >
+              <SidebarItem
+                label={item.label}
+                href={getWorkOrderModuleHref(space.id, currentWorkOrder.id, item.slug)}
+                icon={item.icon}
+                isActive={route.workOrderId === currentWorkOrder.id && route.module === item.slug}
+                className="w-full text-[15px]"
+              />
+            </span>
           ))}
           </div>
         </div>
@@ -165,7 +174,10 @@ export function ContextSidebar({
   return (
     <>
       <div className="flex h-full min-h-0 flex-col">
-        <div className="rounded-[2rem] border border-border bg-panel p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)] dark:shadow-none">
+        <div
+          className="rounded-[2rem] border border-border bg-panel p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)] dark:shadow-none"
+          data-space-tour="space-profile"
+        >
           <div className="flex flex-col items-center text-center">
             <SpaceAvatar
               name={space.name}
@@ -200,39 +212,47 @@ export function ContextSidebar({
             </p>
           </div>
           <div className="space-y-2">
-            <SidebarItem
-              label="Workorders"
-              href={getSpaceWorkOrdersHref(space.id)}
-              icon={BriefcaseBusiness}
-              isActive={isWorkOrdersRoute}
-              className="w-full text-[15px]"
-            />
-            {canShowTeam ? (
+            <span className="block" data-space-tour="space-nav-workorders">
               <SidebarItem
-                label="Team"
-                href={getSpaceTeamHref(space.id)}
-                icon={UsersRound}
-                isActive={isTeamRoute}
+                label="Workorders"
+                href={getSpaceWorkOrdersHref(space.id)}
+                icon={BriefcaseBusiness}
+                isActive={isWorkOrdersRoute}
                 className="w-full text-[15px]"
               />
+            </span>
+            {canShowTeam ? (
+              <span className="block" data-space-tour="space-nav-team">
+                <SidebarItem
+                  label="Team"
+                  href={getSpaceTeamHref(space.id)}
+                  icon={UsersRound}
+                  isActive={isTeamRoute}
+                  className="w-full text-[15px]"
+                />
+              </span>
             ) : null}
             {canShowArchive ? (
-              <SidebarItem
-                label="Archive"
-                href={getSpaceArchiveHref(space.id)}
-                icon={Archive}
-                isActive={isArchiveRoute}
-                className="w-full text-[15px]"
-              />
+              <span className="block" data-space-tour="space-nav-archive">
+                <SidebarItem
+                  label="Archive"
+                  href={getSpaceArchiveHref(space.id)}
+                  icon={Archive}
+                  isActive={isArchiveRoute}
+                  className="w-full text-[15px]"
+                />
+              </span>
             ) : null}
             {canShowSettings ? (
-              <SidebarItem
-                label="Space Settings"
-                href={getSpaceSettingsHref(space.id)}
-                icon={Settings}
-                isActive={isSettingsRoute}
-                className="w-full text-[15px]"
-              />
+              <span className="block" data-space-tour="space-nav-settings">
+                <SidebarItem
+                  label="Space Settings"
+                  href={getSpaceSettingsHref(space.id)}
+                  icon={Settings}
+                  isActive={isSettingsRoute}
+                  className="w-full text-[15px]"
+                />
+              </span>
             ) : null}
           </div>
         </div>

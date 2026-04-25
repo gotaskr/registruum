@@ -105,7 +105,7 @@ export function RealtimeRouteRefresh({
 
       void supabase.removeChannel(channel);
     };
-  }, [channelName, debounceMs, enabled, scheduleRefresh, subscriptionsKey]);
+  }, [channelName, debounceMs, enabled, subscriptionsKey]);
 
   return null;
 }

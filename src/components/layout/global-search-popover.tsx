@@ -113,7 +113,6 @@ export function GlobalSearchPopover() {
           spellCheck={false}
           className="h-12 w-full rounded-2xl border border-border bg-panel pl-11 pr-4 text-sm text-foreground outline-none shadow-[0_8px_20px_rgba(15,23,42,0.04)] placeholder:text-muted focus:border-accent"
           aria-autocomplete="list"
-          aria-expanded={open}
           aria-controls="global-search-results"
         />
       </label>

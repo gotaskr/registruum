@@ -30,7 +30,7 @@ export function getSpaceHref(spaceId: string) {
   return `/space/${spaceId}`;
 }
 
-export function getSpaceEntryHref(space: Pick<Space, "id" | "canAccessOverview" | "landingWorkOrderId">) {
+export function getSpaceEntryHref(space: Pick<Space, "id">) {
   return getSpaceHref(space.id);
 }
 

@@ -38,14 +38,16 @@ export function SpaceWorkOrdersScreen({
         title="Workorders"
         description="Active projects inside this space."
         actions={canCreate ? (
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] dark:shadow-none sm:h-11 lg:w-auto"
-          >
-            <Plus className="h-4 w-4" />
-            Create Workorder
-          </button>
+          <span className="inline-flex w-full max-w-full sm:w-auto" data-space-tour="space-create-workorder">
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(31,95,255,0.24)] dark:shadow-none sm:h-11 lg:w-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Create Workorder
+            </button>
+          </span>
         ) : null}
       >
         {workOrders.length === 0 ? (
@@ -137,6 +139,7 @@ export function SpaceWorkOrdersScreen({
 
       {canCreate ? (
         <CreateWorkOrderModal
+          key={isCreateModalOpen ? "create-wo-open" : "create-wo-closed"}
           open={isCreateModalOpen}
           spaceId={space.id}
           onClose={() => setIsCreateModalOpen(false)}

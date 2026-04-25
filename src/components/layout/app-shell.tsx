@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { ContextBottomNav } from "@/components/layout/context-bottom-nav";
 import { ContextSidebar } from "@/components/layout/context-sidebar";
 import { WorkspaceShell } from "@/components/layout/workspace-shell";
+import { SpaceFirstVisitTour } from "@/features/spaces/ui/space-first-visit-tour";
+import { WorkOrderFirstVisitTour } from "@/features/work-orders/ui/work-order-first-visit-tour";
 import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 import type { Profile } from "@/types/profile";
 import type { Space } from "@/types/space";
@@ -50,6 +52,8 @@ export function AppShell({
         />
       )}
     >
+      <SpaceFirstVisitTour profileId={profile.id} space={space} />
+      <WorkOrderFirstVisitTour profileId={profile.id} />
       {children}
     </WorkspaceShell>
   );

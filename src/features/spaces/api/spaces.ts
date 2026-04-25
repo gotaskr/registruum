@@ -108,6 +108,15 @@ function mapSpaceRow(
 
 type AuthenticatedAppUser = Awaited<ReturnType<typeof requireAuthenticatedAppUser>>;
 
+export type DashboardOnboardingSnapshot = Readonly<{
+  hasCreatedWorkOrder: boolean;
+  hasSentInvite: boolean;
+  firstCreatedWorkOrder: Readonly<{
+    id: string;
+    spaceId: string;
+  }> | null;
+}>;
+
 export async function getSpacesForUser(authenticated?: AuthenticatedAppUser) {
   const { supabase, user } = authenticated ?? (await requireAuthenticatedAppUser());
   let membershipQuery = await supabase
@@ -255,6 +264,48 @@ export async function getSpaceByIdForUser(spaceId: string) {
 export async function getInitialSpaceForUser() {
   const spaces = await getSpacesForUser();
   return spaces[0] ?? null;
+}
+
+export async function getDashboardOnboardingSnapshot(
+  authenticated?: AuthenticatedAppUser,
+): Promise<DashboardOnboardingSnapshot> {
+  const { supabase, user } = authenticated ?? (await requireAuthenticatedAppUser());
+
+  const [firstCreatedWorkOrderResult, sentInviteResult] = await Promise.all([
+    supabase
+      .from("work_orders")
+      .select("id, space_id")
+      .eq("created_by_user_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("invites")
+      .select("id", { count: "exact", head: true })
+      .eq("invited_by_user_id", user.id)
+      .limit(1),
+  ]);
+
+  if (firstCreatedWorkOrderResult.error) {
+    throw new Error(firstCreatedWorkOrderResult.error.message);
+  }
+
+  if (sentInviteResult.error) {
+    throw new Error(sentInviteResult.error.message);
+  }
+
+  const firstCreatedWorkOrder = firstCreatedWorkOrderResult.data
+    ? {
+        id: firstCreatedWorkOrderResult.data.id,
+        spaceId: firstCreatedWorkOrderResult.data.space_id,
+      }
+    : null;
+
+  return {
+    hasCreatedWorkOrder: Boolean(firstCreatedWorkOrder),
+    hasSentInvite: (sentInviteResult.count ?? 0) > 0,
+    firstCreatedWorkOrder,
+  };
 }
 
 export async function getSpaceMembersForSpace(spaceId: string) {

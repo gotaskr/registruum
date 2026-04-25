@@ -108,11 +108,10 @@ export function SpaceDeleteMenu({
           />
           <div
             data-space-actions-sheet
-            className="absolute inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] z-50 rounded-t-2xl border border-border bg-panel px-4 pb-4 pt-3 shadow-[0_-12px_40px_rgba(15,23,42,0.12)]"
+            className="absolute left-1/2 top-1/2 z-50 w-[min(calc(100vw-2rem),26rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-panel px-4 pb-4 pt-3 shadow-[0_18px_48px_rgba(15,23,42,0.2)]"
             role="dialog"
             aria-label="Space actions"
           >
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden />
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                 Space actions

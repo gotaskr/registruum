@@ -72,6 +72,7 @@ export function ContextBottomNav({
           href={getSpaceWorkOrdersHref(space.id)}
           className={bottomNavItemClasses(false)}
           title="All workorders"
+          data-workorder-tour="workorder-nav-back"
         >
           <span className={BOTTOM_NAV_ICON_BOX}>
             <ArrowLeft className="h-[1.15rem] w-[1.15rem] stroke-[2.5] text-current" aria-hidden />
@@ -92,6 +93,7 @@ export function ContextBottomNav({
               href={href}
               className={bottomNavItemClasses(isActive)}
               title={item.label}
+              data-workorder-tour={`workorder-module-${item.slug}`}
             >
               <span className={BOTTOM_NAV_ICON_BOX}>
                 <Icon className="h-[1.15rem] w-[1.15rem] stroke-[2.35] text-current" aria-hidden />
@@ -170,12 +172,23 @@ export function ContextBottomNav({
     >
       {items.map((item) => {
         const Icon = item.icon;
+        const tourId =
+          item.key === "workorders"
+            ? "space-nav-workorders"
+            : item.key === "team"
+              ? "space-nav-team"
+              : item.key === "archive"
+                ? "space-nav-archive"
+                : item.key === "settings"
+                  ? "space-nav-settings"
+                  : undefined;
         return (
           <Link
             key={item.key}
             href={item.href}
             className={bottomNavItemClasses(item.isActive, { equalWidth: true })}
             title={item.label}
+            {...(tourId ? { "data-space-tour": tourId } : {})}
           >
             <span className={BOTTOM_NAV_ICON_BOX}>
               <Icon className="h-[1.15rem] w-[1.15rem] stroke-[2.35] text-current" aria-hidden />

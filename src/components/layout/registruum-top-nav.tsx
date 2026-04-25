@@ -12,6 +12,7 @@ import {
   History,
   Inbox,
   LogOut,
+  RotateCcw,
   Settings,
 } from "lucide-react";
 import { signOut } from "@/features/auth/actions/auth.actions";
@@ -77,6 +78,28 @@ export function RegistruumTopNav({
   const notificationMenuRef = useRef<HTMLDivElement | null>(null);
   const activeSpaceLabel = space?.name ?? "Spaces";
 
+  function replayGuidedTours() {
+    const spaceTourPrefix = `registruum-space-tour:v1:${profile.id}:`;
+    const workOrderTourKey = `registruum-workorder-tour:v1:${profile.id}`;
+    const keysToRemove: string[] = [];
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key) {
+        continue;
+      }
+      if (key.startsWith(spaceTourPrefix) || key === workOrderTourKey) {
+        keysToRemove.push(key);
+      }
+    }
+
+    for (const key of keysToRemove) {
+      window.localStorage.removeItem(key);
+    }
+
+    window.location.reload();
+  }
+
   const refreshInvitationBadge = useCallback(() => {
     let cancelled = false;
     void (async () => {
@@ -102,11 +125,9 @@ export function RegistruumTopNav({
 
   useEffect(() => {
     if (!isNotificationMenuOpen) {
-      setNotificationPanel({ status: "idle" });
       return;
     }
 
-    setNotificationPanel({ status: "loading" });
     let cancelled = false;
     void (async () => {
       try {
@@ -242,12 +263,27 @@ export function RegistruumTopNav({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={replayGuidedTours}
+            className="inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-full border border-border bg-panel text-muted shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition-colors hover:bg-panel-muted hover:text-foreground lg:h-11 lg:w-11 lg:rounded-2xl lg:shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+            aria-label="Replay guided tours"
+            title="Replay guided tours"
+          >
+            <RotateCcw className="h-[1.05rem] w-[1.05rem]" strokeWidth={2.25} aria-hidden />
+          </button>
           <div className="relative" ref={notificationMenuRef}>
             <button
               type="button"
               onClick={() => {
-                setIsNotificationMenuOpen((current) => !current);
                 setIsProfileMenuOpen(false);
+                setIsNotificationMenuOpen((current) => {
+                  if (current) {
+                    return false;
+                  }
+                  setNotificationPanel({ status: "loading" });
+                  return true;
+                });
               }}
               className="relative inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-full border border-border bg-panel text-muted shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition-colors hover:bg-panel-muted hover:text-foreground lg:h-11 lg:w-11 lg:rounded-2xl lg:shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
               aria-label="Notifications"
