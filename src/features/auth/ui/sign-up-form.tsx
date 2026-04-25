@@ -3,7 +3,6 @@
 import { ArrowRight, KeyRound, Mail, User2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type FormEvent } from "react";
-import { syncProfileFromCurrentSession } from "@/features/auth/actions/auth.actions";
 import { formatAuthReachabilityError } from "@/features/auth/lib/format-auth-reachability-error";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import { signUpSchema } from "@/features/auth/schemas/auth.schema";
@@ -69,7 +68,9 @@ export function SignUpForm({ next }: SignUpFormProps) {
         }
 
         if (result.data.session && result.data.user) {
-          await syncProfileFromCurrentSession();
+          // Profile sync also happens server-side on authenticated page load.
+          // Avoid chaining a server action here because auth-route middleware can
+          // redirect during action handling and produce "unexpected response" errors.
           router.replace(parsed.data.next ?? "/");
           router.refresh();
           return;
