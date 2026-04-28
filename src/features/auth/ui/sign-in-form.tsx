@@ -4,6 +4,8 @@ import { ArrowRight, KeyRound, Mail } from "lucide-react";
 import { useActionState } from "react";
 import { signIn } from "@/features/auth/actions/auth.actions";
 import { FormMessage } from "@/features/auth/ui/form-message";
+import { isSocialAuthEnabled } from "@/features/auth/lib/social-auth-availability";
+import { SocialAuthButtons } from "@/features/auth/ui/social-auth-buttons";
 import { initialAuthActionState } from "@/features/auth/types/auth-action-state";
 
 type SignInFormProps = Readonly<{
@@ -65,6 +67,17 @@ export function SignInForm({ next, message }: SignInFormProps) {
         {isPending ? "Signing in..." : "Sign In"}
         <ArrowRight className="h-4 w-4" />
       </button>
+
+      {isSocialAuthEnabled() ? (
+        <>
+          <div className="flex items-center gap-3 py-1">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted">Or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <SocialAuthButtons intent="sign-in" next={next} />
+        </>
+      ) : null}
 
     </form>
   );

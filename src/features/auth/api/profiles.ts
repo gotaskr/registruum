@@ -15,6 +15,29 @@ function buildFallbackUserTag(profileId: string) {
   return `#${profileId.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
 }
 
+function resolveFullNameFromUser(user: User) {
+  const meta = user.user_metadata ?? {};
+
+  if (typeof meta.full_name === "string" && meta.full_name.trim()) {
+    return meta.full_name.trim();
+  }
+
+  if (typeof meta.name === "string" && meta.name.trim()) {
+    return meta.name.trim();
+  }
+
+  const given = typeof meta.given_name === "string" ? meta.given_name.trim() : "";
+  const family = typeof meta.family_name === "string" ? meta.family_name.trim() : "";
+  const combined = [given, family].filter(Boolean).join(" ").trim();
+
+  if (combined) {
+    return combined;
+  }
+
+  const local = user.email?.split("@")[0]?.trim();
+  return local || "Registruum User";
+}
+
 function getUserProviders(user: User) {
   const providers = user.app_metadata.providers;
   return Array.isArray(providers)
@@ -92,10 +115,7 @@ export async function syncProfileFromAuthUser(
   supabase: ServerSupabaseClient,
   user: User,
 ) {
-  const fullName =
-    typeof user.user_metadata.full_name === "string" && user.user_metadata.full_name.trim()
-      ? user.user_metadata.full_name.trim()
-      : user.email?.split("@")[0] ?? "Registruum User";
+  const fullName = resolveFullNameFromUser(user);
 
   const { data, error } = await supabase
     .from("profiles")

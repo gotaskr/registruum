@@ -4,7 +4,9 @@ import { ArrowRight, KeyRound, Mail, User2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type FormEvent } from "react";
 import { formatAuthReachabilityError } from "@/features/auth/lib/format-auth-reachability-error";
+import { isSocialAuthEnabled } from "@/features/auth/lib/social-auth-availability";
 import { FormMessage } from "@/features/auth/ui/form-message";
+import { SocialAuthButtons } from "@/features/auth/ui/social-auth-buttons";
 import { signUpSchema } from "@/features/auth/schemas/auth.schema";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -175,6 +177,17 @@ export function SignUpForm({ next }: SignUpFormProps) {
         {isPending ? "Creating account..." : "Create Account"}
         <ArrowRight className="h-4 w-4" />
       </button>
+
+      {isSocialAuthEnabled() ? (
+        <>
+          <div className="flex items-center gap-3 py-1">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs font-medium uppercase tracking-[0.16em] text-muted">Or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <SocialAuthButtons intent="sign-up" next={next} />
+        </>
+      ) : null}
     </form>
   );
 }
