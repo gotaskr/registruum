@@ -446,13 +446,15 @@ export async function getWorkOrderOverviewData(
       .select("id", { count: "exact", head: true })
       .eq("work_order_id", workOrderId)
       .eq("is_archived", false)
-      .eq("document_kind", "photo"),
+      .eq("document_kind", "photo")
+      .eq("source", "manual"),
     context.supabase
       .from("documents")
       .select("id, title, storage_path")
       .eq("work_order_id", workOrderId)
       .eq("is_archived", false)
       .eq("document_kind", "photo")
+      .eq("source", "manual")
       .not("storage_path", "is", null)
       .order("created_at", { ascending: false })
       .limit(12),
