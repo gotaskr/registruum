@@ -28,6 +28,8 @@ export function Modal({
   contentClassName,
   children,
 }: ModalProps) {
+  const hasCustomPanelLayout = Boolean(panelClassName);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -72,8 +74,11 @@ export function Modal({
         className={cn(
           "relative z-10 flex w-full flex-col overflow-hidden border border-border bg-panel shadow-[0_10px_40px_rgba(15,23,42,0.12)]",
           bottomSheetOnNarrow
-            ? "max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-bottom,0px)-0.5rem))] max-w-none rounded-t-[1.75rem] rounded-b-none border-x-0 border-b-0 lg:max-h-[calc(100vh-2rem)] lg:max-w-md lg:rounded-2xl lg:border-x lg:border-b"
-            : "max-h-[calc(100vh-2rem)] max-w-md rounded-2xl",
+            ? cn(
+                "max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-bottom,0px)-0.5rem))] max-w-none rounded-t-[1.75rem] rounded-b-none border-x-0 border-b-0 lg:max-h-[calc(100vh-2rem)] lg:rounded-2xl lg:border-x lg:border-b",
+                !hasCustomPanelLayout && "lg:max-w-md",
+              )
+            : cn("max-h-[calc(100vh-2rem)] rounded-2xl", !hasCustomPanelLayout && "max-w-md"),
           panelClassName,
         )}
       >

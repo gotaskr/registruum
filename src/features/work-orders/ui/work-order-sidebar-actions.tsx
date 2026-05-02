@@ -4,30 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
 import { EditWorkOrderModal } from "@/features/work-orders/ui/edit-work-order-modal";
 import { DeleteWorkOrderModal } from "@/features/work-orders/ui/delete-work-order-modal";
-import {
-  canDeleteWorkOrder,
-  canEditWorkOrder,
-} from "@/features/permissions/lib/work-order-permissions";
+import type { WorkOrderPermissionSet } from "@/features/permissions/lib/work-order-permissions";
 import type { SpaceMembershipRole } from "@/types/database";
 import type { WorkOrder } from "@/types/work-order";
 
 type WorkOrderSidebarActionsProps = Readonly<{
   workOrder: WorkOrder;
   actorRole: SpaceMembershipRole;
+  permissions: WorkOrderPermissionSet;
   returnTo: string;
 }>;
 
 export function WorkOrderSidebarActions({
   workOrder,
   actorRole,
+  permissions,
   returnTo,
 }: WorkOrderSidebarActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const canEdit = canEditWorkOrder(actorRole, workOrder.status);
-  const canDelete = canDeleteWorkOrder(actorRole, workOrder.status);
+  const canEdit = permissions.canEditSettings;
+  const canDelete = permissions.canDeleteWorkOrder;
 
   useEffect(() => {
     if (!menuOpen) {
@@ -94,6 +93,7 @@ export function WorkOrderSidebarActions({
         open={editOpen}
         workOrder={workOrder}
         actorRole={actorRole}
+        canEdit={canEdit}
         returnTo={returnTo}
         onClose={() => setEditOpen(false)}
       />

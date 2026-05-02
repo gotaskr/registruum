@@ -191,7 +191,9 @@ export function getWorkOrderPermissionSet(
     canEditSettings:
       resolvedRolePermissions.manage_work_order_settings && !isArchived && !isCompleted,
     canDeleteWorkOrder:
-      resolvedRolePermissions.delete_work_order && !isArchived,
+      resolvedRolePermissions.delete_work_order &&
+      !isArchived &&
+      !isCompleted,
     canChangeLifecycleStatus:
       resolvedRolePermissions.change_work_order_status && !isArchived,
     canSendMessage:

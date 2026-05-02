@@ -186,6 +186,7 @@ as $$
       ('manager'::public.app_role, 'delete_any_message'),
       ('manager'::public.app_role, 'view_logs'),
       ('manager'::public.app_role, 'manage_work_order_settings'),
+      ('officer_coordinator'::public.app_role, 'invite_people'),
       ('officer_coordinator'::public.app_role, 'download_files'),
       ('officer_coordinator'::public.app_role, 'send_messages'),
       ('officer_coordinator'::public.app_role, 'edit_own_messages'),

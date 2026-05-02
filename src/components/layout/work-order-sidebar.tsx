@@ -115,6 +115,7 @@ function SidebarTree({
                   <WorkOrderSidebarActions
                     workOrder={workOrder}
                     actorRole={workOrder.actorRole}
+                    permissions={permissions}
                     returnTo={pathname}
                   />
                 ) : undefined

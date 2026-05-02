@@ -40,13 +40,13 @@ export function WorkOrderSidebarCompleteAction({
           buttonClassName,
         )}
       >
-        Complete
+        Mark as complete
       </button>
 
       <Modal
         open={isOpen}
         onClose={() => setIsOpen(false)}
-        title="Complete Work Order"
+        title="Mark work order as complete"
         description="This confirms the work order is finished."
       >
         <form action={formAction} className="space-y-4 px-5 py-4">
@@ -87,7 +87,7 @@ export function WorkOrderSidebarCompleteAction({
               disabled={isPending}
               className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPending ? "Completing..." : "Mark Complete"}
+              {isPending ? "Completing..." : "Mark as complete"}
             </button>
           </div>
         </form>

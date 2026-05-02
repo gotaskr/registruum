@@ -6,6 +6,7 @@ import { Clock3, UserPlus2, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkOrderInviteMemberModal } from "@/features/members/ui/work-order-invite-member-modal";
 import { WorkOrderMemberRowActions } from "@/features/members/ui/work-order-member-row-actions";
+import { WorkOrderRolesHelpModal } from "@/features/members/ui/work-order-roles-help-modal";
 import { isWorkOrderAssignmentRole } from "@/features/permissions/lib/roles";
 import { formatRoleLabel } from "@/lib/utils";
 import type {
@@ -182,6 +183,7 @@ export function MemberList({
   lockedMessage,
 }: MemberListProps) {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [rolesHelpOpen, setRolesHelpOpen] = useState(false);
   const pendingCount = pendingInvites.length;
   const showToolbarInvite =
     members.length > 0 || !canInvitePeople || !canManageMembers;
@@ -194,13 +196,25 @@ export function MemberList({
         spaceId={spaceId}
         workOrderId={workOrderId}
       />
+      <WorkOrderRolesHelpModal open={rolesHelpOpen} onClose={() => setRolesHelpOpen(false)} />
 
       <section className="rounded-xl border border-border bg-panel shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:rounded-2xl sm:shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col gap-3 border-b border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4 sm:py-3.5 lg:px-5">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-              People on this work order
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+                People on this work order
+              </h2>
+              <button
+                type="button"
+                onClick={() => setRolesHelpOpen(true)}
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-panel-muted text-xs font-semibold text-muted transition-colors hover:border-slate-300 hover:bg-panel hover:text-foreground dark:hover:border-slate-600"
+                aria-label="What do work order assignment roles mean?"
+                title="What do work order assignment roles mean?"
+              >
+                ?
+              </button>
+            </div>
             <p className="mt-0.5 hidden text-xs text-slate-600 dark:text-slate-300 sm:block">
               Everyone assigned can see this work order according to their role.
             </p>

@@ -1,5 +1,6 @@
 import { WorkOrderRecentLogs } from "@/features/work-orders/ui/work-order-recent-logs";
 import { WorkOrderPhotoCarousel } from "@/features/work-orders/ui/work-order-photo-carousel";
+import { WorkOrderOverviewHeroMenu } from "@/features/work-orders/ui/work-order-overview-hero-menu";
 import { WorkOrderOverviewLifecycleActions } from "@/features/work-orders/ui/work-order-overview-lifecycle-actions";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SpaceInfoCard } from "@/features/spaces/ui/space-info-card";
@@ -45,18 +46,23 @@ export function WorkOrderOverview({
       <section className="rounded-xl border border-border bg-panel px-4 py-4 shadow-none sm:rounded-2xl sm:px-6 sm:py-6 sm:shadow-[0_12px_40px_rgba(15,23,42,0.06)] sm:ring-1 sm:ring-border lg:px-8 lg:py-8">
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
           <div className="min-w-0 space-y-3 sm:space-y-5">
-            <div className="max-w-3xl space-y-2 sm:space-y-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-xs sm:tracking-[0.24em]">
-                Current work
-              </p>
-              <h2 className="text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-                {workOrder.title}
-              </h2>
-              <p className="text-sm leading-relaxed text-muted sm:text-base">
-                {workOrder.description?.trim()
-                  ? workOrder.description
-                  : "No description has been added for this work order yet."}
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="max-w-3xl min-w-0 space-y-2 sm:space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-xs sm:tracking-[0.24em]">
+                  Current work
+                </p>
+                <h2 className="text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl lg:text-3xl">
+                  {workOrder.title}
+                </h2>
+                <p className="text-sm leading-relaxed text-muted sm:text-base">
+                  {workOrder.description?.trim()
+                    ? workOrder.description
+                    : "No description has been added for this work order yet."}
+                </p>
+              </div>
+              {permissions.canDeleteWorkOrder ? (
+                <WorkOrderOverviewHeroMenu workOrder={workOrder} />
+              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-2 sm:gap-3">

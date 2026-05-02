@@ -244,6 +244,7 @@ export function getDefaultWorkOrderPermissions(
       });
     case "officer_coordinator":
       return createPermissionValues({
+        invite_people: true,
         download_files: true,
         send_messages: true,
         edit_own_messages: true,

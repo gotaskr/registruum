@@ -136,7 +136,7 @@ export function CreateWorkOrderModal({
         aria-modal="true"
         aria-labelledby="create-work-order-title"
         className={cn(
-          "relative z-10 flex w-full max-w-full flex-col overflow-hidden border-[#dbe4f0] bg-[#f8fbff] shadow-[0_-12px_48px_rgba(15,23,42,0.18)] will-change-transform dark:border-border dark:bg-panel dark:shadow-[0_-12px_48px_rgba(0,0,0,0.45)]",
+          "auth-shell-bg relative z-10 flex w-full max-w-full flex-col overflow-hidden border-[#dbe4f0] shadow-[0_-12px_48px_rgba(15,23,42,0.18)] will-change-transform dark:border-border dark:shadow-[0_-12px_48px_rgba(0,0,0,0.45)]",
           "max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-bottom)-0.5rem))] rounded-t-[1.75rem] border-x border-t",
           "lg:max-h-[calc(100vh-2rem)] lg:max-w-3xl lg:translate-y-0 lg:rounded-[2rem] lg:border lg:shadow-[0_24px_60px_rgba(15,23,42,0.14)]",
           !isDraggingSheet && "lg:transition-none motion-reduce:transition-none",

@@ -16,6 +16,8 @@ type FileUploadFieldProps = Readonly<{
   iconOnly?: boolean;
   title?: string;
   onFilesChange?: (count: number) => void;
+  /** Called immediately before opening the system file picker (use to absorb post-dialog ghost clicks). */
+  onBeforeOpen?: () => void;
   className?: string;
   buttonClassName?: string;
   helperTextClassName?: string;
@@ -53,6 +55,7 @@ export function FileUploadField({
   iconOnly = false,
   title,
   onFilesChange,
+  onBeforeOpen,
   className,
   buttonClassName,
   helperTextClassName,
@@ -147,11 +150,22 @@ export function FileUploadField({
         multiple
         disabled={disabled}
         className="hidden"
+        tabIndex={-1}
         onChange={handleChange}
       />
-      <label
-        htmlFor={inputId}
+      <button
+        type="button"
         title={title ?? buttonLabel}
+        disabled={disabled}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (disabled) {
+            return;
+          }
+          onBeforeOpen?.();
+          inputRef.current?.click();
+        }}
         className={cn(
           "inline-flex cursor-pointer items-center rounded-lg border border-border bg-panel-muted text-sm font-medium text-foreground",
           iconOnly ? "w-10 justify-center px-0" : "gap-2 px-3",
@@ -162,7 +176,7 @@ export function FileUploadField({
       >
         <Icon className="h-4 w-4" />
         {iconOnly ? <span className="sr-only">{buttonLabel}</span> : <span>{buttonLabel}</span>}
-      </label>
+      </button>
       {helperText ? <p className={cn("text-xs text-muted", helperTextClassName)}>{helperText}</p> : null}
       {selectedFiles.length > 0 ? (
         <div className={cn("flex flex-wrap gap-2", fileListClassName)}>
