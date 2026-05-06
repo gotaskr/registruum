@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getWorkOrderCreationBlockedMessage } from "@/features/settings/lib/subscription-enforcement";
 import { recordCompletedWorkOrderHistoryForCompletion } from "@/features/history/lib/record-completion-history";
 import { createActivityLog } from "@/features/logs/api/activity-logs";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -56,6 +55,11 @@ function getAssignedMemberIds(formData: FormData) {
 
 function getSafeReturnTo(returnTo: string, fallback: string) {
   return returnTo.startsWith("/") ? returnTo : fallback;
+}
+
+/** Plan-based work order limits live in subscription code (not in repo yet). Until then, never block creation. */
+async function getWorkOrderCreationBlockedMessage(_spaceId: string): Promise<string | null> {
+  return null;
 }
 
 function formatStatusLabel(value: "open" | "in_progress" | "on_hold" | "completed" | "archived") {
