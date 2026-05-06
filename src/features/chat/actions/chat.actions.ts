@@ -15,6 +15,9 @@ import {
 } from "@/features/chat/types/chat-action-state";
 import { attachmentsOnlyMessageBody } from "@/features/chat/lib/message-body";
 import {
+  collectMentionedUserIdsByName,
+} from "@/features/chat/lib/mentions";
+import {
   getWorkOrderActorContextForAction,
   getWorkOrderMemberCount,
 } from "@/features/work-orders/api/work-orders";
@@ -23,6 +26,72 @@ import { getValidFiles, registruumFilesBucket } from "@/lib/supabase/storage";
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+async function createMentionNotifications(input: {
+  supabase: Awaited<NonNullable<Awaited<ReturnType<typeof getWorkOrderActorContextForAction>>>>["supabase"];
+  spaceId: string;
+  workOrderId: string;
+  messageId: string;
+  actorUserId: string;
+  actorName: string;
+  body: string;
+}) {
+  if (!input.body.includes("@")) {
+    return;
+  }
+  const { data: memberRows, error: memberError } = await input.supabase
+    .from("work_order_memberships")
+    .select("user_id")
+    .eq("work_order_id", input.workOrderId);
+
+  if (memberError) {
+    throw new Error(memberError.message);
+  }
+
+  const memberUserIds = [...new Set((memberRows ?? []).map((row) => row.user_id))];
+  if (memberUserIds.length === 0) {
+    return;
+  }
+  const { data: profiles, error: profilesError } = await input.supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", memberUserIds);
+  if (profilesError) {
+    throw new Error(profilesError.message);
+  }
+  const mentionedUserIds = collectMentionedUserIdsByName(
+    input.body,
+    (profiles ?? []).map((profile) => ({
+      userId: profile.id,
+      fullName: profile.full_name,
+    })),
+  ).filter((userId) => userId !== input.actorUserId);
+
+  if (mentionedUserIds.length === 0) {
+    return;
+  }
+
+  const summary = input.body.trim().slice(0, 120) || "Mentioned you in chat";
+  const { error: mentionError } = await input.supabase.from("activity_logs").insert(
+    mentionedUserIds.map((mentionedUserId) => ({
+      action: "Mentioned you in chat",
+      actor_user_id: input.actorUserId,
+      space_id: input.spaceId,
+      work_order_id: input.workOrderId,
+      entity_type: "message" as const,
+      entity_id: input.messageId,
+      details: {
+        summary,
+        mentioned_user_id: mentionedUserId,
+        actor_name: input.actorName,
+      },
+    })),
+  );
+
+  if (mentionError) {
+    throw new Error(mentionError.message);
+  }
 }
 
 export async function createWorkOrderMessage(
@@ -211,6 +280,15 @@ export async function createWorkOrderMessage(
           ? `${files.length} attached files`
           : files[0]?.name ?? "Sent a message"),
     },
+  });
+  await createMentionNotifications({
+    supabase: context.supabase,
+    spaceId: parsed.data.spaceId,
+    workOrderId: parsed.data.workOrderId,
+    messageId: messageRow.id,
+    actorUserId: context.user.id,
+    actorName: context.profile.fullName,
+    body: parsed.data.body,
   });
 
   revalidatePath(

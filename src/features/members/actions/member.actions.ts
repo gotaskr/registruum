@@ -538,39 +538,61 @@ export async function addWorkOrderMemberByCode(
       workOrderId: parsed.data.workOrderId,
       userId: profile.id,
     });
-    await ensureInternalSpaceMembership({
-      supabase: adminSupabase,
-      spaceId: parsed.data.spaceId,
-      userId: profile.id,
-      invitedByUserId: context.user.id,
-      role: defaultRole,
-    });
+    const { data: existingPendingInvite, error: existingPendingInviteError } =
+      await adminSupabase
+        .from("invites")
+        .select("id")
+        .eq("space_id", parsed.data.spaceId)
+        .eq("status", "pending")
+        .eq("target_user_id", profile.id)
+        .contains("assigned_work_order_ids", [parsed.data.workOrderId])
+        .maybeSingle();
 
-    const { data: insertedRow, error: insertError } = await adminSupabase
-      .from("work_order_memberships")
+    if (existingPendingInviteError) {
+      return {
+        error: existingPendingInviteError.message,
+      };
+    }
+
+    if (existingPendingInvite) {
+      return {
+        success: "Invitation already sent to this user.",
+      };
+    }
+
+    const token = buildInviteToken();
+    const { data: insertedInvite, error: insertInviteError } = await adminSupabase
+      .from("invites")
       .insert({
-        work_order_id: parsed.data.workOrderId,
-        user_id: profile.id,
+        space_id: parsed.data.spaceId,
+        invited_by_user_id: context.user.id,
+        target_user_id: profile.id,
+        email: profile.email,
         role: defaultRole,
-        assigned_by_user_id: context.user.id,
+        token_hash: token,
+        status: "pending",
+        expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+        method: "link",
+        message: null,
+        assigned_work_order_ids: [parsed.data.workOrderId],
       })
       .select("id")
       .single();
 
-    if (insertError || !insertedRow) {
+    if (insertInviteError || !insertedInvite) {
       return {
-        error: insertError?.message ?? "Unable to add member.",
+        error: insertInviteError?.message ?? "Unable to send invite.",
       };
     }
 
     await createActivityLog({
       supabase: context.supabase,
-      action: "Added a work order member by code",
+      action: "Created a work order invite",
       actorUserId: context.user.id,
       spaceId: parsed.data.spaceId,
       workOrderId: parsed.data.workOrderId,
-      entityType: "work_order_membership",
-      entityId: insertedRow.id,
+      entityType: "invite",
+      entityId: insertedInvite.id,
       details: {
         summary: profile.full_name,
       },
@@ -584,7 +606,7 @@ export async function addWorkOrderMemberByCode(
   revalidatePath(getWorkOrderMembersPath(parsed.data.spaceId, parsed.data.workOrderId));
 
   return {
-    success: "Member added.",
+    success: "Invitation sent.",
   };
 }
 

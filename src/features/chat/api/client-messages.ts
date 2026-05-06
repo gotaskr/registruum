@@ -2,11 +2,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildLinkTitle, extractUniqueUrlsFromText, inferDocumentKindFromFile } from "@/features/documents/lib/document-system";
 import { attachmentsOnlyMessageBody } from "@/features/chat/lib/message-body";
 import {
+  collectMentionedUserIdsByName,
+} from "@/features/chat/lib/mentions";
+import {
   mapAttachmentRow,
   mapMessageRow,
   type AttachmentRow,
   type MessageRow,
   type ProfileRow,
+  type ReactionRow,
 } from "@/features/chat/lib/message-mappers";
 import { createWorkOrderMessageSchema } from "@/features/chat/schemas/chat.schema";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -41,6 +45,7 @@ export type SendWorkOrderMessageInput = Readonly<{
   actorName: string;
   body: string;
   files: ReadonlyArray<File>;
+  replyToMessageId?: string | null;
   messageId?: string;
 }>;
 
@@ -108,6 +113,71 @@ async function createActivityLogEntry(
 
   if (error) {
     throw new Error(error.message);
+  }
+}
+
+async function createMentionNotifications(
+  supabase: BrowserSupabaseClient,
+  input: {
+    spaceId: string;
+    workOrderId: string;
+    messageId: string;
+    actorUserId: string;
+    actorName: string;
+    body: string;
+  },
+) {
+  if (!input.body.includes("@")) {
+    return;
+  }
+  const { data: memberRows, error: memberError } = await supabase
+    .from("work_order_memberships")
+    .select("user_id")
+    .eq("work_order_id", input.workOrderId);
+  if (memberError) {
+    throw new Error(memberError.message);
+  }
+  const memberUserIds = [...new Set((memberRows ?? []).map((row) => row.user_id))];
+  if (memberUserIds.length === 0) {
+    return;
+  }
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", memberUserIds);
+  if (profilesError) {
+    throw new Error(profilesError.message);
+  }
+  const mentionedUserIds = collectMentionedUserIdsByName(
+    input.body,
+    (profiles ?? []).map((profile) => ({
+      userId: profile.id,
+      fullName: profile.full_name,
+    })),
+  ).filter((userId) => userId !== input.actorUserId);
+  if (mentionedUserIds.length === 0) {
+    return;
+  }
+
+  const summary = input.body.trim().slice(0, 120) || "Mentioned you in chat";
+  const { error: logError } = await supabase.from("activity_logs").insert(
+    mentionedUserIds.map((mentionedUserId) => ({
+      action: "Mentioned you in chat",
+      actor_user_id: input.actorUserId,
+      space_id: input.spaceId,
+      work_order_id: input.workOrderId,
+      entity_type: "message" as const,
+      entity_id: input.messageId,
+      details: {
+        summary,
+        mentioned_user_id: mentionedUserId,
+        actor_name: input.actorName,
+      },
+    })),
+  );
+
+  if (logError) {
+    throw new Error(logError.message);
   }
 }
 
@@ -298,6 +368,11 @@ function fallbackMessageFromRow(
     rawCreatedAt: row.created_at,
     isCurrentUser: row.sender_user_id === actorUserId,
     attachments: [],
+    replyToMessageId: row.reply_to_message_id,
+    replyToPreview: null,
+    deletedAt: row.deleted_at,
+    deletedByCurrentUser: row.deleted_by_user_id === actorUserId,
+    reactions: { up: 0, down: 0, currentUserReaction: null },
     status: "sent",
   };
 }
@@ -322,6 +397,11 @@ export function createOptimisticMessage(
     rawCreatedAt,
     isCurrentUser: true,
     attachments: input.files.map((file) => mapOptimisticAttachment(messageId, file)),
+    replyToMessageId: input.replyToMessageId ?? null,
+    replyToPreview: null,
+    deletedAt: null,
+    deletedByCurrentUser: false,
+    reactions: { up: 0, down: 0, currentUserReaction: null },
     status: "sending",
   };
 }
@@ -360,7 +440,7 @@ export async function getWorkOrderMessageById({
     return null;
   }
 
-  const [profileResult, attachmentResult] = await Promise.all([
+  const [profileResult, attachmentResult, reactionResult, previewResult] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, full_name")
@@ -370,6 +450,17 @@ export async function getWorkOrderMessageById({
       .from("work_order_message_attachments")
       .select("*")
       .eq("message_id", messageId),
+    supabase
+      .from("work_order_message_reactions")
+      .select("*")
+      .eq("message_id", messageId),
+    messageRow.reply_to_message_id
+      ? supabase
+          .from("work_order_messages")
+          .select("id, body, deleted_at")
+          .eq("id", messageRow.reply_to_message_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   if (profileResult.error) {
@@ -379,6 +470,12 @@ export async function getWorkOrderMessageById({
   if (attachmentResult.error) {
     throw new Error(attachmentResult.error.message);
   }
+  if (reactionResult.error) {
+    throw new Error(reactionResult.error.message);
+  }
+  if (previewResult.error) {
+    throw new Error(previewResult.error.message);
+  }
 
   const profileById = new Map<string, ProfileRow>();
   if (profileResult.data) {
@@ -386,18 +483,30 @@ export async function getWorkOrderMessageById({
   }
 
   const attachments = (attachmentResult.data ?? []) as AttachmentRow[];
+  const reactions = (reactionResult.data ?? []) as ReactionRow[];
   const signedUrlByPath = await getSignedUrlByPath(supabase, attachments);
   const attachmentMap = new Map<string, MessageAttachment[]>();
+  const reactionsByMessageId = new Map<string, ReactionRow[]>();
+  const previewByMessageId = new Map<string, string>();
 
   attachmentMap.set(
     messageId,
     attachments.map((attachment) => mapAttachmentRow(attachment, signedUrlByPath)),
   );
+  reactionsByMessageId.set(messageId, reactions);
+  if (previewResult.data?.id) {
+    const text = previewResult.data.deleted_at
+      ? "Message deleted"
+      : String(previewResult.data.body ?? "").trim().slice(0, 100);
+    previewByMessageId.set(previewResult.data.id, text || "Attachment");
+  }
 
   return mapMessageRow(
     messageRow as MessageRow,
     profileById,
     attachmentMap,
+    reactionsByMessageId,
+    previewByMessageId,
     currentUserId,
   );
 }
@@ -431,6 +540,7 @@ export async function sendWorkOrderMessage(
       work_order_id: parsed.data.workOrderId,
       sender_user_id: input.actorUserId,
       body: storedBody,
+      reply_to_message_id: input.replyToMessageId ?? null,
     })
     .select("*")
     .single();
@@ -521,6 +631,14 @@ export async function sendWorkOrderMessage(
       body: parsed.data.body,
       files,
     });
+    await createMentionNotifications(supabase, {
+      spaceId: parsed.data.spaceId,
+      workOrderId: parsed.data.workOrderId,
+      messageId,
+      actorUserId: input.actorUserId,
+      actorName: input.actorName,
+      body: parsed.data.body,
+    });
   } catch (error) {
     console.error(toMessageError(error, "Unable to write chat activity log."));
   }
@@ -536,4 +654,61 @@ export async function sendWorkOrderMessage(
       input.actorName,
     )
   );
+}
+
+export async function toggleMessageReaction(input: {
+  messageId: string;
+  userId: string;
+  reaction: "up" | "down";
+}) {
+  const supabase = createSupabaseBrowserClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("work_order_message_reactions")
+    .select("reaction")
+    .eq("message_id", input.messageId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+  if (existing?.reaction === input.reaction) {
+    const { error } = await supabase
+      .from("work_order_message_reactions")
+      .delete()
+      .eq("message_id", input.messageId)
+      .eq("user_id", input.userId);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return;
+  }
+  const { error } = await supabase.from("work_order_message_reactions").upsert(
+    {
+      message_id: input.messageId,
+      user_id: input.userId,
+      reaction: input.reaction,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "message_id,user_id" },
+  );
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function deleteWorkOrderMessage(input: { messageId: string; userId: string }) {
+  const supabase = createSupabaseBrowserClient();
+  const { error } = await supabase
+    .from("work_order_messages")
+    .update({
+      body: "Message deleted",
+      deleted_at: new Date().toISOString(),
+      deleted_by_user_id: input.userId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.messageId)
+    .eq("sender_user_id", input.userId);
+  if (error) {
+    throw new Error(error.message);
+  }
 }

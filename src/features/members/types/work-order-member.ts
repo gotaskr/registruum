@@ -6,6 +6,7 @@ export type WorkOrderMember = Readonly<{
   workOrderId: string;
   name: string;
   email: string;
+  userTag: string | null;
   role: SpaceMembershipRole;
   initials: string;
   avatarUrl: string | null;

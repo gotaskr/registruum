@@ -111,7 +111,7 @@ export function WorkOrderInviteMemberModal({
       open={open}
       onClose={onClose}
       title="Invite Member"
-      description="Bring someone into this work order directly, without sending them through a separate members area."
+      description="Invite someone to this work order by link or user tag. They must accept in Invitation Settings."
       bottomSheetOnNarrow
       panelClassName="max-w-none lg:max-w-2xl"
     >
@@ -287,7 +287,7 @@ export function WorkOrderInviteMemberModal({
                   <input type="hidden" name="userCode" value={userCode} />
 
                   <div className="rounded-xl border border-[#2f5fd4]/15 bg-[#eef3ff] px-3 py-3 text-[13px] leading-relaxed text-slate-800 dark:border-[#3d6fd9]/25 dark:bg-slate-800 dark:text-slate-100 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">
-                    Adding by user tag assigns the default role:{" "}
+                    Sending by user tag creates a pending invite with default role:{" "}
                     <span className="font-semibold text-[#1a3d8f] dark:text-[#93c5fd]">
                       {formatRoleLabel(defaultRole)}
                     </span>
@@ -306,7 +306,7 @@ export function WorkOrderInviteMemberModal({
                       disabled={addPending}
                       className={primaryMobileClass}
                     >
-                      {addPending ? "Adding…" : "Add to work order"}
+                      {addPending ? "Sending…" : "Send invite"}
                     </Button>
                   </div>
                 </form>

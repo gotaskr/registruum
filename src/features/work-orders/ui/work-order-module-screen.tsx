@@ -112,6 +112,7 @@ export function WorkOrderModuleScreen({
           workOrderId={workOrder.id}
           actorUserId={actorUserId}
           actorName={actorName}
+          members={members}
           canSendMessage={permissions.canSendMessage}
           lockedMessage={lockedMessage}
           embeddedInWorkOrderShell

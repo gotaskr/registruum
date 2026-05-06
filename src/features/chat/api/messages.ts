@@ -7,6 +7,7 @@ import {
   type AttachmentRow,
   type MessageRow,
   type ProfileRow,
+  type ReactionRow,
 } from "@/features/chat/lib/message-mappers";
 import { getWorkOrderActorContext } from "@/features/work-orders/api/work-orders";
 import { registruumFilesBucket } from "@/lib/supabase/storage";
@@ -52,6 +53,11 @@ function mapSystemLogRow(
     rawCreatedAt: row.created_at,
     isCurrentUser: false,
     attachments: [],
+    replyToMessageId: null,
+    replyToPreview: null,
+    deletedAt: null,
+    deletedByCurrentUser: false,
+    reactions: { up: 0, down: 0, currentUserReaction: null },
   };
 }
 
@@ -83,6 +89,7 @@ export async function getWorkOrderMessages(spaceId: string, workOrderId: string)
     { data: profileRows, error: profileError },
     { data: attachmentRows, error: attachmentError },
     { data: logRows, error: logError },
+    { data: reactionRows, error: reactionError },
   ] =
     await Promise.all([
       senderIds.length > 0
@@ -103,6 +110,12 @@ export async function getWorkOrderMessages(spaceId: string, workOrderId: string)
         .eq("space_id", spaceId)
         .eq("work_order_id", workOrderId)
         .order("created_at", { ascending: true }),
+      messageIds.length > 0
+        ? context.supabase
+            .from("work_order_message_reactions")
+            .select("*")
+            .in("message_id", messageIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
   if (profileError) {
@@ -116,9 +129,13 @@ export async function getWorkOrderMessages(spaceId: string, workOrderId: string)
   if (logError) {
     throw new Error(logError.message);
   }
+  if (reactionError) {
+    throw new Error(reactionError.message);
+  }
 
   const profiles = (profileRows ?? []) as ProfileRow[];
   const attachments = (attachmentRows ?? []) as AttachmentRow[];
+  const reactions = (reactionRows ?? []) as ReactionRow[];
   const systemLogs = ((logRows ?? []) as ActivityLogRow[]).filter((row) =>
     shouldRenderAsSystemMessage(row.action),
   );
@@ -172,6 +189,8 @@ export async function getWorkOrderMessages(spaceId: string, workOrderId: string)
   }
 
   const attachmentMap = new Map<string, MessageAttachment[]>();
+  const reactionsByMessageId = new Map<string, ReactionRow[]>();
+  const previewByMessageId = new Map<string, string>();
 
   const mappedAttachments = attachments.map((attachment) =>
     mapAttachmentRow(attachment, signedUrlByPath),
@@ -182,10 +201,26 @@ export async function getWorkOrderMessages(spaceId: string, workOrderId: string)
     current.push(mappedAttachments[index]);
     attachmentMap.set(attachments[index].message_id, current);
   }
+  for (const reaction of reactions) {
+    const current = reactionsByMessageId.get(reaction.message_id) ?? [];
+    current.push(reaction);
+    reactionsByMessageId.set(reaction.message_id, current);
+  }
+  for (const row of rows) {
+    const preview = row.deleted_at ? "Message deleted" : row.body.trim().slice(0, 100);
+    previewByMessageId.set(row.id, preview || "Attachment");
+  }
 
   const userMessages = rows.map((row) => ({
     sortValue: row.created_at,
-    message: mapMessageRow(row, profileById, attachmentMap, context.user.id),
+    message: mapMessageRow(
+      row,
+      profileById,
+      attachmentMap,
+      reactionsByMessageId,
+      previewByMessageId,
+      context.user.id,
+    ),
   }));
 
   const systemMessages = systemLogs.map((row) => ({

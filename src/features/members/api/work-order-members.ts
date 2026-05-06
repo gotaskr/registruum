@@ -15,7 +15,7 @@ type WorkOrderMembershipRow =
 type InviteRow = Database["public"]["Tables"]["invites"]["Row"];
 type ProfileRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
-  "id" | "full_name" | "email" | "avatar_path"
+  "id" | "full_name" | "email" | "avatar_path" | "user_tag"
 >;
 
 type WorkOrderMembersResult = Readonly<{
@@ -69,7 +69,7 @@ export async function getWorkOrderMembers(
 
   const { data: profileRows, error: profileError } = await adminSupabase
     .from("profiles")
-    .select("id, full_name, email, avatar_path")
+    .select("id, full_name, email, avatar_path, user_tag")
     .in("id", profileIds.length > 0 ? profileIds : ["00000000-0000-0000-0000-000000000000"]);
 
   if (profileError) {
@@ -106,6 +106,7 @@ export async function getWorkOrderMembers(
         workOrderId: row.work_order_id,
         name,
         email: profile?.email ?? "unknown@registruum.app",
+        userTag: profile?.user_tag ?? null,
         role: row.role,
         initials: getInitials(name),
         avatarUrl: avatarUrlByUserId.get(row.user_id) ?? null,

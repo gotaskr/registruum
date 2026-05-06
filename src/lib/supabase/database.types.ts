@@ -1041,7 +1041,10 @@ export type Database = {
         Row: {
           body: string
           created_at: string
+          deleted_at: string | null
+          deleted_by_user_id: string | null
           id: string
+          reply_to_message_id: string | null
           sender_user_id: string
           updated_at: string
           work_order_id: string
@@ -1049,7 +1052,10 @@ export type Database = {
         Insert: {
           body: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
           id?: string
+          reply_to_message_id?: string | null
           sender_user_id: string
           updated_at?: string
           work_order_id: string
@@ -1057,12 +1063,29 @@ export type Database = {
         Update: {
           body?: string
           created_at?: string
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
           id?: string
+          reply_to_message_id?: string | null
           sender_user_id?: string
           updated_at?: string
           work_order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_order_messages_deleted_by_user_id_fkey"
+            columns: ["deleted_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_order_messages_sender_user_id_fkey"
             columns: ["sender_user_id"]
@@ -1075,6 +1098,45 @@ export type Database = {
             columns: ["work_order_id"]
             isOneToOne: false
             referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_message_reactions: {
+        Row: {
+          created_at: string
+          message_id: string
+          reaction: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          message_id: string
+          reaction: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          message_id?: string
+          reaction?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

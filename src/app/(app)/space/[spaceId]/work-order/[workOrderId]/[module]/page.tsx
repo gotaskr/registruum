@@ -44,7 +44,7 @@ export default async function WorkOrderModulePage({
       ? await getWorkOrderDocuments(spaceId, workOrderId)
       : { folders: [], documents: [] };
   const memberData =
-    module === "members" || module === "settings"
+    module === "chat" || module === "members" || module === "settings"
       ? await getWorkOrderMembers(spaceId, workOrderId)
       : { members: [], pendingInvites: [] };
   const logs = module === "logs" ? await getWorkOrderLogs(spaceId, workOrderId) : [];

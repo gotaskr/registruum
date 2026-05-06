@@ -39,10 +39,23 @@ type RegistruumTopNavProps = Readonly<{
 type NotificationPanelState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ready"; invitations: SettingsInvitation[] }
+  | { status: "ready"; invitations: SettingsInvitation[]; mentions: MentionNotification[] }
   | { status: "error"; message: string };
 
-async function fetchNotificationSummary(): Promise<SettingsInvitation[]> {
+type MentionNotification = Readonly<{
+  id: string;
+  actorName: string;
+  spaceId: string;
+  workOrderId: string | null;
+  entityId: string | null;
+  summary: string;
+  createdAt: string;
+}>;
+
+async function fetchNotificationSummary(): Promise<{
+  invitations: SettingsInvitation[];
+  mentions: MentionNotification[];
+}> {
   const response = await fetch("/api/notifications/summary", {
     credentials: "same-origin",
     cache: "no-store",
@@ -57,8 +70,14 @@ async function fetchNotificationSummary(): Promise<SettingsInvitation[]> {
     throw new Error(body?.error ?? "Unable to load notifications.");
   }
 
-  const data = (await response.json()) as { invitations: SettingsInvitation[] };
-  return data.invitations ?? [];
+  const data = (await response.json()) as {
+    invitations: SettingsInvitation[];
+    mentions: MentionNotification[];
+  };
+  return {
+    invitations: data.invitations ?? [],
+    mentions: data.mentions ?? [],
+  };
 }
 
 export function RegistruumTopNav({
@@ -100,13 +119,17 @@ export function RegistruumTopNav({
     window.location.reload();
   }
 
+  const totalNotificationCount =
+    invitationBadgeCount +
+    (notificationPanel.status === "ready" ? notificationPanel.mentions.length : 0);
+
   const refreshInvitationBadge = useCallback(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const invitations = await fetchNotificationSummary();
+        const summary = await fetchNotificationSummary();
         if (!cancelled) {
-          setInvitationBadgeCount(invitations.length);
+          setInvitationBadgeCount(summary.invitations.length + summary.mentions.length);
         }
       } catch {
         if (!cancelled) {
@@ -131,10 +154,14 @@ export function RegistruumTopNav({
     let cancelled = false;
     void (async () => {
       try {
-        const invitations = await fetchNotificationSummary();
+        const summary = await fetchNotificationSummary();
         if (!cancelled) {
-          setNotificationPanel({ status: "ready", invitations });
-          setInvitationBadgeCount(invitations.length);
+          setNotificationPanel({
+            status: "ready",
+            invitations: summary.invitations,
+            mentions: summary.mentions,
+          });
+          setInvitationBadgeCount(summary.invitations.length + summary.mentions.length);
         }
       } catch (error) {
         if (!cancelled) {
@@ -291,9 +318,9 @@ export function RegistruumTopNav({
               aria-expanded={isNotificationMenuOpen}
             >
               <Bell className="h-[1.15rem] w-[1.15rem]" strokeWidth={2.25} aria-hidden />
-              {invitationBadgeCount > 0 ? (
+              {totalNotificationCount > 0 ? (
                 <span className="absolute -right-0.5 -top-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold leading-none text-white">
-                  {invitationBadgeCount > 9 ? "9+" : invitationBadgeCount}
+                  {totalNotificationCount > 9 ? "9+" : totalNotificationCount}
                 </span>
               ) : null}
             </button>
@@ -330,9 +357,15 @@ export function RegistruumTopNav({
                           setNotificationPanel({ status: "loading" });
                           void (async () => {
                             try {
-                              const invitations = await fetchNotificationSummary();
-                              setNotificationPanel({ status: "ready", invitations });
-                              setInvitationBadgeCount(invitations.length);
+                              const summary = await fetchNotificationSummary();
+                              setNotificationPanel({
+                                status: "ready",
+                                invitations: summary.invitations,
+                                mentions: summary.mentions,
+                              });
+                              setInvitationBadgeCount(
+                                summary.invitations.length + summary.mentions.length,
+                              );
                             } catch (error) {
                               setNotificationPanel({
                                 status: "error",
@@ -351,10 +384,11 @@ export function RegistruumTopNav({
                   ) : null}
 
                   {notificationPanel.status === "ready" &&
-                  notificationPanel.invitations.length === 0 ? (
+                  notificationPanel.invitations.length === 0 &&
+                  notificationPanel.mentions.length === 0 ? (
                     <div className="space-y-3 py-1">
                       <p className="text-sm leading-relaxed text-muted">
-                        You&apos;re all caught up. Pending space invitations will show here.
+                        You&apos;re all caught up. Mentions and pending invitations will show here.
                       </p>
                       <Link
                         href={`${getSettingsHref()}?section=invitations`}
@@ -364,6 +398,31 @@ export function RegistruumTopNav({
                         Open invitations
                       </Link>
                     </div>
+                  ) : null}
+
+                  {notificationPanel.status === "ready" &&
+                  notificationPanel.mentions.length > 0 ? (
+                    <ul className="mb-3 space-y-2">
+                      {notificationPanel.mentions.slice(0, 6).map((mention) => (
+                        <li key={mention.id}>
+                          <Link
+                            href={
+                              mention.workOrderId
+                                ? `/space/${mention.spaceId}/work-order/${mention.workOrderId}/chat`
+                                : `/space/${mention.spaceId}`
+                            }
+                            className="block rounded-xl border border-transparent px-2 py-2 transition-colors hover:border-border hover:bg-panel-muted"
+                            onClick={() => setIsNotificationMenuOpen(false)}
+                          >
+                            <p className="text-sm font-semibold text-foreground">
+                              {mention.actorName} mentioned you
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted">{mention.summary}</p>
+                            <p className="mt-1 text-[11px] text-muted">{mention.createdAt}</p>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
 
                   {notificationPanel.status === "ready" &&

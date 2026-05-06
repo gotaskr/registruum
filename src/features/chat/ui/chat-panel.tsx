@@ -17,9 +17,11 @@ import { InputBar } from "@/components/ui/input-bar";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import {
   createOptimisticMessage,
+  deleteWorkOrderMessage,
   getWorkOrderMessageById,
   revokeMessageObjectUrls,
   sendWorkOrderMessage,
+  toggleMessageReaction,
 } from "@/features/chat/api/client-messages";
 import { createWorkOrderMessageSchema } from "@/features/chat/schemas/chat.schema";
 import { ChatEmptyState } from "@/features/chat/ui/chat-empty-state";
@@ -29,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { getValidFiles } from "@/lib/supabase/storage";
 import type { Message } from "@/types/message";
 import type { WorkOrderStatus } from "@/types/work-order";
+import type { WorkOrderMember } from "@/features/members/types/work-order-member";
 
 type ChatPanelProps = Readonly<{
   workOrderName: string;
@@ -39,6 +42,7 @@ type ChatPanelProps = Readonly<{
   workOrderId: string;
   actorUserId: string;
   actorName: string;
+  members: WorkOrderMember[];
   canSendMessage: boolean;
   lockedMessage?: string;
   /** When true, skip the in-panel title row (work order shell already shows name + status). */
@@ -85,6 +89,13 @@ function areMessagesEquivalent(left: Message, right: Message) {
     left.rawCreatedAt === right.rawCreatedAt &&
     left.isCurrentUser === right.isCurrentUser &&
     left.status === right.status &&
+    left.replyToMessageId === right.replyToMessageId &&
+    left.replyToPreview === right.replyToPreview &&
+    left.deletedAt === right.deletedAt &&
+    left.deletedByCurrentUser === right.deletedByCurrentUser &&
+    left.reactions.up === right.reactions.up &&
+    left.reactions.down === right.reactions.down &&
+    left.reactions.currentUserReaction === right.reactions.currentUserReaction &&
     compareAttachments(left.attachments, right.attachments)
   );
 }
@@ -161,11 +172,13 @@ export function ChatPanel({
   workOrderId,
   actorUserId,
   actorName,
+  members,
   canSendMessage,
   lockedMessage,
   embeddedInWorkOrderShell = false,
 }: ChatPanelProps) {
   const [renderedMessages, setRenderedMessages] = useState<Message[]>(() => messages);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [error, setError] = useState<string | undefined>(undefined);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -258,16 +271,26 @@ export function ChatPanel({
           void reconcileMessage(payload.payload.messageId);
         }
       })
+      .on("broadcast", { event: "reaction-updated" }, (payload) => {
+        if (
+          payload.payload &&
+          typeof payload.payload === "object" &&
+          "messageId" in payload.payload &&
+          typeof payload.payload.messageId === "string"
+        ) {
+          void reconcileMessage(payload.payload.messageId);
+        }
+      })
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "work_order_messages",
           filter: `work_order_id=eq.${workOrderId}`,
         },
-        (payload: RealtimePostgresInsertPayload<{ id: string }>) => {
-          if (typeof payload.new.id === "string") {
+        (payload) => {
+          if ("id" in payload.new && typeof payload.new.id === "string") {
             void reconcileMessage(payload.new.id);
           }
         },
@@ -282,6 +305,22 @@ export function ChatPanel({
         (payload: RealtimePostgresInsertPayload<{ message_id: string }>) => {
           if (typeof payload.new.message_id === "string") {
             void reconcileMessage(payload.new.message_id);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "work_order_message_reactions",
+        },
+        (payload) => {
+          if ("message_id" in payload.new && typeof payload.new.message_id === "string") {
+            void reconcileMessage(payload.new.message_id);
+          }
+          if ("message_id" in payload.old && typeof payload.old.message_id === "string") {
+            void reconcileMessage(payload.old.message_id);
           }
         },
       )
@@ -307,6 +346,7 @@ export function ChatPanel({
         actorName,
         body: optimisticMessage.body,
         files,
+        replyToMessageId: optimisticMessage.replyToMessageId,
         messageId: optimisticMessage.id,
       });
 
@@ -363,9 +403,11 @@ export function ChatPanel({
       actorName,
       body: parsed.data.body,
       files,
+      replyToMessageId: replyingTo?.id ?? null,
     });
 
     setRenderedMessages((current) => upsertMessage(current, optimisticMessage));
+    setReplyingTo(null);
     void persistOptimisticMessage(optimisticMessage, files);
 
     return true;
@@ -378,6 +420,24 @@ export function ChatPanel({
     }
 
     shouldStickToBottomRef.current = isScrolledToBottom(container);
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    await deleteWorkOrderMessage({ messageId, userId: actorUserId });
+    await reconcileMessage(messageId);
+  };
+
+  const handleToggleReaction = async (messageId: string, reaction: "up" | "down") => {
+    await toggleMessageReaction({ messageId, userId: actorUserId, reaction });
+    await channelRef.current?.send({
+      type: "broadcast",
+      event: "reaction-updated",
+      payload: {
+        messageId,
+        workOrderId,
+      },
+    });
+    await reconcileMessage(messageId);
   };
 
   return (
@@ -411,13 +471,32 @@ export function ChatPanel({
         <div className="space-y-3 sm:space-y-4">
           {renderedMessages.length > 0 ? (
             renderedMessages.map((message) => (
-              <ChatMessageItem key={message.id} message={message} />
+              <ChatMessageItem
+                key={message.id}
+                message={message}
+                onReply={setReplyingTo}
+                onDelete={handleDeleteMessage}
+                onToggleReaction={handleToggleReaction}
+              />
             ))
           ) : (
             <ChatEmptyState />
           )}
         </div>
       </div>
+      {replyingTo ? (
+        <div className="border-t border-border bg-panel px-3 py-2 text-xs text-muted sm:px-4">
+          Replying to {replyingTo.isCurrentUser ? "yourself" : replyingTo.senderName}:{" "}
+          {(replyingTo.body || "Attachment").slice(0, 100)}
+          <button
+            type="button"
+            onClick={() => setReplyingTo(null)}
+            className="ml-2 text-foreground underline"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : null}
       <InputBar
         onSubmit={handleSubmit}
         hiddenFields={[
@@ -426,6 +505,12 @@ export function ChatPanel({
         ]}
         inputName="body"
         fileInputName="files"
+        mentionCandidates={members
+          .map((member) => ({
+            id: member.userId,
+            label: member.name,
+            mentionText: member.name,
+          }))}
         placeholder={
           canUseChatInput
             ? "Message the work order team"

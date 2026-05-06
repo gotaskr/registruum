@@ -11,6 +11,7 @@ export type MessageAttachment = Readonly<{
 }>;
 
 export type MessageDeliveryStatus = "sending" | "sent" | "failed";
+export type MessageReactionKind = "up" | "down";
 
 export type Message = Readonly<{
   id: string;
@@ -23,5 +24,14 @@ export type Message = Readonly<{
   rawCreatedAt: string;
   isCurrentUser: boolean;
   attachments: MessageAttachment[];
+  replyToMessageId: string | null;
+  replyToPreview: string | null;
+  deletedAt: string | null;
+  deletedByCurrentUser: boolean;
+  reactions: Readonly<{
+    up: number;
+    down: number;
+    currentUserReaction: MessageReactionKind | null;
+  }>;
   status?: MessageDeliveryStatus;
 }>;
