@@ -15,11 +15,11 @@ import { createWorkOrder } from "@/features/work-orders/actions/work-order.actio
 import {
   getWorkOrderSubjectTypeLabel,
   getWorkOrderSubjectTypePlaceholder,
+  type WorkOrderSubjectTypeOptionValue,
   workOrderSubjectTypeOptions,
 } from "@/features/work-orders/lib/work-order-subject-types";
 import { initialWorkOrderActionState } from "@/features/work-orders/types/work-order-action-state";
 import { cn } from "@/lib/utils";
-import type { WorkOrderSubjectType } from "@/types/work-order";
 
 const inputSurfaceClass =
   "h-12 w-full rounded-2xl border border-[#dbe4f0] bg-[#f9fbff] text-sm text-foreground outline-none transition focus:border-[#97b5ff] focus:bg-white dark:border-border dark:bg-panel-muted dark:focus:border-accent";
@@ -39,12 +39,15 @@ export function CreateWorkOrderForm({
   onBusyChange,
 }: CreateWorkOrderFormProps) {
   const [step, setStep] = useState(1);
-  const [subjectType, setSubjectType] = useState<WorkOrderSubjectType>("issue");
+  const [subjectType, setSubjectType] = useState<WorkOrderSubjectTypeOptionValue>("issue");
+  const [subject, setSubject] = useState("");
   const [title, setTitle] = useState("");
   const [expirationAt, setExpirationAt] = useState("");
+  const [noExpiration, setNoExpiration] = useState(false);
   /** After the OS file picker closes, a stray click can hit the submit button; block briefly. */
   const [suppressSubmitPointer, setSuppressSubmitPointer] = useState(false);
   const submitGhostGuardRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blockSubmitUntilRef = useRef(0);
 
   function armSubmitGhostGuard() {
     if (submitGhostGuardRef.current) {
@@ -62,13 +65,18 @@ export function CreateWorkOrderForm({
   );
   const today = new Date().toISOString().slice(0, 10);
 
-  const step1Valid = title.trim().length >= 2;
+  const step1Valid =
+    title.trim().length >= 2 &&
+    (subjectType !== "other" || subject.trim().length > 0);
   const step2Valid = useMemo(() => {
+    if (noExpiration) {
+      return true;
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(expirationAt)) {
       return false;
     }
     return expirationAt >= today;
-  }, [expirationAt, today]);
+  }, [expirationAt, noExpiration, today]);
 
   const canSubmit = useMemo(() => step1Valid && step2Valid, [step1Valid, step2Valid]);
 
@@ -88,6 +96,19 @@ export function CreateWorkOrderForm({
     <form
       action={formAction}
       onSubmit={(event) => {
+        if (Date.now() < blockSubmitUntilRef.current) {
+          event.preventDefault();
+          return;
+        }
+        const nativeEvent = event.nativeEvent as SubmitEvent;
+        const submitter = nativeEvent.submitter as
+          | (HTMLElement & { dataset?: DOMStringMap })
+          | null;
+        const submitIntent = submitter?.dataset?.intent;
+        if (submitIntent !== "create-work-order") {
+          event.preventDefault();
+          return;
+        }
         if (step < 3) {
           event.preventDefault();
           return;
@@ -99,6 +120,12 @@ export function CreateWorkOrderForm({
       className="space-y-4 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:space-y-5 sm:px-5 sm:pb-5 sm:pt-5"
     >
       <input type="hidden" name="spaceId" value={spaceId} />
+      <input type="hidden" name="noExpiration" value={noExpiration ? "true" : "false"} />
+      <input
+        type="hidden"
+        name="subjectType"
+        value={subjectType === "other" ? "issue" : subjectType}
+      />
       <FormMessage message={state.error} />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -163,9 +190,10 @@ export function CreateWorkOrderForm({
             <span className="text-sm font-medium text-foreground">Type</span>
             <div className="relative">
               <select
-                name="subjectType"
                 value={subjectType}
-                onChange={(event) => setSubjectType(event.target.value as WorkOrderSubjectType)}
+                onChange={(event) =>
+                  setSubjectType(event.target.value as WorkOrderSubjectTypeOptionValue)
+                }
                 className={`${inputSurfaceClass} appearance-none px-4 pl-11 pr-10`}
               >
                 {workOrderSubjectTypeOptions.map((option) => (
@@ -185,6 +213,8 @@ export function CreateWorkOrderForm({
             <input
               name="subject"
               type="text"
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
               placeholder={getWorkOrderSubjectTypePlaceholder(subjectType)}
               className={`${inputSurfaceClass} px-4`}
             />
@@ -246,7 +276,9 @@ export function CreateWorkOrderForm({
             <label className="block space-y-2">
               <span className="text-sm font-medium text-foreground">
                 Expiration date{" "}
-                <span className="font-normal text-muted">(required)</span>
+                <span className="font-normal text-muted">
+                  {noExpiration ? "(optional)" : "(required)"}
+                </span>
               </span>
               <input
                 name="expirationAt"
@@ -254,8 +286,24 @@ export function CreateWorkOrderForm({
                 min={today}
                 value={expirationAt}
                 onChange={(event) => setExpirationAt(event.target.value)}
-                className={`${inputSurfaceClass} bg-white px-4 dark:bg-panel`}
+                disabled={noExpiration}
+                className={`${inputSurfaceClass} bg-white px-4 disabled:opacity-60 dark:bg-panel`}
               />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={noExpiration}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setNoExpiration(checked);
+                  if (checked) {
+                    setExpirationAt("");
+                  }
+                }}
+                className="h-4 w-4 rounded border border-border"
+              />
+              No expiration
             </label>
           </div>
         </div>
@@ -330,7 +378,15 @@ export function CreateWorkOrderForm({
             <button
               type="button"
               disabled={isPending || (step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
-              onClick={() => setStep((s) => Math.min(3, s + 1))}
+              onClick={() => {
+                if (step === 2) {
+                  // Prevent pointer "click-through" into the submit button
+                  // when Step 3 renders in the same footer region.
+                  blockSubmitUntilRef.current = Date.now() + 1500;
+                  armSubmitGhostGuard();
+                }
+                setStep((s) => Math.min(3, s + 1));
+              }}
               className={cn(
                 "inline-flex h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-semibold transition-colors sm:h-11 sm:w-auto",
                 (step === 1 && step1Valid) || (step === 2 && step2Valid)
@@ -343,6 +399,7 @@ export function CreateWorkOrderForm({
           ) : (
             <button
               type="submit"
+              data-intent="create-work-order"
               disabled={isPending || !canSubmit}
               className={cn(
                 "inline-flex h-12 w-full items-center justify-center rounded-2xl px-5 text-sm font-semibold transition-colors sm:h-11 sm:w-auto",

@@ -106,6 +106,13 @@ async function mapProfileRow(
     companyFacebookUrl: row.company_facebook_url,
     companyXUrl: row.company_x_url,
     companyInstagramUrl: row.company_instagram_url,
+    billingPlanTier: row.billing_plan_tier,
+    billingStatus: row.billing_status,
+    billingTrialEndsAt: row.billing_trial_ends_at,
+    billingCycleAnchor: row.billing_cycle_anchor,
+    monthlyBandwidthUsedBytes: row.monthly_bandwidth_used_bytes,
+    monthlyBandwidthWindowStart: row.monthly_bandwidth_window_start,
+    onboardingCompletedAt: row.onboarding_completed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

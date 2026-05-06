@@ -674,6 +674,10 @@ export type Database = {
           additional_emails: string[]
           avatar_file_name: string | null
           avatar_path: string | null
+          billing_cycle_anchor: string | null
+          billing_plan_tier: string
+          billing_status: string
+          billing_trial_ends_at: string | null
           company_address: string | null
           company_email: string | null
           company_facebook_url: string | null
@@ -692,7 +696,10 @@ export type Database = {
           full_name: string
           id: string
           in_app_notifications_enabled: boolean
+          monthly_bandwidth_used_bytes: number
+          monthly_bandwidth_window_start: string
           mentions_only_mode: boolean
+          onboarding_completed_at: string | null
           represents_company: boolean
           theme_preference: string
           timezone: string
@@ -703,6 +710,10 @@ export type Database = {
           additional_emails?: string[]
           avatar_file_name?: string | null
           avatar_path?: string | null
+          billing_cycle_anchor?: string | null
+          billing_plan_tier?: string
+          billing_status?: string
+          billing_trial_ends_at?: string | null
           company_address?: string | null
           company_email?: string | null
           company_facebook_url?: string | null
@@ -721,7 +732,10 @@ export type Database = {
           full_name: string
           id: string
           in_app_notifications_enabled?: boolean
+          monthly_bandwidth_used_bytes?: number
+          monthly_bandwidth_window_start?: string
           mentions_only_mode?: boolean
+          onboarding_completed_at?: string | null
           represents_company?: boolean
           theme_preference?: string
           timezone?: string
@@ -732,6 +746,10 @@ export type Database = {
           additional_emails?: string[]
           avatar_file_name?: string | null
           avatar_path?: string | null
+          billing_cycle_anchor?: string | null
+          billing_plan_tier?: string
+          billing_status?: string
+          billing_trial_ends_at?: string | null
           company_address?: string | null
           company_email?: string | null
           company_facebook_url?: string | null
@@ -750,7 +768,10 @@ export type Database = {
           full_name?: string
           id?: string
           in_app_notifications_enabled?: boolean
+          monthly_bandwidth_used_bytes?: number
+          monthly_bandwidth_window_start?: string
           mentions_only_mode?: boolean
+          onboarding_completed_at?: string | null
           represents_company?: boolean
           theme_preference?: string
           timezone?: string

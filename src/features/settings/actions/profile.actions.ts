@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import {
+  completeBasicProfileOnboardingSchema,
   updateProfileCompanySchema,
   updateProfileDisplaySchema,
   updateProfileIdentitySchema,
@@ -233,5 +234,71 @@ export async function updateProfileDisplayIdentity(
 
   return {
     success: "Display identity updated.",
+  };
+}
+
+export async function completeBasicProfileOnboarding(
+  previousState: ProfileActionState = initialProfileActionState,
+  formData: FormData,
+): Promise<ProfileActionState> {
+  void previousState;
+  const parsed = completeBasicProfileOnboardingSchema.safeParse({
+    firstName: readText(formData, "firstName"),
+    lastName: readText(formData, "lastName"),
+    hasBusiness: readBoolean(formData, "hasBusiness"),
+    companyName: readText(formData, "companyName"),
+    companyEmail: readText(formData, "companyEmail"),
+    companyAddress: readText(formData, "companyAddress"),
+    companyWebsite: readText(formData, "companyWebsite"),
+  });
+
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Unable to complete onboarding.",
+    };
+  }
+
+  const { supabase, profile } = await requireAuthenticatedAppUser();
+  const fullName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
+
+  const authSupabase = await createSupabaseServerClient();
+  const { error: authError } = await authSupabase.auth.updateUser({
+    data: {
+      full_name: fullName,
+      given_name: parsed.data.firstName,
+      family_name: parsed.data.lastName,
+    },
+  });
+
+  if (authError) {
+    return {
+      error: authError.message,
+    };
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({
+      full_name: fullName,
+      onboarding_completed_at: new Date().toISOString(),
+      represents_company: parsed.data.hasBusiness,
+      company_name: parsed.data.hasBusiness ? parsed.data.companyName : null,
+      company_email: parsed.data.hasBusiness ? parsed.data.companyEmail : null,
+      company_address: parsed.data.hasBusiness ? parsed.data.companyAddress : null,
+      company_website: parsed.data.hasBusiness ? parsed.data.companyWebsite : null,
+    })
+    .eq("id", profile.id);
+
+  if (updateError) {
+    return {
+      error: updateError.message,
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/settings");
+
+  return {
+    success: "Profile onboarding complete.",
   };
 }

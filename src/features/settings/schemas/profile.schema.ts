@@ -71,3 +71,39 @@ export const updateProfileDisplaySchema = z.object({
     .min(1, "Display name is required.")
     .max(160, "Display name is too long."),
 });
+
+export const completeBasicProfileOnboardingSchema = z
+  .object({
+    firstName: z
+      .string()
+      .trim()
+      .min(1, "First name is required.")
+      .max(80, "First name is too long."),
+    lastName: z
+      .string()
+      .trim()
+      .min(1, "Last name is required.")
+      .max(80, "Last name is too long."),
+    hasBusiness: z.boolean(),
+    companyName: z
+      .string()
+      .trim()
+      .max(160, "Company name is too long.")
+      .transform((value) => (value.length > 0 ? value : null)),
+    companyEmail: optionalEmail,
+    companyAddress: z
+      .string()
+      .trim()
+      .max(240, "Company address is too long.")
+      .transform((value) => (value.length > 0 ? value : null)),
+    companyWebsite: optionalUrl,
+  })
+  .superRefine((value, context) => {
+    if (value.hasBusiness && !value.companyName) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["companyName"],
+        message: "Company name is required when representing a business.",
+      });
+    }
+  });

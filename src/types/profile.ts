@@ -26,6 +26,13 @@ export type Profile = Readonly<{
   companyFacebookUrl: string | null;
   companyXUrl: string | null;
   companyInstagramUrl: string | null;
+  billingPlanTier: string;
+  billingStatus: string;
+  billingTrialEndsAt: string | null;
+  billingCycleAnchor: string | null;
+  monthlyBandwidthUsedBytes: number;
+  monthlyBandwidthWindowStart: string;
+  onboardingCompletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }>;

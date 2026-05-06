@@ -73,7 +73,16 @@ export const createWorkOrderSchema = z.object({
   locationLabel: nullableShortText,
   unitLabel: nullableShortText,
   description: nullableTrimmedText,
-  expirationAt: requiredCurrentOrFutureDate,
+  noExpiration: z.boolean().default(false),
+  expirationAt: nullableCurrentOrFutureDate,
+}).superRefine((value, context) => {
+  if (!value.noExpiration && !value.expirationAt) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["expirationAt"],
+      message: "Expiration date is required.",
+    });
+  }
 });
 
 export const updateWorkOrderSchema = z.object({

@@ -1,4 +1,4 @@
-import { formatDateTimeLabel } from "@/lib/utils";
+import { formatDateTimeLabel, sanitizePersonDisplayName } from "@/lib/utils";
 import type { Database } from "@/types/database";
 import type { LogEntry } from "@/types/log";
 import { parseLogDetails } from "@/features/logs/lib/log-details";
@@ -16,7 +16,9 @@ export function mapActivityLogRow(
 ): LogEntry {
   const details = parseLogDetails(row.details);
   const actorName = row.actor_user_id
-    ? (profileById.get(row.actor_user_id)?.full_name ?? "Unknown User")
+    ? sanitizePersonDisplayName(
+        profileById.get(row.actor_user_id)?.full_name ?? "Unknown User",
+      )
     : "System";
 
   return {

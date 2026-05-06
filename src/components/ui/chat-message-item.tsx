@@ -1,19 +1,38 @@
 import { memo } from "react";
 import { MessageAttachmentList } from "@/components/ui/message-attachment-list";
 import { cn } from "@/lib/utils";
+import { sanitizePersonDisplayName } from "@/lib/utils";
 import type { Message } from "@/types/message";
 
 type ChatMessageItemProps = Readonly<{
   message: Message;
 }>;
 
+function formatViewerLocalTimestamp(value: string, fallback: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return fallback;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+}
+
 function ChatMessageItemComponent({ message }: ChatMessageItemProps) {
+  const localTimestamp = formatViewerLocalTimestamp(
+    message.rawCreatedAt,
+    message.createdAt,
+  );
+  const senderDisplayName = sanitizePersonDisplayName(message.senderName);
+
   if (message.kind === "system") {
     return (
       <div className="flex justify-center px-0.5">
         <div className="max-w-[calc(100%-0.25rem)] rounded-2xl border border-border/80 bg-panel-muted/90 px-3 py-2 text-center text-[11px] leading-snug text-muted sm:max-w-2xl sm:rounded-full sm:px-4 sm:text-xs">
           <span className="font-medium text-foreground">{message.body}</span>
-          <span className="mt-0.5 block text-muted sm:ml-2 sm:mt-0 sm:inline">{message.createdAt}</span>
+          <span className="mt-0.5 block text-muted sm:ml-2 sm:mt-0 sm:inline">{localTimestamp}</span>
         </div>
       </div>
     );
@@ -44,9 +63,9 @@ function ChatMessageItemComponent({ message }: ChatMessageItemProps) {
         )}
       >
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] sm:text-xs">
-          <span className="font-semibold">{message.senderName}</span>
+          <span className="font-semibold">{senderDisplayName}</span>
           <span className={message.isCurrentUser ? "text-slate-300" : "text-muted"}>
-            {message.createdAt}
+            {localTimestamp}
           </span>
           {deliveryLabel ? (
             <span

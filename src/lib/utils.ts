@@ -55,6 +55,31 @@ export function formatDateTimeLabel(value: string) {
   }).format(new Date(value));
 }
 
+export function sanitizePersonDisplayName(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "User";
+  }
+
+  if (!trimmed.includes("@")) {
+    return trimmed;
+  }
+
+  const localPart = trimmed.split("@")[0]?.trim() ?? "";
+  if (!localPart) {
+    return "User";
+  }
+
+  const parsed = localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+    .trim();
+
+  return parsed || "User";
+}
+
 export function formatRoleLabel(value: string) {
   if (value in roleLabelByValue) {
     return roleLabelByValue[value];

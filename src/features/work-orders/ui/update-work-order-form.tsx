@@ -7,13 +7,14 @@ import { splitWorkOrderDescription } from "@/features/work-orders/lib/work-order
 import {
   getWorkOrderSubjectTypeLabel,
   getWorkOrderSubjectTypePlaceholder,
+  type WorkOrderSubjectTypeOptionValue,
   workOrderSubjectTypeOptions,
 } from "@/features/work-orders/lib/work-order-subject-types";
 import { updateWorkOrder } from "@/features/work-orders/actions/work-order.actions";
 import { initialWorkOrderActionState } from "@/features/work-orders/types/work-order-action-state";
 import { formatRoleLabel } from "@/lib/utils";
 import type { SpaceMembershipRole } from "@/types/database";
-import type { WorkOrder, WorkOrderSubjectType } from "@/types/work-order";
+import type { WorkOrder } from "@/types/work-order";
 
 type UpdateWorkOrderFormProps = Readonly<{
   workOrder: WorkOrder;
@@ -39,9 +40,11 @@ export function UpdateWorkOrderForm({
     initialWorkOrderActionState,
   );
   const details = splitWorkOrderDescription(workOrder.description);
-  const [subjectType, setSubjectType] = useState<WorkOrderSubjectType>(
+  const [subjectType, setSubjectType] = useState<WorkOrderSubjectTypeOptionValue>(
     workOrder.subjectType ?? details.subjectType,
   );
+  const [subject, setSubject] = useState(workOrder.subject ?? details.subject);
+  const subjectTypeValue: WorkOrderSubjectTypeOptionValue = subjectType;
   const statusOptions =
     actorRole === "admin"
       ? [
@@ -60,6 +63,11 @@ export function UpdateWorkOrderForm({
     <form action={formAction} className="mx-auto max-w-5xl space-y-4 px-6 py-6">
       <input type="hidden" name="workOrderId" value={workOrder.id} />
       <input type="hidden" name="spaceId" value={workOrder.spaceId} />
+      <input
+        type="hidden"
+        name="subjectType"
+        value={subjectTypeValue === "other" ? "issue" : subjectTypeValue}
+      />
       <input type="hidden" name="returnTo" value={returnTo ?? ""} />
       <input type="hidden" name="ownerUserId" value={workOrder.ownerUserId} />
       <input type="hidden" name="priority" value={workOrder.priority} />
@@ -103,9 +111,10 @@ export function UpdateWorkOrderForm({
       <label className="block space-y-2">
         <span className="text-sm font-medium text-foreground">Type</span>
         <select
-          name="subjectType"
-          value={subjectType}
-          onChange={(event) => setSubjectType(event.target.value as WorkOrderSubjectType)}
+          value={subjectTypeValue}
+          onChange={(event) =>
+            setSubjectType(event.target.value as WorkOrderSubjectTypeOptionValue)
+          }
           disabled={!canEdit}
           className="h-11 w-full rounded-lg border border-border bg-panel px-3 text-sm text-foreground outline-none disabled:bg-panel-muted"
         >
@@ -123,9 +132,10 @@ export function UpdateWorkOrderForm({
         <input
           name="subject"
           type="text"
-          defaultValue={workOrder.subject ?? details.subject}
+          value={subject}
+          onChange={(event) => setSubject(event.target.value)}
           disabled={!canEdit}
-          placeholder={getWorkOrderSubjectTypePlaceholder(subjectType)}
+          placeholder={getWorkOrderSubjectTypePlaceholder(subjectTypeValue)}
           className="h-11 w-full rounded-lg border border-border bg-panel px-3 text-sm text-foreground outline-none disabled:bg-panel-muted"
         />
       </label>

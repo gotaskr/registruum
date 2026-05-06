@@ -1,7 +1,9 @@
 import type { WorkOrderSubjectType } from "@/types/work-order";
 
+export type WorkOrderSubjectTypeOptionValue = WorkOrderSubjectType | "other";
+
 export const workOrderSubjectTypeOptions: ReadonlyArray<{
-  value: WorkOrderSubjectType;
+  value: WorkOrderSubjectTypeOptionValue;
   label: string;
   placeholder: string;
 }> = [
@@ -30,16 +32,21 @@ export const workOrderSubjectTypeOptions: ReadonlyArray<{
     label: "Emergency",
     placeholder: "Describe the emergency",
   },
+  {
+    value: "other",
+    label: "Others",
+    placeholder: "Enter custom type",
+  },
 ];
 
-export function getWorkOrderSubjectTypeLabel(value: WorkOrderSubjectType) {
+export function getWorkOrderSubjectTypeLabel(value: WorkOrderSubjectTypeOptionValue) {
   return (
     workOrderSubjectTypeOptions.find((option) => option.value === value)?.label ??
     "Issue"
   );
 }
 
-export function getWorkOrderSubjectTypePlaceholder(value: WorkOrderSubjectType) {
+export function getWorkOrderSubjectTypePlaceholder(value: WorkOrderSubjectTypeOptionValue) {
   return (
     workOrderSubjectTypeOptions.find((option) => option.value === value)?.placeholder ??
     "Describe the issue"

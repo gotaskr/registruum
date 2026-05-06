@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getWorkOrderCreationBlockedMessage } from "@/features/settings/lib/subscription-enforcement";
 import { recordCompletedWorkOrderHistoryForCompletion } from "@/features/history/lib/record-completion-history";
 import { createActivityLog } from "@/features/logs/api/activity-logs";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -113,6 +114,7 @@ export async function executeCreateWorkOrder(
     locationLabel: readText(formData, "locationLabel"),
     unitLabel: readText(formData, "unitLabel"),
     description: readText(formData, "description"),
+    noExpiration: readBoolean(formData, "noExpiration"),
     expirationAt: readText(formData, "expirationAt"),
   });
 
@@ -154,8 +156,17 @@ export async function executeCreateWorkOrder(
     };
   }
 
+  const workOrderLimitMessage = await getWorkOrderCreationBlockedMessage(parsed.data.spaceId);
+  if (workOrderLimitMessage) {
+    return {
+      ok: false,
+      error: workOrderLimitMessage,
+    };
+  }
+
   const adminSupabase = createSupabaseAdminClient();
   const workOrderId = crypto.randomUUID();
+  const expirationAt = parsed.data.noExpiration ? null : parsed.data.expirationAt;
   const { error: createError } = await adminSupabase.from("work_orders").insert({
     id: workOrderId,
     space_id: parsed.data.spaceId,
@@ -172,8 +183,8 @@ export async function executeCreateWorkOrder(
       parsed.data.description,
     ),
     priority: "medium",
-    due_date: parsed.data.expirationAt,
-    expiration_at: parsed.data.expirationAt,
+    due_date: expirationAt,
+    expiration_at: expirationAt,
     status: "open",
     is_posted_to_job_market: false,
   });
