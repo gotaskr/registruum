@@ -4,10 +4,11 @@ export type AboutUsSection = Readonly<{
   bullets?: readonly string[];
 }>;
 
+/** Content aligned with Registruum “About Us” company PDF (plain text for the site). */
 export const aboutUsIntro = {
   title: "About Registruum",
   summary:
-    "Registruum is a modern platform built by Hightech Elevator Solution Inc. to simplify operations, records, and communication for businesses, teams, and individuals.",
+    "Registruum Technologies Inc. is a Canadian-based technology company focused on transforming how businesses manage operations, records, and communication.",
   purpose:
     "We built Registruum with one clear goal: to bring structure, clarity, and control to businesses overwhelmed by scattered workflows and lost information.",
 } as const;
@@ -17,57 +18,57 @@ export const aboutUsSections: readonly AboutUsSection[] = [
     heading: "Why Registruum Was Created",
     paragraphs: [
       "Registruum was not created in a boardroom. It was built from real-life experience.",
-      "As a startup founder managing operations, communication, project tracking, and documentation, we experienced firsthand how difficult it is to stay organized when work is scattered across too many tools.",
-      "Many startups, small teams, property managers, and service-based companies still rely on messaging apps, manual tracking, unorganized files, and verbal agreements. That often leads to confusion, delays, lost records, miscommunication, financial loss, and legal risk.",
-      "Registruum was built to solve that.",
+      "As a startup founder managing multiple responsibilities — from operations, communication, project tracking, and documentation — we experienced firsthand how difficult it is to keep everything aligned when work is scattered across too many tools.",
+      "Many businesses — especially startups, small teams, property managers, and service-based companies — rely on messaging apps, manual tracking, unorganized files, and verbal agreements.",
+      "That often leads to confusion, delays, lost records, miscommunication, financial loss, and legal risk. Registruum was built to solve this.",
     ],
     bullets: [
-      "keep track of work orders;",
-      "manage teams across different roles;",
-      "store important files and proof of work;",
-      "maintain clear communication;",
-      "protect records from being lost or disputed.",
+      "Keep track of work orders",
+      "Manage teams across different roles",
+      "Store important files and proof of work",
+      "Maintain clear communication",
+      "Protect records from being lost or disputed",
     ],
   },
   {
     heading: "What Registruum Does",
     paragraphs: [
-      "Registruum is a centralized platform that gives users one workflow and one place for operational coordination and recordkeeping.",
+      "Registruum is a centralized platform that allows teams to run operations in one workflow and one place. Everything is stored in one system, one workflow, one place.",
     ],
     bullets: [
-      "create and manage work orders;",
-      "assign roles and responsibilities;",
-      "communicate within structured workflows;",
-      "upload and store files, photos, and documents;",
-      "track progress in real time;",
-      "maintain organized and traceable records;",
-      "build audit-ready documentation.",
+      "Create and manage work orders",
+      "Assign roles and responsibilities",
+      "Communicate within structured workflows",
+      "Upload and store files, photos, and documents",
+      "Track progress in real time",
+      "Maintain organized and traceable records",
+      "Build audit-ready documentation",
     ],
   },
   {
     heading: "Who We Serve",
     bullets: [
-      "small to medium businesses managing daily operations, projects, and internal coordination;",
-      "property managers and building teams handling maintenance, repairs, and communication;",
-      "contractors and service providers tracking jobs, documenting work, and maintaining proof of service;",
-      "individuals and startups who need a simple but structured system to stay organized and professional.",
+      "Small to medium businesses — teams managing daily operations, projects, and internal coordination",
+      "Property managers and building teams — handling maintenance, repairs, and communication between management, contractors, and staff",
+      "Contractors and service providers — tracking jobs, documenting work, and maintaining proof of service",
+      "Individuals and startups — who need a simple but structured system to stay organized and professional",
     ],
   },
   {
     heading: "Mission and Vision",
     paragraphs: [
       "Our mission is to empower businesses and individuals with a simple, structured, and reliable system that transforms chaos into organized workflows and secure records.",
-      "Our vision is to become a globally trusted platform for work order management, digital recordkeeping, operational workflows, and business accountability, where every task, record, and communication is clear, traceable, and protected.",
+      "Our vision is to become a globally trusted platform for work order management, digital recordkeeping, operational workflows, and business accountability — where every task, record, and communication is clear, traceable, and protected.",
     ],
   },
   {
     heading: "What Makes Registruum Different",
     bullets: [
-      "simplicity with structure so complex operations stay manageable;",
-      "an audit-ready system where every action, update, and record is stored and traceable;",
-      "built for real use and based on real business struggles, not theory;",
-      "flexible for any industry, from property management to service-based businesses and beyond;",
-      "scalable growth so teams can start small and grow without changing systems.",
+      "Simplicity with structure — we focus on making complex operations easy to manage",
+      "Audit-ready system — every action, update, and record is stored and traceable",
+      "Built for real use — designed from real business struggles, not theory",
+      "Flexible for any industry — from property management to service-based businesses and beyond",
+      "Scalable growth — start small and grow without changing systems",
     ],
   },
   {
@@ -81,7 +82,7 @@ export const aboutUsSections: readonly AboutUsSection[] = [
 
 export const founderMessage = {
   quote:
-    "Registruum was built during a time when managing everything felt overwhelming, from connecting with people, handling operations, tracking work, to keeping records safe. I realized that many businesses go through the same struggle. Instead of accepting the chaos, we built a system to fix it. Registruum is more than a platform. It's a solution to help people stay organized, protected, and in control of their work.",
+    "Registruum was built during a time when managing everything felt overwhelming — from connecting with people, handling operations, tracking work, to keeping records safe. I realized that many businesses go through the same struggle. Instead of accepting the chaos, we built a system to fix it. Registruum is more than a platform. It's a solution to help people stay organized, protected, and in control of their work.",
   author: "Ruzyl Earl Cabarles",
-  title: "Founder of Registruum (by Hightech Elevator Solution Inc.)",
+  title: "Founder, Registruum Technologies Inc.",
 } as const;
