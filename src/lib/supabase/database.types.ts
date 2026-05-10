@@ -699,6 +699,7 @@ export type Database = {
           monthly_bandwidth_used_bytes: number
           monthly_bandwidth_window_start: string
           mentions_only_mode: boolean
+          notifications_last_viewed_at: string | null
           onboarding_completed_at: string | null
           represents_company: boolean
           theme_preference: string
@@ -735,6 +736,7 @@ export type Database = {
           monthly_bandwidth_used_bytes?: number
           monthly_bandwidth_window_start?: string
           mentions_only_mode?: boolean
+          notifications_last_viewed_at?: string | null
           onboarding_completed_at?: string | null
           represents_company?: boolean
           theme_preference?: string
@@ -771,6 +773,7 @@ export type Database = {
           monthly_bandwidth_used_bytes?: number
           monthly_bandwidth_window_start?: string
           mentions_only_mode?: boolean
+          notifications_last_viewed_at?: string | null
           onboarding_completed_at?: string | null
           represents_company?: boolean
           theme_preference?: string

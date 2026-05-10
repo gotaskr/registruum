@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedAppUserOrNull } from "@/features/auth/api/profiles";
 import { listPendingInvitationsForUser } from "@/features/settings/api/invitations";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { formatDateTimeLabel } from "@/lib/utils";
-import { sanitizePersonDisplayName } from "@/lib/utils";
+import { formatDateTimeLabel, sanitizePersonDisplayName } from "@/lib/utils";
 
 type MentionNotification = Readonly<{
   id: string;
@@ -24,6 +23,38 @@ export async function GET() {
 
   try {
     const adminSupabase = createSupabaseAdminClient();
+
+    const { data: viewerProfile, error: profileReadError } = await adminSupabase
+      .from("profiles")
+      .select("notifications_last_viewed_at")
+      .eq("id", ctx.user.id)
+      .maybeSingle();
+
+    if (profileReadError) {
+      throw new Error(profileReadError.message);
+    }
+
+    const lastViewedAt = viewerProfile?.notifications_last_viewed_at ?? null;
+
+    let unreadMentionQuery = adminSupabase
+      .from("activity_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("action", "Mentioned you in chat")
+      .eq("details->>mentioned_user_id", ctx.user.id);
+
+    if (lastViewedAt) {
+      unreadMentionQuery = unreadMentionQuery.gt("created_at", lastViewedAt);
+    }
+
+    const { count: unreadMentionCountRaw, error: unreadCountError } =
+      await unreadMentionQuery;
+
+    if (unreadCountError) {
+      throw new Error(unreadCountError.message);
+    }
+
+    const unreadMentionCount = unreadMentionCountRaw ?? 0;
+
     const invitations = await listPendingInvitationsForUser(ctx);
     const { data: mentionRows, error: mentionError } = await adminSupabase
       .from("activity_logs")
@@ -79,7 +110,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ invitations, mentions });
+    return NextResponse.json({ invitations, mentions, unreadMentionCount });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to load notifications.";

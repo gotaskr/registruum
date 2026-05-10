@@ -13,6 +13,7 @@ import { FormMessage } from "@/features/auth/ui/form-message";
 import { createSpace } from "@/features/spaces/actions/space.actions";
 import { spaceTypeOptions } from "@/features/spaces/lib/space-types";
 import { initialSpaceActionState } from "@/features/spaces/types/space-action-state";
+import { SpaceAddressAutocompleteInput } from "@/features/spaces/ui/space-address-autocomplete-input";
 import { SpacePhotoField } from "@/features/spaces/ui/space-photo-field";
 import { cn } from "@/lib/utils";
 
@@ -262,10 +263,10 @@ export function CreateSpaceModal({
                 <label className="block space-y-2">
                   <span className="text-sm font-medium text-foreground">Address</span>
                   <div className="relative">
-                    <input
+                    <SpaceAddressAutocompleteInput
                       name="address"
-                      type="text"
                       placeholder="123 Main St, Edmonton"
+                      autoComplete="street-address"
                       className="h-12 w-full rounded-2xl border border-[#dbe4f0] bg-[#f9fbff] px-4 pr-10 text-sm text-foreground outline-none transition focus:border-[#97b5ff] focus:bg-white dark:border-border dark:bg-panel-muted dark:focus:border-accent"
                     />
                     <MapPin className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7f8ca3] dark:text-muted" />

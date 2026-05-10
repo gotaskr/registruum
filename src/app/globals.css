@@ -250,3 +250,8 @@ html[data-theme="dark"] .auth-shimmer-line::after {
     transform: translateX(360%);
   }
 }
+
+/* Google Places suggestions must render above app modals (e.g. create-space). */
+.pac-container {
+  z-index: 10050;
+}

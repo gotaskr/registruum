@@ -39,7 +39,12 @@ type RegistruumTopNavProps = Readonly<{
 type NotificationPanelState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ready"; invitations: SettingsInvitation[]; mentions: MentionNotification[] }
+  | {
+      status: "ready";
+      invitations: SettingsInvitation[];
+      mentions: MentionNotification[];
+      unreadMentionCount: number;
+    }
   | { status: "error"; message: string };
 
 type MentionNotification = Readonly<{
@@ -55,6 +60,7 @@ type MentionNotification = Readonly<{
 async function fetchNotificationSummary(): Promise<{
   invitations: SettingsInvitation[];
   mentions: MentionNotification[];
+  unreadMentionCount: number;
 }> {
   const response = await fetch("/api/notifications/summary", {
     credentials: "same-origin",
@@ -73,11 +79,26 @@ async function fetchNotificationSummary(): Promise<{
   const data = (await response.json()) as {
     invitations: SettingsInvitation[];
     mentions: MentionNotification[];
+    unreadMentionCount?: number;
   };
   return {
     invitations: data.invitations ?? [],
     mentions: data.mentions ?? [],
+    unreadMentionCount: data.unreadMentionCount ?? 0,
   };
+}
+
+async function markNotificationsViewed(): Promise<void> {
+  const response = await fetch("/api/notifications/mark-viewed", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Unable to mark notifications as viewed.");
+  }
 }
 
 export function RegistruumTopNav({
@@ -120,8 +141,9 @@ export function RegistruumTopNav({
   }
 
   const totalNotificationCount =
-    invitationBadgeCount +
-    (notificationPanel.status === "ready" ? notificationPanel.mentions.length : 0);
+    notificationPanel.status === "ready"
+      ? notificationPanel.invitations.length + notificationPanel.unreadMentionCount
+      : invitationBadgeCount;
 
   const refreshInvitationBadge = useCallback(() => {
     let cancelled = false;
@@ -129,7 +151,9 @@ export function RegistruumTopNav({
       try {
         const summary = await fetchNotificationSummary();
         if (!cancelled) {
-          setInvitationBadgeCount(summary.invitations.length + summary.mentions.length);
+          setInvitationBadgeCount(
+            summary.invitations.length + summary.unreadMentionCount,
+          );
         }
       } catch {
         if (!cancelled) {
@@ -160,8 +184,25 @@ export function RegistruumTopNav({
             status: "ready",
             invitations: summary.invitations,
             mentions: summary.mentions,
+            unreadMentionCount: summary.unreadMentionCount,
           });
-          setInvitationBadgeCount(summary.invitations.length + summary.mentions.length);
+          setInvitationBadgeCount(
+            summary.invitations.length + summary.unreadMentionCount,
+          );
+          try {
+            await markNotificationsViewed();
+            if (!cancelled) {
+              setNotificationPanel({
+                status: "ready",
+                invitations: summary.invitations,
+                mentions: summary.mentions,
+                unreadMentionCount: 0,
+              });
+              setInvitationBadgeCount(summary.invitations.length);
+            }
+          } catch {
+            /* Badge stays until next successful mark or navigation refresh. */
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -362,10 +403,23 @@ export function RegistruumTopNav({
                                 status: "ready",
                                 invitations: summary.invitations,
                                 mentions: summary.mentions,
+                                unreadMentionCount: summary.unreadMentionCount,
                               });
                               setInvitationBadgeCount(
-                                summary.invitations.length + summary.mentions.length,
+                                summary.invitations.length + summary.unreadMentionCount,
                               );
+                              try {
+                                await markNotificationsViewed();
+                                setNotificationPanel({
+                                  status: "ready",
+                                  invitations: summary.invitations,
+                                  mentions: summary.mentions,
+                                  unreadMentionCount: 0,
+                                });
+                                setInvitationBadgeCount(summary.invitations.length);
+                              } catch {
+                                /* keep counts from summary */
+                              }
                             } catch (error) {
                               setNotificationPanel({
                                 status: "error",

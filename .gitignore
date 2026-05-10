@@ -49,6 +49,12 @@ yarn-error.log*
 
 # local scaffolds / scratch folders
 /registruum-bootstrap/
+/scratch/
+registruum-backup-*.zip
+
+# Cursor / CLI installed agent skills (large; regenerate with npx skills add)
+/.agents/
+/skills-lock.json
 
 # typescript
 *.tsbuildinfo
