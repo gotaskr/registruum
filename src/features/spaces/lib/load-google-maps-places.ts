@@ -81,7 +81,11 @@ export function loadGoogleMapsPlaces(): Promise<void> {
 
       const script = document.createElement("script");
       script.async = true;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&loading=async&callback=${callbackName}`;
+      const originReferrer =
+        process.env.NEXT_PUBLIC_GOOGLE_MAPS_AUTH_REFERRER_ORIGIN === "true"
+          ? "&auth_referrer_policy=origin"
+          : "";
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&loading=async&callback=${callbackName}${originReferrer}`;
       script.onerror = () => {
         loadPromise = null;
         Reflect.deleteProperty(window as unknown as object, callbackName);

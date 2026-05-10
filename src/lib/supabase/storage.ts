@@ -106,6 +106,14 @@ export function buildWorkOrderStoragePath({
   ].join("/");
 }
 
+function storageUploadErrorMessage(raw: string) {
+  const lower = raw.toLowerCase();
+  if (lower.includes("maximum") && lower.includes("size")) {
+    return `${raw} Per Supabase, the Free plan enforces a 50 MB global limit per file (bucket settings cannot exceed it). Raise the cap in Dashboard → Storage → Settings or upgrade for higher limits — see https://supabase.com/docs/guides/storage/uploads/file-limits`;
+  }
+  return raw;
+}
+
 export async function uploadFileToStorage({
   supabase,
   path,
@@ -128,6 +136,6 @@ export async function uploadFileToStorage({
     });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(storageUploadErrorMessage(error.message));
   }
 }

@@ -38,9 +38,8 @@ export function SpaceAddressAutocompleteInput({
 
         autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
           fields: ["formatted_address"],
-          // `address` is very strict; `geocode` still biases to street-level results
-          // and returns predictions for partial queries like "9 clearwater".
-          types: ["geocode"],
+          // Omit `types` so partial queries (e.g. "710 gr") get address + place predictions;
+          // strict `geocode`/`address` filters often return nothing on production.
         });
 
         autocomplete.addListener("place_changed", () => {
@@ -55,12 +54,11 @@ export function SpaceAddressAutocompleteInput({
         });
       })
       .catch((err: unknown) => {
-        if (process.env.NODE_ENV === "development") {
-          console.warn(
-            "[Registruum] Address suggestions unavailable (manual entry still works):",
-            err,
-          );
-        }
+        const detail = err instanceof Error ? err.message : String(err);
+        console.warn(
+          "[Registruum] Address suggestions unavailable (manual entry still works):",
+          detail,
+        );
       });
 
     return () => {

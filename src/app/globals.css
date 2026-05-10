@@ -251,7 +251,7 @@ html[data-theme="dark"] .auth-shimmer-line::after {
   }
 }
 
-/* Google Places suggestions must render above app modals (e.g. create-space). */
+/* Google Places: must sit above modals/backdrops (z-50 ≈ 50) and portal stacking contexts. */
 .pac-container {
-  z-index: 10050;
+  z-index: 999999 !important;
 }
