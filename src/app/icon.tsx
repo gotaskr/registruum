@@ -4,14 +4,10 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
 
-export const size = {
-  width: 180,
-  height: 180,
-};
-
+export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-export default async function AppleIcon() {
+export default async function Icon() {
   const file = await readFile(join(process.cwd(), "public", "logo.png"));
   const src = `data:image/png;base64,${file.toString("base64")}`;
 
@@ -24,18 +20,18 @@ export default async function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#f3f6fb",
+          background: "#ffffff",
         }}
       >
         <img
           src={src}
-          width={140}
-          height={140}
+          width={28}
+          height={28}
           alt=""
           style={{ objectFit: "contain" }}
         />
       </div>
     ),
-    size,
+    { ...size },
   );
 }
