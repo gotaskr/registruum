@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { createArchiveFolderAction } from "@/features/archive/actions/archive.actions";
@@ -10,6 +11,7 @@ import {
 } from "@/features/archive/lib/archive-form-styles";
 import { formatArchiveFolderOptionLabel } from "@/features/archive/lib/archive-folder-tree";
 import type { ArchiveFolderOption } from "@/features/archive/types/archive";
+import { cn } from "@/lib/utils";
 
 type ArchiveCreateFolderModalProps = Readonly<{
   returnTo: string;
@@ -19,6 +21,8 @@ type ArchiveCreateFolderModalProps = Readonly<{
   disabled?: boolean;
   /** Override trigger button layout (e.g. compact row next to folder select on mobile). */
   triggerClassName?: string;
+  /** Desktop space archive rail: icon-only on lg until ancestor `group/archiveRail` hover or focus-within. */
+  archiveRailTrigger?: boolean;
 }>;
 
 export function ArchiveCreateFolderModal({
@@ -28,6 +32,7 @@ export function ArchiveCreateFolderModal({
   spaceId = null,
   disabled = false,
   triggerClassName,
+  archiveRailTrigger = false,
 }: ArchiveCreateFolderModalProps) {
   const [open, setOpen] = useState(false);
 
@@ -39,12 +44,25 @@ export function ArchiveCreateFolderModal({
     <>
       <Button
         type="button"
-        variant="secondary"
+        variant="brand"
         disabled={disabled}
         onClick={() => setOpen(true)}
-        className={triggerClassName ?? "h-10 w-full touch-manipulation"}
+        className={cn(
+          triggerClassName ?? "h-10 w-full touch-manipulation",
+          archiveRailTrigger &&
+            "lg:min-h-[2.75rem] lg:justify-center lg:gap-0 lg:px-2 lg:group-hover/archiveRail:gap-2 lg:group-hover/archiveRail:px-3 lg:group-focus-within/archiveRail:gap-2 lg:group-focus-within/archiveRail:px-3 lg:group-data-[archive-rail=expanded]/archiveRail:gap-2 lg:group-data-[archive-rail=expanded]/archiveRail:px-3",
+        )}
       >
-        Add folder
+        {archiveRailTrigger ? (
+          <>
+            <FolderPlus className="hidden h-4 w-4 shrink-0 lg:inline" aria-hidden />
+            <span className="inline lg:hidden lg:group-hover/archiveRail:inline lg:group-focus-within/archiveRail:inline lg:group-data-[archive-rail=expanded]/archiveRail:inline">
+              Add folder
+            </span>
+          </>
+        ) : (
+          "Add folder"
+        )}
       </Button>
 
       <Modal

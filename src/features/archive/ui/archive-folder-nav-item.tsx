@@ -23,6 +23,8 @@ type ArchiveFolderNavItemProps = Readonly<{
   }> | null;
   isActive?: boolean;
   isSystem?: boolean;
+  /** Desktop space archive rail: icon-only until parent `group/archiveRail` hover or focus-within. */
+  archiveRail?: boolean;
 }>;
 
 export function ArchiveFolderTreeGuides({
@@ -64,11 +66,39 @@ export function ArchiveFolderNavItem({
   toggleButton = null,
   isActive = false,
   isSystem = false,
+  archiveRail = false,
 }: ArchiveFolderNavItemProps) {
+  const depthPadding =
+    !isSystem && depth > 0 && (!treeGuides || treeGuides.length === 0)
+      ? `${0.75 + depth * 1.1}rem`
+      : null;
+
+  const railToggleClasses = archiveRail
+    ? "lg:hidden lg:group-hover/archiveRail:inline-flex lg:group-focus-within/archiveRail:inline-flex lg:group-data-[archive-rail=expanded]/archiveRail:inline-flex"
+    : undefined;
+  const railSpacerClasses = archiveRail
+    ? "lg:hidden lg:group-hover/archiveRail:block lg:group-focus-within/archiveRail:block lg:group-data-[archive-rail=expanded]/archiveRail:block"
+    : undefined;
+  const railGuidesClasses = archiveRail
+    ? "lg:hidden lg:group-hover/archiveRail:contents lg:group-focus-within/archiveRail:contents lg:group-data-[archive-rail=expanded]/archiveRail:contents"
+    : undefined;
+
   const content = (
     <>
-      <div className="flex min-w-0 items-center gap-3">
-        <ArchiveFolderTreeGuides guides={treeGuides} isBranchEnd={isBranchEnd} />
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-3",
+          archiveRail &&
+            "lg:w-full lg:justify-center lg:gap-0 lg:group-hover/archiveRail:w-auto lg:group-hover/archiveRail:justify-start lg:group-hover/archiveRail:gap-3 lg:group-focus-within/archiveRail:w-auto lg:group-focus-within/archiveRail:justify-start lg:group-focus-within/archiveRail:gap-3 lg:group-data-[archive-rail=expanded]/archiveRail:w-auto lg:group-data-[archive-rail=expanded]/archiveRail:justify-start lg:group-data-[archive-rail=expanded]/archiveRail:gap-3",
+        )}
+      >
+        {treeGuides && treeGuides.length > 0 ? (
+          <span className={cn(railGuidesClasses)}>
+            <ArchiveFolderTreeGuides guides={treeGuides} isBranchEnd={isBranchEnd} />
+          </span>
+        ) : (
+          <ArchiveFolderTreeGuides guides={treeGuides} isBranchEnd={isBranchEnd} />
+        )}
         {toggleButton ? (
           <button
             type="button"
@@ -78,7 +108,10 @@ export function ArchiveFolderNavItem({
               toggleButton.onToggle();
             }}
             aria-label={toggleButton.ariaLabel}
-            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-900"
+            className={cn(
+              "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-900",
+              railToggleClasses,
+            )}
           >
             <ChevronRight
               className={cn(
@@ -88,7 +121,7 @@ export function ArchiveFolderNavItem({
             />
           </button>
         ) : (
-          <span className="block w-7 shrink-0" aria-hidden="true" />
+          <span className={cn("block w-7 shrink-0", railSpacerClasses)} aria-hidden="true" />
         )}
         <div
           className={cn(
@@ -98,11 +131,21 @@ export function ArchiveFolderNavItem({
               : isSystem
                 ? "border-slate-200 bg-slate-50 text-slate-700"
                 : "border-slate-200 bg-white text-slate-600 group-hover:text-slate-900",
+            archiveRail &&
+              "lg:mx-auto lg:group-hover/archiveRail:mx-0 lg:group-focus-within/archiveRail:mx-0 lg:group-data-[archive-rail=expanded]/archiveRail:mx-0",
           )}
         >
           <Icon className="h-4 w-4" />
         </div>
-        <p className="truncate text-sm font-medium">{label}</p>
+        <p
+          className={cn(
+            "truncate text-sm font-medium",
+            archiveRail &&
+              "lg:hidden lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-opacity lg:duration-200 lg:group-hover/archiveRail:block lg:group-hover/archiveRail:max-w-none lg:group-hover/archiveRail:opacity-100 lg:group-focus-within/archiveRail:block lg:group-focus-within/archiveRail:max-w-none lg:group-focus-within/archiveRail:opacity-100 lg:group-data-[archive-rail=expanded]/archiveRail:block lg:group-data-[archive-rail=expanded]/archiveRail:max-w-none lg:group-data-[archive-rail=expanded]/archiveRail:opacity-100",
+          )}
+        >
+          {label}
+        </p>
       </div>
 
       <span
@@ -111,6 +154,8 @@ export function ArchiveFolderNavItem({
           isActive
             ? "border-accent/30 bg-accent-soft text-accent"
             : "border-slate-200 bg-white text-slate-600",
+          archiveRail &&
+            "lg:ml-0 lg:hidden lg:group-hover/archiveRail:ml-3 lg:group-hover/archiveRail:inline-flex lg:group-focus-within/archiveRail:ml-3 lg:group-focus-within/archiveRail:inline-flex lg:group-data-[archive-rail=expanded]/archiveRail:ml-3 lg:group-data-[archive-rail=expanded]/archiveRail:inline-flex",
         )}
       >
         {count}
@@ -127,11 +172,19 @@ export function ArchiveFolderNavItem({
         isActive
           ? "border-accent/40 bg-accent-soft/80 text-foreground shadow-sm"
           : "border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950",
+        archiveRail &&
+          "lg:min-h-[2.75rem] lg:justify-center lg:px-1.5 lg:py-2 lg:group-hover/archiveRail:justify-between lg:group-hover/archiveRail:px-3 lg:group-hover/archiveRail:py-2.5 lg:group-focus-within/archiveRail:justify-between lg:group-focus-within/archiveRail:px-3 lg:group-focus-within/archiveRail:py-2.5 lg:group-data-[archive-rail=expanded]/archiveRail:justify-between lg:group-data-[archive-rail=expanded]/archiveRail:px-3 lg:group-data-[archive-rail=expanded]/archiveRail:py-2.5",
+        archiveRail &&
+          depthPadding &&
+          `lg:pl-1.5 lg:pr-1.5 lg:group-hover/archiveRail:[padding-left:${depthPadding}] lg:group-hover/archiveRail:pr-3 lg:group-focus-within/archiveRail:[padding-left:${depthPadding}] lg:group-focus-within/archiveRail:pr-3 lg:group-data-[archive-rail=expanded]/archiveRail:[padding-left:${depthPadding}] lg:group-data-[archive-rail=expanded]/archiveRail:pr-3`,
+        archiveRail &&
+          !depthPadding &&
+          "lg:px-1.5 lg:group-hover/archiveRail:px-3 lg:group-focus-within/archiveRail:px-3 lg:group-data-[archive-rail=expanded]/archiveRail:px-3",
       )}
       style={
-        !isSystem && depth > 0 && (!treeGuides || treeGuides.length === 0)
-          ? { paddingLeft: `${0.75 + depth * 1.1}rem` }
-          : undefined
+        archiveRail || !depthPadding
+          ? undefined
+          : { paddingLeft: depthPadding }
       }
     >
       {content}

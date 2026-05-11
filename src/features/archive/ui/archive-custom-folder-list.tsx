@@ -19,6 +19,8 @@ type ArchiveCustomFolderListProps = Readonly<{
   spaceId?: string | null;
   /** Tighter block when nested in a space-archive sidebar rail. */
   listStyle?: "default" | "sidebar";
+  /** Desktop hover rail: collapse chrome until parent `group/archiveRail` hover or focus-within. */
+  archiveRail?: boolean;
 }>;
 
 type ArchiveFolderTreeRow = Readonly<{
@@ -34,8 +36,10 @@ export function ArchiveCustomFolderList({
   basePath = "/archive",
   spaceId = null,
   listStyle = "default",
+  archiveRail = false,
 }: ArchiveCustomFolderListProps) {
   const isSidebar = listStyle === "sidebar";
+  const railChrome = archiveRail && isSidebar;
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedFolderIdForDelete, setSelectedFolderIdForDelete] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -164,8 +168,20 @@ export function ArchiveCustomFolderList({
         isSidebar ? "mt-3 border-t border-border/80 pt-3" : "mt-5 border-t border-border pt-4",
       )}
     >
-      <div className="flex items-center justify-between gap-3 px-2">
-        <div className="flex items-center gap-3">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 px-2",
+          railChrome &&
+            "lg:justify-center lg:group-hover/archiveRail:justify-between lg:group-focus-within/archiveRail:justify-between lg:group-data-[archive-rail=expanded]/archiveRail:justify-between",
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center gap-3",
+            railChrome &&
+              "lg:hidden lg:group-hover/archiveRail:flex lg:group-focus-within/archiveRail:flex lg:group-data-[archive-rail=expanded]/archiveRail:flex",
+          )}
+        >
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
             {isSidebar ? "Your folders" : "Custom Folders"}
           </p>
@@ -181,7 +197,7 @@ export function ArchiveCustomFolderList({
             "inline-flex h-9 items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors",
             selectedFolderIdForDelete
               ? "border-rose-200 bg-rose-50 text-rose-700"
-              : "w-9 border-border bg-white text-muted hover:text-foreground",
+              : "w-9 border-rose-200/80 bg-rose-50 text-rose-600 hover:border-rose-300 hover:bg-rose-100 hover:text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/35 dark:text-rose-400 dark:hover:border-rose-800 dark:hover:bg-rose-950/55 dark:hover:text-rose-300",
           )}
           aria-label={selectedFolderIdForDelete ? "Delete selected folder" : "Select a folder to delete"}
         >
@@ -204,18 +220,41 @@ export function ArchiveCustomFolderList({
                   selectedFolderIdForDelete === folder.id
                     ? "border-slate-300 bg-white text-slate-950 shadow-[0_4px_12px_rgba(15,23,42,0.04)]"
                     : "border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950",
+                  railChrome &&
+                    "lg:min-h-[2.75rem] lg:justify-center lg:px-1.5 lg:py-2 lg:group-hover/archiveRail:justify-between lg:group-hover/archiveRail:px-3 lg:group-hover/archiveRail:py-2.5 lg:group-focus-within/archiveRail:justify-between lg:group-focus-within/archiveRail:px-3 lg:group-focus-within/archiveRail:py-2.5 lg:group-data-[archive-rail=expanded]/archiveRail:justify-between lg:group-data-[archive-rail=expanded]/archiveRail:px-3 lg:group-data-[archive-rail=expanded]/archiveRail:py-2.5",
                 )}
               >
-                <div className="flex min-w-0 items-center gap-3">
+                <div
+                  className={cn(
+                    "flex min-w-0 items-center gap-3",
+                    railChrome &&
+                      "lg:w-full lg:justify-center lg:gap-0 lg:group-hover/archiveRail:w-auto lg:group-hover/archiveRail:justify-start lg:group-hover/archiveRail:gap-3 lg:group-focus-within/archiveRail:w-auto lg:group-focus-within/archiveRail:justify-start lg:group-focus-within/archiveRail:gap-3 lg:group-data-[archive-rail=expanded]/archiveRail:w-auto lg:group-data-[archive-rail=expanded]/archiveRail:justify-start lg:group-data-[archive-rail=expanded]/archiveRail:gap-3",
+                  )}
+                >
                   <input
                     type="checkbox"
                     checked={selectedFolderIdForDelete === folder.id}
                     onChange={(event) =>
                       setSelectedFolderIdForDelete(event.target.checked ? folder.id : null)
                     }
-                    className="h-4 w-4 rounded border-border"
+                    className={cn(
+                      "h-4 w-4 rounded border-border",
+                      railChrome &&
+                        "lg:hidden lg:group-hover/archiveRail:block lg:group-focus-within/archiveRail:block lg:group-data-[archive-rail=expanded]/archiveRail:block",
+                    )}
                   />
-                  <ArchiveFolderTreeGuides guides={treeGuides} isBranchEnd={isBranchEnd} />
+                  {treeGuides.length > 0 ? (
+                    <span
+                      className={cn(
+                        railChrome &&
+                          "lg:hidden lg:group-hover/archiveRail:contents lg:group-focus-within/archiveRail:contents lg:group-data-[archive-rail=expanded]/archiveRail:contents",
+                      )}
+                    >
+                      <ArchiveFolderTreeGuides guides={treeGuides} isBranchEnd={isBranchEnd} />
+                    </span>
+                  ) : (
+                    <ArchiveFolderTreeGuides guides={treeGuides} isBranchEnd={isBranchEnd} />
+                  )}
                   {hasChildren ? (
                     <button
                       type="button"
@@ -229,7 +268,11 @@ export function ArchiveCustomFolderList({
                           ? `Expand ${folder.name}`
                           : `Collapse ${folder.name}`
                       }
-                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-900"
+                      className={cn(
+                        "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-900",
+                        railChrome &&
+                          "lg:hidden lg:group-hover/archiveRail:inline-flex lg:group-focus-within/archiveRail:inline-flex lg:group-data-[archive-rail=expanded]/archiveRail:inline-flex",
+                      )}
                     >
                       <ChevronRight
                         className={cn(
@@ -239,15 +282,42 @@ export function ArchiveCustomFolderList({
                       />
                     </button>
                   ) : (
-                    <span className="block w-7 shrink-0" aria-hidden="true" />
+                    <span
+                      className={cn(
+                        "block w-7 shrink-0",
+                        railChrome &&
+                          "lg:hidden lg:group-hover/archiveRail:block lg:group-focus-within/archiveRail:block lg:group-data-[archive-rail=expanded]/archiveRail:block",
+                      )}
+                      aria-hidden="true"
+                    />
                   )}
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600">
+                  <div
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600",
+                      railChrome &&
+                        "lg:mx-auto lg:group-hover/archiveRail:mx-0 lg:group-focus-within/archiveRail:mx-0 lg:group-data-[archive-rail=expanded]/archiveRail:mx-0",
+                    )}
+                  >
                     <FolderClosed className="h-4 w-4" />
                   </div>
-                  <p className="truncate text-sm font-medium">{folder.name}</p>
+                  <p
+                    className={cn(
+                      "truncate text-sm font-medium",
+                      railChrome &&
+                        "lg:hidden lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-opacity lg:duration-200 lg:group-hover/archiveRail:block lg:group-hover/archiveRail:max-w-none lg:group-hover/archiveRail:opacity-100 lg:group-focus-within/archiveRail:block lg:group-focus-within/archiveRail:max-w-none lg:group-focus-within/archiveRail:opacity-100 lg:group-data-[archive-rail=expanded]/archiveRail:block lg:group-data-[archive-rail=expanded]/archiveRail:max-w-none lg:group-data-[archive-rail=expanded]/archiveRail:opacity-100",
+                    )}
+                  >
+                    {folder.name}
+                  </p>
                 </div>
 
-                <span className="ml-3 inline-flex min-w-8 items-center justify-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
+                <span
+                  className={cn(
+                    "ml-3 inline-flex min-w-8 items-center justify-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600",
+                    railChrome &&
+                      "lg:ml-0 lg:hidden lg:group-hover/archiveRail:ml-3 lg:group-hover/archiveRail:inline-flex lg:group-focus-within/archiveRail:ml-3 lg:group-focus-within/archiveRail:inline-flex lg:group-data-[archive-rail=expanded]/archiveRail:ml-3 lg:group-data-[archive-rail=expanded]/archiveRail:inline-flex",
+                  )}
+                >
                   {folder.archivedCount}
                 </span>
               </label>
@@ -273,11 +343,18 @@ export function ArchiveCustomFolderList({
                     : null
                 }
                 isActive={selectedFolderId === folder.id}
+                archiveRail={archiveRail}
               />
             ),
           )
         ) : (
-          <div className="rounded-xl border border-dashed border-border bg-white px-4 py-4">
+          <div
+            className={cn(
+              "rounded-xl border border-dashed border-border bg-white px-4 py-4",
+              railChrome &&
+                "lg:hidden lg:group-hover/archiveRail:block lg:group-focus-within/archiveRail:block lg:group-data-[archive-rail=expanded]/archiveRail:block",
+            )}
+          >
             <p className="text-sm text-muted">No custom folders yet.</p>
           </div>
         )}

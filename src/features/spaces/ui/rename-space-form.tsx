@@ -6,6 +6,7 @@ import { FormMessage } from "@/features/auth/ui/form-message";
 import { updateSpaceProfile } from "@/features/spaces/actions/space.actions";
 import { spaceTypeOptions } from "@/features/spaces/lib/space-types";
 import { initialSpaceActionState } from "@/features/spaces/types/space-action-state";
+import { SpaceAddressAutocompleteInput } from "@/features/spaces/ui/space-address-autocomplete-input";
 import { SpacePhotoField } from "@/features/spaces/ui/space-photo-field";
 import type { Space } from "@/types/space";
 
@@ -80,10 +81,11 @@ export function SpaceProfileForm({ space }: SpaceProfileFormProps) {
         <label className="block space-y-2">
           <span className="text-sm font-medium text-foreground">Address</span>
           <div className="relative">
-            <input
+            <SpaceAddressAutocompleteInput
               name="address"
-              type="text"
               defaultValue={space.address ?? ""}
+              autoComplete="street-address"
+              placeholder="Start typing an address…"
               className="h-11 w-full rounded-xl border border-border bg-panel px-3 pr-10 text-sm text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-[#2f5fd4]/35 sm:h-12 sm:rounded-2xl sm:px-4"
             />
             <MapPin className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted sm:right-4" />

@@ -83,6 +83,30 @@ a {
   text-decoration: none;
 }
 
+/* Beats `a { color: inherit }` — auth footer CTA must stay visibly blue. */
+a.auth-terms-cta-link {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgb(37 99 235 / 55%);
+  text-underline-offset: 0.2em;
+}
+
+a.auth-terms-cta-link:hover {
+  color: #1d4ed8;
+  text-decoration-color: #1d4ed8;
+}
+
+html[data-theme="dark"] a.auth-terms-cta-link {
+  color: #60a5fa;
+  text-decoration-color: rgb(96 165 250 / 55%);
+}
+
+html[data-theme="dark"] a.auth-terms-cta-link:hover {
+  color: #93c5fd;
+  text-decoration-color: #93c5fd;
+}
+
 button {
   font: inherit;
 }
@@ -251,7 +275,7 @@ html[data-theme="dark"] .auth-shimmer-line::after {
   }
 }
 
-/* Google Places: must sit above modals/backdrops (z-50 ≈ 50) and portal stacking contexts. */
+/* Google Places + `SpaceAddressAutocompleteInput` portal: above modals (z-50), tours, nav popovers. */
 .pac-container {
   z-index: 999999 !important;
 }

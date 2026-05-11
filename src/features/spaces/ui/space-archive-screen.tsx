@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowUpRight,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   FolderOpen,
   FolderTree,
@@ -69,6 +70,79 @@ export function SpaceArchiveScreen({
   const [query, setQuery] = useState(searchQuery);
   /** Default open so mobile users reach folders and records without an extra tap. */
   const [isArchiveOpen, setIsArchiveOpen] = useState(true);
+  /** iPad / touch at `lg+`: coarse pointer cannot rely on hover — tap header to expand, outside tap or Esc to collapse. */
+  const [coarsePointerLg, setCoarsePointerLg] = useState(false);
+  const [touchArchiveRailExpanded, setTouchArchiveRailExpanded] = useState(false);
+  const archiveRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const query = "(min-width: 1024px) and (pointer: coarse)";
+    const media = window.matchMedia(query);
+
+    function sync() {
+      const next = media.matches;
+      setCoarsePointerLg(next);
+      if (!next) {
+        setTouchArchiveRailExpanded(false);
+      }
+    }
+
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!coarsePointerLg || !touchArchiveRailExpanded) {
+      return;
+    }
+
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (target instanceof Element && target.closest('[role="dialog"]')) {
+        return;
+      }
+
+      const root = archiveRailRef.current;
+      if (root?.contains(target)) {
+        return;
+      }
+
+      setTouchArchiveRailExpanded(false);
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [coarsePointerLg, touchArchiveRailExpanded]);
+
+  useEffect(() => {
+    if (!coarsePointerLg || !touchArchiveRailExpanded) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setTouchArchiveRailExpanded(false);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [coarsePointerLg, touchArchiveRailExpanded]);
+
+  useEffect(() => {
+    if (coarsePointerLg) {
+      setTouchArchiveRailExpanded(false);
+    }
+  }, [pathname, coarsePointerLg]);
 
   const customFolders = useMemo(
     () => folders.filter((folder) => !folder.isSystemDefault),
@@ -210,9 +284,16 @@ export function SpaceArchiveScreen({
     return nextQuery ? `${pathname}?${nextQuery}` : pathname;
   }
 
-  function jumpDestinationClass(isActive: boolean) {
+  function jumpDestinationClass(
+    isActive: boolean,
+    options?: Readonly<{ truncate?: boolean }>,
+  ) {
     return cn(
-      "inline-flex shrink-0 items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors touch-manipulation",
+      "inline-flex items-center rounded-full border py-1.5 text-sm font-medium transition-colors touch-manipulation",
+      "px-2.5 sm:px-3",
+      options?.truncate
+        ? "min-w-0 max-w-[12rem] shrink truncate sm:max-w-[14rem] lg:max-w-[min(16rem,calc(100vw-22rem))]"
+        : "shrink-0",
       isActive
         ? "border-accent bg-accent-soft text-accent"
         : "border-border bg-panel text-foreground hover:bg-panel-muted",
@@ -435,102 +516,147 @@ export function SpaceArchiveScreen({
                     ))}
                   </select>
                 </label>
-                <ArchiveCreateFolderModal
-                  returnTo={pathname}
-                  folders={folders}
-                  defaultParentFolderId={selectedFolderId}
-                  spaceId={space.id}
-                  triggerClassName="h-10 w-auto shrink-0 touch-manipulation px-3"
-                />
-              </div>
-              <div
-                className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                aria-label="Quick folder jumps"
-              >
-                <Link
-                  href={buildFolderHref(null)}
-                  className={jumpDestinationClass(!selectedFolderId)}
-                >
-                  All records
-                </Link>
-                {defaultFolder ? (
-                  <Link
-                    href={buildFolderHref(defaultFolder.id)}
-                    className={jumpDestinationClass(selectedFolderId === defaultFolder.id)}
-                  >
-                    {defaultFolder.name}
-                  </Link>
-                ) : null}
               </div>
             </div>
 
-            <aside className="hidden w-full shrink-0 border-border bg-panel-muted/40 lg:flex lg:min-h-0 lg:w-[min(100%,18rem)] lg:flex-col lg:border-r xl:w-72">
-              <div className="shrink-0 border-b border-border px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <FolderTree className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-                  <p className="text-xs font-semibold text-foreground">Folders</p>
+            <div
+              ref={archiveRailRef}
+              data-archive-rail={
+                coarsePointerLg && touchArchiveRailExpanded ? "expanded" : "peek"
+              }
+              className={cn(
+                "group/archiveRail relative z-10 hidden h-full min-h-0 shrink-0 lg:block lg:overflow-visible lg:transition-[width] lg:duration-200 lg:ease-out",
+                coarsePointerLg
+                  ? touchArchiveRailExpanded
+                    ? "lg:w-[min(100%,18rem)] xl:w-72"
+                    : "lg:w-14"
+                  : "lg:w-14 lg:hover:w-[min(100%,18rem)] lg:focus-within:w-[min(100%,18rem)] xl:hover:w-72 xl:focus-within:w-72",
+              )}
+            >
+              <aside
+                id="archive-folder-sidebar"
+                className="flex h-full min-h-0 w-full flex-col overflow-hidden border-r border-border bg-panel-muted/40"
+              >
+                <div className="shrink-0 border-b border-border px-3 py-2.5">
+                  {coarsePointerLg && !touchArchiveRailExpanded ? (
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-center rounded-lg py-1 text-accent outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-accent"
+                      onClick={() => setTouchArchiveRailExpanded(true)}
+                      aria-expanded={false}
+                      aria-controls="archive-folder-sidebar"
+                      aria-label="Expand folders sidebar"
+                    >
+                      <FolderTree className="h-4 w-4 shrink-0" aria-hidden />
+                    </button>
+                  ) : (
+                    <div className="flex w-full items-center justify-center gap-2 lg:justify-center lg:group-hover/archiveRail:justify-start lg:group-focus-within/archiveRail:justify-start lg:group-data-[archive-rail=expanded]/archiveRail:justify-start">
+                      <FolderTree className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+                      <p className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground lg:max-w-0 lg:overflow-hidden lg:opacity-0 lg:transition-opacity lg:duration-200 lg:group-hover/archiveRail:max-w-[12rem] lg:group-hover/archiveRail:opacity-100 lg:group-focus-within/archiveRail:max-w-[12rem] lg:group-focus-within/archiveRail:opacity-100 lg:group-data-[archive-rail=expanded]/archiveRail:max-w-[12rem] lg:group-data-[archive-rail=expanded]/archiveRail:opacity-100">
+                        Folders
+                      </p>
+                      {coarsePointerLg && touchArchiveRailExpanded ? (
+                        <button
+                          type="button"
+                          className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-panel text-muted transition-colors hover:bg-panel-muted hover:text-foreground"
+                          onClick={() => setTouchArchiveRailExpanded(false)}
+                          aria-expanded={true}
+                          aria-label="Collapse folders sidebar"
+                        >
+                          <ChevronLeft className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2 sm:px-3 sm:py-3">
-                <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted">
-                  Start here
-                </p>
-                <div className="mt-2 space-y-1.5">
-                  <ArchiveFolderNavItem
-                    label="All records"
-                    count={allArchiveCount}
-                    href={buildFolderHref(null)}
-                    icon={Vault}
-                    isActive={!selectedFolderId}
-                    isSystem
-                  />
-                  {defaultFolder ? (
+                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 sm:px-3 sm:py-3">
+                  <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted lg:hidden lg:group-hover/archiveRail:block lg:group-focus-within/archiveRail:block lg:group-data-[archive-rail=expanded]/archiveRail:block">
+                    Start here
+                  </p>
+                  <div className="mt-2 space-y-1.5 lg:mt-0 lg:space-y-1.5 lg:group-hover/archiveRail:mt-2 lg:group-focus-within/archiveRail:mt-2 lg:group-data-[archive-rail=expanded]/archiveRail:mt-2">
                     <ArchiveFolderNavItem
-                      label={defaultFolder.name}
-                      count={defaultFolder.archivedCount}
-                      href={buildFolderHref(defaultFolder.id)}
-                      icon={FolderOpen}
-                      isActive={selectedFolderId === defaultFolder.id}
+                      label="All records"
+                      count={allArchiveCount}
+                      href={buildFolderHref(null)}
+                      icon={Vault}
+                      isActive={!selectedFolderId}
                       isSystem
+                      archiveRail
                     />
-                  ) : null}
+                    {defaultFolder ? (
+                      <ArchiveFolderNavItem
+                        label={defaultFolder.name}
+                        count={defaultFolder.archivedCount}
+                        href={buildFolderHref(defaultFolder.id)}
+                        icon={FolderOpen}
+                        isActive={selectedFolderId === defaultFolder.id}
+                        isSystem
+                        archiveRail
+                      />
+                    ) : null}
+                  </div>
+
+                  <ArchiveCustomFolderList
+                    folders={customFolders}
+                    selectedFolderId={selectedFolderId}
+                    basePath={pathname}
+                    spaceId={space.id}
+                    listStyle="sidebar"
+                    archiveRail
+                  />
                 </div>
-
-                <ArchiveCustomFolderList
-                  folders={customFolders}
-                  selectedFolderId={selectedFolderId}
-                  basePath={pathname}
-                  spaceId={space.id}
-                  listStyle="sidebar"
-                />
-              </div>
-
-              <div className="shrink-0 border-t border-border bg-panel px-2 py-2 sm:px-3 sm:py-2.5">
-                <ArchiveCreateFolderModal
-                  returnTo={pathname}
-                  folders={folders}
-                  defaultParentFolderId={selectedFolderId}
-                  spaceId={space.id}
-                />
-              </div>
-            </aside>
+              </aside>
+            </div>
 
             <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-3 sm:space-y-4 lg:space-y-0">
               <div className="rounded-lg border border-border bg-panel p-3 shadow-sm sm:rounded-xl sm:p-4 sm:shadow-[0_8px_24px_rgba(15,23,42,0.04)] lg:rounded-none lg:border-0 lg:border-b lg:shadow-none lg:px-4 lg:py-3">
-                {/* Mobile: one compact row — full folder title + count (no duplicate subcopy). */}
-                <div className="flex items-start justify-between gap-3 lg:hidden">
-                  <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground break-words">
-                    {selectedFolder ? selectedFolder.pathLabel : `${space.name} archive`}
-                  </h3>
-                  <p className="shrink-0 pt-0.5 text-right text-xs tabular-nums text-muted">
-                    <span className="font-medium text-foreground">{items.length}</span>
-                    {query.trim() ? (
-                      <span className="block text-[10px] font-normal leading-tight">filtered</span>
-                    ) : (
-                      <span className="block text-[10px] font-normal leading-tight">shown</span>
-                    )}
-                  </p>
+                {/* Mobile: title + count, then folder pills + Add folder (same row as pills). */}
+                <div className="flex flex-col gap-2.5 lg:hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="min-w-0 flex-1 text-base font-semibold leading-snug text-foreground break-words">
+                      {selectedFolder ? selectedFolder.pathLabel : `${space.name} archive`}
+                    </h3>
+                    <p className="shrink-0 pt-0.5 text-right text-xs tabular-nums text-muted">
+                      <span className="font-medium text-foreground">{items.length}</span>
+                      {query.trim() ? (
+                        <span className="block text-[10px] font-normal leading-tight">filtered</span>
+                      ) : (
+                        <span className="block text-[10px] font-normal leading-tight">shown</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div
+                      className="flex min-w-0 flex-1 flex-wrap items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      aria-label="Quick folder jumps"
+                    >
+                      <Link
+                        href={buildFolderHref(null)}
+                        className={jumpDestinationClass(!selectedFolderId)}
+                      >
+                        All records
+                      </Link>
+                      {defaultFolder ? (
+                        <Link
+                          href={buildFolderHref(defaultFolder.id)}
+                          className={jumpDestinationClass(selectedFolderId === defaultFolder.id, {
+                            truncate: true,
+                          })}
+                          title={defaultFolder.name}
+                        >
+                          {defaultFolder.name}
+                        </Link>
+                      ) : null}
+                    </div>
+                    <ArchiveCreateFolderModal
+                      returnTo={pathname}
+                      folders={folders}
+                      defaultParentFolderId={selectedFolderId}
+                      spaceId={space.id}
+                      triggerClassName="h-8 w-auto shrink-0 touch-manipulation px-2 text-sm sm:h-9 sm:px-3"
+                    />
+                  </div>
                 </div>
 
                 <div className="hidden flex-col gap-2.5 lg:flex">
@@ -581,7 +707,7 @@ export function SpaceArchiveScreen({
                         })
                       )}
                     </nav>
-                    <div className="shrink-0 text-right text-xs tabular-nums text-muted">
+                    <div className="text-right text-xs tabular-nums text-muted shrink-0">
                       <span className="font-medium text-foreground">{items.length}</span>
                       {query.trim() ? (
                         <span className="ml-1">filtered</span>
@@ -590,21 +716,38 @@ export function SpaceArchiveScreen({
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2" aria-label="Quick folder jumps">
-                    <Link
-                      href={buildFolderHref(null)}
-                      className={jumpDestinationClass(!selectedFolderId)}
-                    >
-                      All records
-                    </Link>
-                    {defaultFolder ? (
+                  <div
+                    className="flex min-w-0 w-full flex-wrap items-center justify-between gap-x-2 gap-y-2"
+                    aria-label="Quick folder jumps"
+                  >
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                       <Link
-                        href={buildFolderHref(defaultFolder.id)}
-                        className={jumpDestinationClass(selectedFolderId === defaultFolder.id)}
+                        href={buildFolderHref(null)}
+                        className={jumpDestinationClass(!selectedFolderId)}
                       >
-                        {defaultFolder.name}
+                        All records
                       </Link>
-                    ) : null}
+                      {defaultFolder ? (
+                        <Link
+                          href={buildFolderHref(defaultFolder.id)}
+                          className={jumpDestinationClass(selectedFolderId === defaultFolder.id, {
+                            truncate: true,
+                          })}
+                          title={defaultFolder.name}
+                        >
+                          {defaultFolder.name}
+                        </Link>
+                      ) : null}
+                    </div>
+                    <div className="shrink-0 self-center">
+                      <ArchiveCreateFolderModal
+                        returnTo={pathname}
+                        folders={folders}
+                        defaultParentFolderId={selectedFolderId}
+                        spaceId={space.id}
+                        triggerClassName="h-8 shrink-0 touch-manipulation px-2 text-sm lg:h-9 lg:px-2.5 xl:px-3 w-auto"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

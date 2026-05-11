@@ -32,10 +32,7 @@ export function AuthTermsNotice({ mode, next }: AuthTermsNoticeProps) {
 
       <p>
         {mode === "sign-in" ? "Don't have an account?" : "Already have an account?"}{" "}
-        <Link
-          href={authHref}
-          className="font-semibold text-foreground transition-colors hover:text-accent"
-        >
+        <Link href={authHref} className="auth-terms-cta-link">
           {mode === "sign-in" ? "Create one" : "Sign in"}
         </Link>
       </p>
