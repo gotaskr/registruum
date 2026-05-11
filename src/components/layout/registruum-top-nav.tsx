@@ -8,6 +8,7 @@ import {
   Bell,
   ChevronRight,
   ChevronsUpDown,
+  CreditCard,
   History,
   Inbox,
   LogOut,
@@ -17,6 +18,7 @@ import {
 import { signOut } from "@/features/auth/actions/auth.actions";
 import { GlobalSearchPopover } from "@/components/layout/global-search-popover";
 import { RegistruumLogo } from "@/components/ui/registruum-logo";
+import { SETTINGS_BILLING_SECTION_ENABLED } from "@/features/settings/lib/settings-sections";
 import { SpaceAvatar } from "@/features/spaces/ui/space-avatar";
 import type { SettingsInvitation } from "@/features/settings/types/invitation";
 import {
@@ -567,6 +569,16 @@ export function RegistruumTopNav({
               </div>
 
               <div className="mt-4 space-y-1">
+                {SETTINGS_BILLING_SECTION_ENABLED ? (
+                  <Link
+                    href={`${getSettingsHref()}?section=subscription`}
+                    className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-panel-muted"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  >
+                    <CreditCard className="h-4 w-4 text-muted" />
+                    <span>Billing</span>
+                  </Link>
+                ) : null}
                 <Link
                   href={`${getSettingsHref()}?section=invitations`}
                   className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-panel-muted"
