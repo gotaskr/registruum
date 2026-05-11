@@ -44,10 +44,6 @@ function getSectionHelperText(sectionId: SettingsSectionId) {
     return "In-app and email delivery";
   }
 
-  if (sectionId === "subscription") {
-    return "Plans, billing, and invoices";
-  }
-
   return "Device and session activity";
 }
 
