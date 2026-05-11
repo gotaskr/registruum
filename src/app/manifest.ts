@@ -16,21 +16,13 @@ export default function manifest(): MetadataRoute.Manifest {
         src: "/registruum-favicon.svg",
         sizes: "any",
         type: "image/svg+xml",
+        purpose: "any",
       },
       {
-        src: "/logo.png",
-        sizes: "192x192",
-        type: "image/png",
-      },
-      {
-        src: "/logo.png",
-        sizes: "512x512",
-        type: "image/png",
-      },
-      {
-        src: "/logo.png",
-        sizes: "180x180",
-        type: "image/png",
+        src: "/registruum-favicon.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "maskable",
       },
     ],
   };

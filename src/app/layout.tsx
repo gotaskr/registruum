@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/registruum-favicon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/logo.png", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/registruum-favicon.svg", type: "image/svg+xml" }],
   },
 };
 
