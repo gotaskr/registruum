@@ -13,6 +13,11 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     icons: [
       {
+        src: "/registruum-favicon.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+      },
+      {
         src: "/logo.png",
         sizes: "192x192",
         type: "image/png",

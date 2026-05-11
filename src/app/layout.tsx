@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "Operational workspace for spaces, work orders, and documents.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/logo.png", type: "image/png" }],
+    icon: [{ url: "/registruum-favicon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/logo.png", sizes: "180x180", type: "image/png" }],
   },
 };
