@@ -59,21 +59,3 @@ registruum-backup-*.zip
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Billing / Stripe / subscription (local-only; not pushed). Copy your own versions back into these paths after clone.
-# `stripe` stays in devDependencies so Next/typecheck still resolve when these files exist locally.
-/scripts/run-stripe.ps1
-/src/app/api/billing/
-/src/lib/stripe/
-/src/app/(app)/settings/plans/
-/src/features/settings/api/storage.ts
-/src/features/settings/api/subscription.ts
-/src/features/settings/lib/plan-card-formatters.ts
-/src/features/settings/lib/subscription-enforcement.ts
-/src/features/settings/lib/subscription-plans.ts
-/src/features/settings/types/upgrade-prompt.ts
-/src/features/settings/ui/billing-plans-page-content.tsx
-/src/features/settings/ui/storage-settings-section.tsx
-/src/features/settings/ui/subscription-settings-section.tsx
-/src/features/settings/ui/upgrade-required-modal.tsx
-/supabase/migrations/*profile*billing*.sql

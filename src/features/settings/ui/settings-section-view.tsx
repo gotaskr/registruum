@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getVisibleSettingsSections,
+  SETTINGS_BILLING_SECTION_ENABLED,
   settingsSections,
   type SettingsSectionId,
 } from "@/features/settings/lib/settings-sections";
@@ -15,6 +16,7 @@ import { PreferencesSettingsSection } from "@/features/settings/ui/preferences-s
 import { ProfileSettingsSection } from "@/features/settings/ui/profile-settings-section";
 import { SecuritySettingsSection } from "@/features/settings/ui/security-settings-section";
 import { SessionSettingsSection } from "@/features/settings/ui/session-settings-section";
+import { SubscriptionSettingsSection } from "@/features/settings/ui/subscription-settings-section";
 import type { SettingsInvitation } from "@/features/settings/types/invitation";
 import type { Profile } from "@/types/profile";
 
@@ -46,7 +48,11 @@ export function SettingsSectionView({
   const searchParams = useSearchParams();
   const requestedSection = getSectionFromSearchParam(searchParams.get("section"));
   const activeSection =
-    requestedSection === "security" && !canManagePassword ? "profile" : requestedSection;
+    requestedSection === "security" && !canManagePassword
+      ? "profile"
+      : requestedSection === "subscription" && !SETTINGS_BILLING_SECTION_ENABLED
+        ? "profile"
+        : requestedSection;
 
   const activeSectionMeta = useMemo(
     () =>
@@ -66,6 +72,8 @@ export function SettingsSectionView({
       <PreferencesSettingsSection profile={profile} currentTheme={currentTheme} />
     ) : activeSection === "notifications" ? (
       <NotificationsSettingsSection profile={profile} />
+    ) : activeSection === "subscription" && SETTINGS_BILLING_SECTION_ENABLED ? (
+      <SubscriptionSettingsSection />
     ) : (
       <SessionSettingsSection session={session} />
     );
