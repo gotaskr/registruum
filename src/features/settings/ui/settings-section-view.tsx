@@ -8,6 +8,7 @@ import {
   settingsSections,
   type SettingsSectionId,
 } from "@/features/settings/lib/settings-sections";
+import type { BillingSnapshot } from "@/features/settings/types/billing-snapshot";
 import type { ThemePreference } from "@/features/settings/lib/preferences";
 import type { SessionDetails } from "@/features/settings/lib/session-details";
 import { InvitationsSettingsSection } from "@/features/settings/ui/invitations-settings-section";
@@ -26,6 +27,7 @@ type SettingsSectionViewProps = Readonly<{
   canManagePassword: boolean;
   currentTheme: ThemePreference;
   invitations: SettingsInvitation[];
+  billingSnapshot: BillingSnapshot | null;
 }>;
 
 function getSectionFromSearchParam(value: string | null): SettingsSectionId {
@@ -44,6 +46,7 @@ export function SettingsSectionView({
   canManagePassword,
   currentTheme,
   invitations,
+  billingSnapshot,
 }: SettingsSectionViewProps) {
   const searchParams = useSearchParams();
   const requestedSection = getSectionFromSearchParam(searchParams.get("section"));
@@ -73,7 +76,7 @@ export function SettingsSectionView({
     ) : activeSection === "notifications" ? (
       <NotificationsSettingsSection profile={profile} />
     ) : activeSection === "subscription" && SETTINGS_BILLING_SECTION_ENABLED ? (
-      <SubscriptionSettingsSection />
+      <SubscriptionSettingsSection profile={profile} billingSnapshot={billingSnapshot} />
     ) : (
       <SessionSettingsSection session={session} />
     );

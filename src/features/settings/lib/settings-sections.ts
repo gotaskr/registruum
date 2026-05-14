@@ -7,10 +7,11 @@ import {
   Lock,
   UserRound,
 } from "lucide-react";
-
-/** Toggle off to hide Billing in settings nav and deep links until the flow is ready. */
-export const SETTINGS_BILLING_SECTION_ENABLED = false;
 import type { LucideIcon } from "lucide-react";
+import { isBillingDisabled } from "@/features/settings/lib/billing-feature-flag";
+
+/** Billing nav/profile entry; off when `NEXT_PUBLIC_BILLING_DISABLED=true` (pre-launch). */
+export const SETTINGS_BILLING_SECTION_ENABLED = !isBillingDisabled();
 
 export type SettingsSectionId =
   | "profile"

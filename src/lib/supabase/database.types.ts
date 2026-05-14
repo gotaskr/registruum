@@ -675,6 +675,7 @@ export type Database = {
           avatar_file_name: string | null
           avatar_path: string | null
           billing_cycle_anchor: string | null
+          billing_current_period_ends_at: string | null
           billing_plan_tier: string
           billing_status: string
           billing_trial_ends_at: string | null
@@ -712,6 +713,7 @@ export type Database = {
           avatar_file_name?: string | null
           avatar_path?: string | null
           billing_cycle_anchor?: string | null
+          billing_current_period_ends_at?: string | null
           billing_plan_tier?: string
           billing_status?: string
           billing_trial_ends_at?: string | null
@@ -749,6 +751,7 @@ export type Database = {
           avatar_file_name?: string | null
           avatar_path?: string | null
           billing_cycle_anchor?: string | null
+          billing_current_period_ends_at?: string | null
           billing_plan_tier?: string
           billing_status?: string
           billing_trial_ends_at?: string | null

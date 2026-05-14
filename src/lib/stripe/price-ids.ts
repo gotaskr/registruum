@@ -1,7 +1,9 @@
-import type { BillingPlanTier } from "@/features/settings/lib/subscription-plans";
+import {
+  paidCheckoutPlanTiers,
+  type BillingPlanTier,
+} from "@/features/settings/lib/subscription-plans";
 
-export function parseCheckoutPlan(raw: string | null): BillingPlanTier {
-  if (raw === "basic" || raw === "pro_team" || raw === "business" || raw === "enterprise") {
+export function parseCheckoutPlan(raw: string | null): BillingPlanTier {  if (raw === "basic" || raw === "pro_team" || raw === "business" || raw === "enterprise") {
     return raw;
   }
 
@@ -25,4 +27,19 @@ export function resolveStripePriceIdForTier(tier: BillingPlanTier): string | nul
 
 export function hasMinimumStripeCheckoutConfig(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID_BASIC);
+}
+
+/** Maps a Stripe Price id back to a plan tier (webhook / post-checkout sync). */
+export function resolveBillingTierFromStripePriceId(priceId: string | null | undefined): BillingPlanTier | null {
+  if (!priceId) {
+    return null;
+  }
+
+  for (const tier of paidCheckoutPlanTiers) {
+    if (resolveStripePriceIdForTier(tier) === priceId) {
+      return tier;
+    }
+  }
+
+  return null;
 }

@@ -2,29 +2,72 @@ import "server-only";
 
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
 import {
+  fetchCurrentPeriodEndIsoFromStripeForSupabaseUser,
+  updateProfileBillingFields,
+} from "@/features/settings/api/billing-profile-update";
+import {
   billingPlans,
   resolveBillingPlanTier,
   type BillingPlanTier,
 } from "@/features/settings/lib/subscription-plans";
+import type { BillingSnapshot } from "@/features/settings/types/billing-snapshot";
 
-export type BillingSnapshot = Readonly<{
-  planTier: BillingPlanTier;
-  planLabel: string;
-  billingCycle: "monthly";
-  renewalDateLabel: string;
-  usage: Readonly<{
-    usedStorageLabel: string;
-    storagePercent: number;
-    activeMembersLabel: string;
-    membersPercent: number;
-    usedBandwidthLabel: string;
-    bandwidthPercent: number;
-    activeWorkOrdersLabel: string;
-  }>;
-}>;
+export type { BillingSnapshot };
 
 function clampPercent(value: number) {
   return Math.max(0, Math.min(100, value));
+}
+
+function formatBillingDateLabel(iso: string | null): string | null {
+  if (!iso) {
+    return null;
+  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return null;
+  }
+  return d.toLocaleDateString("en-CA", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function resolveRenewalDateLabel(input: Readonly<{
+  planTier: BillingPlanTier;
+  billingStatus: string;
+  trialEndsAt: string | null;
+  periodEndsAt: string | null;
+}>): string {
+  if (input.planTier === "free") {
+    return "—";
+  }
+
+  const trialLabel = formatBillingDateLabel(input.trialEndsAt);
+  if (input.billingStatus === "trialing" && trialLabel) {
+    return `Trial ends ${trialLabel}`;
+  }
+
+  const periodEndLabel = formatBillingDateLabel(input.periodEndsAt);
+  if (periodEndLabel) {
+    return periodEndLabel;
+  }
+
+  if (trialLabel) {
+    return `Trial ends ${trialLabel}`;
+  }
+
+  return "—";
+}
+
+function coerceProfileBillingStatusForUpdate(
+  raw: string,
+): "active" | "trialing" | "past_due" | "canceled" {
+  switch (raw) {
+    case "active":
+    case "trialing":
+    case "past_due":
+    case "canceled":
+      return raw;
+    default:
+      return "active";
+  }
 }
 
 function formatBytes(value: number) {
@@ -91,9 +134,6 @@ export async function getBillingSnapshotForCurrentUser(): Promise<BillingSnapsho
   const activeMembers = memberResult.count ?? 0;
   const usedStorage = 0;
   const usedBandwidth = profile.monthlyBandwidthUsedBytes;
-  const renewalDate = new Date();
-  renewalDate.setMonth(renewalDate.getMonth() + 1);
-
   const storageCap = plan.limits.storageBytes;
   const bandwidthCap = plan.limits.monthlyBandwidthBytes;
   const membersCap = plan.limits.maxActiveMembers;
@@ -101,14 +141,40 @@ export async function getBillingSnapshotForCurrentUser(): Promise<BillingSnapsho
   const bandwidthPercent = bandwidthCap ? clampPercent((usedBandwidth / bandwidthCap) * 100) : 0;
   const membersPercent = membersCap ? clampPercent((activeMembers / membersCap) * 100) : 0;
 
+  let periodEndsAt: string | null = profile.billingCurrentPeriodEndsAt;
+  const hasPeriodLabel = formatBillingDateLabel(periodEndsAt) !== null;
+  const trialCoversRenewal =
+    profile.billingStatus === "trialing" && formatBillingDateLabel(profile.billingTrialEndsAt) !== null;
+
+  if (planTier !== "free" && !hasPeriodLabel && !trialCoversRenewal) {
+    const recovered = await fetchCurrentPeriodEndIsoFromStripeForSupabaseUser(user.id);
+    if (recovered) {
+      periodEndsAt = recovered;
+      try {
+        await updateProfileBillingFields({
+          userId: user.id,
+          tier: planTier,
+          billingStatus: coerceProfileBillingStatusForUpdate(profile.billingStatus),
+          trialEndsAtIso: profile.billingTrialEndsAt,
+          cycleAnchorIso: profile.billingCycleAnchor,
+          currentPeriodEndsAtIso: recovered,
+        });
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause);
+        console.warn("[billing] persist recovered period end failed", message);
+      }
+    }
+  }
+
   return {
     planTier,
     planLabel: plan.label,
     billingCycle: "monthly",
-    renewalDateLabel: renewalDate.toLocaleDateString("en-CA", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
+    renewalDateLabel: resolveRenewalDateLabel({
+      planTier,
+      billingStatus: profile.billingStatus,
+      trialEndsAt: profile.billingTrialEndsAt,
+      periodEndsAt,
     }),
     usage: {
       usedStorageLabel: `${formatBytes(usedStorage)} / ${storageCap ? formatBytes(storageCap) : "Unlimited"}`,

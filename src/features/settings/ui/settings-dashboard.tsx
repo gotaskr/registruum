@@ -2,6 +2,7 @@ import { MainShell } from "@/components/layout/main-shell";
 import { CheckCircle2, Mail, Shield } from "lucide-react";
 import type { ThemePreference } from "@/features/settings/lib/preferences";
 import type { SessionDetails } from "@/features/settings/lib/session-details";
+import type { BillingSnapshot } from "@/features/settings/types/billing-snapshot";
 import type { SettingsInvitation } from "@/features/settings/types/invitation";
 import { SettingsSectionView } from "@/features/settings/ui/settings-section-view";
 import type { Profile } from "@/types/profile";
@@ -11,6 +12,7 @@ type SettingsDashboardProps = Readonly<{
   session: SessionDetails;
   currentTheme: ThemePreference;
   invitations: SettingsInvitation[];
+  billingSnapshot: BillingSnapshot | null;
 }>;
 
 export function SettingsDashboard({
@@ -18,6 +20,7 @@ export function SettingsDashboard({
   session,
   currentTheme,
   invitations,
+  billingSnapshot,
 }: SettingsDashboardProps) {
   return (
     <MainShell
@@ -47,6 +50,7 @@ export function SettingsDashboard({
         canManagePassword={profile.canManagePassword}
         currentTheme={currentTheme}
         invitations={invitations}
+        billingSnapshot={billingSnapshot}
       />
     </MainShell>
   );

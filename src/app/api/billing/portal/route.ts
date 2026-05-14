@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedAppUserOrNull } from "@/features/auth/api/profiles";
+import { isBillingDisabled } from "@/features/settings/lib/billing-feature-flag";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveStripeCustomerForUser } from "@/lib/stripe/resolve-customer";
 
@@ -8,6 +9,12 @@ function hasStripeSecret() {
 }
 
 export async function GET(request: Request) {
+  if (isBillingDisabled()) {
+    return NextResponse.redirect(
+      new URL("/settings?section=subscription&billingStatus=billing_not_live", request.url),
+    );
+  }
+
   const authenticated = await getAuthenticatedAppUserOrNull();
 
   if (!authenticated) {

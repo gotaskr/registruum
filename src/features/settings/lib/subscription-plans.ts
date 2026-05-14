@@ -43,7 +43,7 @@ export const billingPlans: Readonly<Record<BillingPlanTier, BillingPlanDefinitio
     tier: "basic",
     label: "Basic",
     priceLabel: "CA$14.99/month",
-    trialLabel: "1-month free trial",
+    trialLabel: "Billed monthly",
     limits: {
       maxSpaces: 2,
       maxActiveWorkOrders: 20,
@@ -56,7 +56,7 @@ export const billingPlans: Readonly<Record<BillingPlanTier, BillingPlanDefinitio
     tier: "pro_team",
     label: "Pro Team",
     priceLabel: "CA$89.99/month",
-    trialLabel: "1-month free trial",
+    trialLabel: "Billed monthly",
     limits: {
       maxSpaces: 5,
       maxActiveWorkOrders: 50,
@@ -69,7 +69,7 @@ export const billingPlans: Readonly<Record<BillingPlanTier, BillingPlanDefinitio
     tier: "business",
     label: "Business",
     priceLabel: "CA$399.99/month",
-    trialLabel: "1-month free trial",
+    trialLabel: "Billed monthly",
     limits: {
       maxSpaces: 10,
       maxActiveWorkOrders: 100,
@@ -82,7 +82,7 @@ export const billingPlans: Readonly<Record<BillingPlanTier, BillingPlanDefinitio
     tier: "enterprise",
     label: "Enterprise",
     priceLabel: "CA$699.99/month",
-    trialLabel: "1-month free trial",
+    trialLabel: "Billed monthly",
     limits: {
       maxSpaces: 25,
       maxActiveWorkOrders: 300,

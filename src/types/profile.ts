@@ -29,6 +29,8 @@ export type Profile = Readonly<{
   billingPlanTier: string;
   billingStatus: string;
   billingTrialEndsAt: string | null;
+  /** Stripe `subscription.current_period_end` (next invoice), synced from webhooks. */
+  billingCurrentPeriodEndsAt: string | null;
   billingCycleAnchor: string | null;
   monthlyBandwidthUsedBytes: number;
   monthlyBandwidthWindowStart: string;

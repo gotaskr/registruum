@@ -109,6 +109,7 @@ async function mapProfileRow(
     billingPlanTier: row.billing_plan_tier,
     billingStatus: row.billing_status,
     billingTrialEndsAt: row.billing_trial_ends_at,
+    billingCurrentPeriodEndsAt: row.billing_current_period_ends_at,
     billingCycleAnchor: row.billing_cycle_anchor,
     monthlyBandwidthUsedBytes: row.monthly_bandwidth_used_bytes,
     monthlyBandwidthWindowStart: row.monthly_bandwidth_window_start,

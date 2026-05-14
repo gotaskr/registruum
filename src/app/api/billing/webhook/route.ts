@@ -1,75 +1,20 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { resolveBillingPlanTier, type BillingPlanTier } from "@/features/settings/lib/subscription-plans";
+import {
+  stripeSubscriptionRetrieveParams,
+  subscriptionBillingPayload,
+  updateProfileBillingFields,
+} from "@/features/settings/api/billing-profile-update";
+import { resolveBillingPlanTierFromStripeSubscription } from "@/features/settings/lib/billing-stripe-tier";
+import { isBillingDisabled } from "@/features/settings/lib/billing-feature-flag";
 import { getStripe } from "@/lib/stripe/server";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
-
-function unixSecondsToIsoOrNull(value: number | null | undefined): string | null {
-  if (value == null || typeof value !== "number") {
-    return null;
-  }
-
-  const date = new Date(value * 1000);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-function mapSubscriptionStatus(
-  status: Stripe.Subscription.Status,
-): "active" | "trialing" | "past_due" | "canceled" {
-  switch (status) {
-    case "trialing":
-      return "trialing";
-    case "active":
-      return "active";
-    case "past_due":
-      return "past_due";
-    case "canceled":
-    case "unpaid":
-    case "incomplete_expired":
-    case "paused":
-      return "canceled";
-    case "incomplete":
-      return "past_due";
-    default:
-      return "active";
-  }
-}
-
-async function updateProfileBilling(input: Readonly<{
-  userId: string;
-  tier: BillingPlanTier;
-  billingStatus: "active" | "trialing" | "past_due" | "canceled";
-  trialEndsAtIso: string | null;
-  cycleAnchorIso: string | null;
-}>) {
-  const admin = createSupabaseAdminClient();
-  const { error } = await admin
-    .from("profiles")
-    .update({
-      billing_plan_tier: input.tier,
-      billing_status: input.billingStatus,
-      billing_trial_ends_at: input.trialEndsAtIso,
-      billing_cycle_anchor: input.cycleAnchorIso,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", input.userId);
-
-  if (error) {
-    console.error("[billing webhook] profile update failed", error.message, error.code, error.details);
-    throw new Error(error.message);
-  }
-}
 
 function resolveUserIdFromSubscription(sub: Stripe.Subscription): string | null {
   const fromMeta = sub.metadata?.supabase_user_id;
   return typeof fromMeta === "string" && fromMeta.trim() ? fromMeta.trim() : null;
-}
-
-function resolveTierFromSubscription(sub: Stripe.Subscription): BillingPlanTier {
-  return resolveBillingPlanTier(sub.metadata?.billing_plan_tier);
 }
 
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
@@ -90,7 +35,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
-  const tier = resolveBillingPlanTier(session.metadata?.billing_plan_tier);
   const subscriptionId =
     typeof session.subscription === "string"
       ? session.subscription
@@ -103,14 +47,24 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
-  const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
+  const subscription = await getStripe().subscriptions.retrieve(
+    subscriptionId,
+    stripeSubscriptionRetrieveParams,
+  );
 
-  await updateProfileBilling({
+  const tier = resolveBillingPlanTierFromStripeSubscription(subscription, {
+    sessionMetadataTier: session.metadata?.billing_plan_tier,
+  });
+
+  const payload = subscriptionBillingPayload(subscription);
+
+  await updateProfileBillingFields({
     userId,
     tier,
-    billingStatus: mapSubscriptionStatus(subscription.status),
-    trialEndsAtIso: unixSecondsToIsoOrNull(subscription.trial_end),
-    cycleAnchorIso: unixSecondsToIsoOrNull(subscription.billing_cycle_anchor),
+    billingStatus: payload.billingStatus,
+    trialEndsAtIso: payload.trialEndsAtIso,
+    cycleAnchorIso: payload.cycleAnchorIso,
+    currentPeriodEndsAtIso: payload.currentPeriodEndsAtIso,
   });
 }
 
@@ -120,14 +74,22 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     return;
   }
 
-  const tier = resolveTierFromSubscription(subscription);
+  const fresh = await getStripe().subscriptions.retrieve(
+    subscription.id,
+    stripeSubscriptionRetrieveParams,
+  );
 
-  await updateProfileBilling({
+  const tier = resolveBillingPlanTierFromStripeSubscription(fresh);
+
+  const payload = subscriptionBillingPayload(fresh);
+
+  await updateProfileBillingFields({
     userId,
     tier,
-    billingStatus: mapSubscriptionStatus(subscription.status),
-    trialEndsAtIso: unixSecondsToIsoOrNull(subscription.trial_end),
-    cycleAnchorIso: unixSecondsToIsoOrNull(subscription.billing_cycle_anchor),
+    billingStatus: payload.billingStatus,
+    trialEndsAtIso: payload.trialEndsAtIso,
+    cycleAnchorIso: payload.cycleAnchorIso,
+    currentPeriodEndsAtIso: payload.currentPeriodEndsAtIso,
   });
 }
 
@@ -137,16 +99,21 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     return;
   }
 
-  await updateProfileBilling({
+  await updateProfileBillingFields({
     userId,
     tier: "free",
     billingStatus: "canceled",
     trialEndsAtIso: null,
     cycleAnchorIso: null,
+    currentPeriodEndsAtIso: null,
   });
 }
 
 export async function POST(request: Request) {
+  if (isBillingDisabled()) {
+    return NextResponse.json({ received: true, skipped: true });
+  }
+
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
     console.error("[billing webhook] STRIPE_WEBHOOK_SECRET is not set");

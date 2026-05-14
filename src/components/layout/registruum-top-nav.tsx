@@ -569,6 +569,14 @@ export function RegistruumTopNav({
               </div>
 
               <div className="mt-4 space-y-1">
+                <Link
+                  href={`${getSettingsHref()}?section=invitations`}
+                  className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-panel-muted"
+                  onClick={() => setIsProfileMenuOpen(false)}
+                >
+                  <Inbox className="h-4 w-4 text-muted" />
+                  <span>Invitations</span>
+                </Link>
                 {SETTINGS_BILLING_SECTION_ENABLED ? (
                   <Link
                     href={`${getSettingsHref()}?section=subscription`}
@@ -579,14 +587,6 @@ export function RegistruumTopNav({
                     <span>Billing</span>
                   </Link>
                 ) : null}
-                <Link
-                  href={`${getSettingsHref()}?section=invitations`}
-                  className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-panel-muted"
-                  onClick={() => setIsProfileMenuOpen(false)}
-                >
-                  <Inbox className="h-4 w-4 text-muted" />
-                  <span>Invitations</span>
-                </Link>
                 <Link
                   href={`${getSettingsHref()}?section=profile`}
                   className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-panel-muted"
