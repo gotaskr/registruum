@@ -95,7 +95,12 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(session.url);
   } catch (cause) {
-    console.error("[billing checkout] Stripe session create failed", cause);
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    // One searchable line for Vercel / hosting log UIs (full-text search often indexes a single string).
+    console.error(`[billing checkout] Stripe session create failed: ${detail}`);
+    if (cause instanceof Error && cause.stack) {
+      console.error(cause.stack);
+    }
     return NextResponse.redirect(
       new URL("/settings?section=subscription&billingStatus=checkout_stripe_error", request.url),
     );
