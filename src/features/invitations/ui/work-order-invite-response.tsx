@@ -10,6 +10,8 @@ import {
   declineWorkOrderInviteLink,
 } from "@/features/invitations/actions/work-order-invite.actions";
 import { initialInvitationActionState } from "@/features/settings/types/invitation-action-state";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 
 type WorkOrderInviteResponseProps = Readonly<{
   token: string;
@@ -31,6 +33,13 @@ export function WorkOrderInviteResponse({
     declineWorkOrderInviteLink,
     initialInvitationActionState,
   );
+  const acceptLimit = usePlanLimitModal(acceptState);
+  const declineLimit = usePlanLimitModal(declineState);
+  const modalPrompt = acceptLimit.modalPrompt ?? declineLimit.modalPrompt;
+  const closeUpgradeModal = () => {
+    acceptLimit.closeModal();
+    declineLimit.closeModal();
+  };
   /** After sign-in, land on this page so the user explicitly taps Accept (no auto-submit). */
   const acceptNext = `/invite/${token}`;
   const inviteReturnUrl = `/invite/${token}`;
@@ -43,6 +52,7 @@ export function WorkOrderInviteResponse({
 
   if (isOwnInvite) {
     return (
+      <>
       <div className="space-y-3">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
           You can&apos;t accept an invitation you created. Share this link with the person you
@@ -64,10 +74,13 @@ export function WorkOrderInviteResponse({
           tone={declineState.error ? "error" : "info"}
         />
       </div>
+      <UpgradeRequiredModal prompt={modalPrompt} onClose={closeUpgradeModal} />
+      </>
     );
   }
 
   return (
+    <>
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         {isAuthenticated ? (
@@ -114,5 +127,7 @@ export function WorkOrderInviteResponse({
         tone={acceptState.error || declineState.error ? "error" : "info"}
       />
     </div>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeUpgradeModal} />
+    </>
   );
 }

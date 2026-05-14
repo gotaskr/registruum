@@ -15,6 +15,10 @@ import type {
 import { ChatMessageItem } from "@/components/ui/chat-message-item";
 import { InputBar } from "@/components/ui/input-bar";
 import { FormMessage } from "@/features/auth/ui/form-message";
+import { checkWorkOrderAttachmentPlanLimits } from "@/features/settings/actions/plan-limit-checks.actions";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import type { UpgradePrompt } from "@/features/settings/types/upgrade-prompt";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import {
   createOptimisticMessage,
   deleteWorkOrderMessage,
@@ -180,6 +184,8 @@ export function ChatPanel({
   const [renderedMessages, setRenderedMessages] = useState<Message[]>(() => messages);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [upgradePrompt, setUpgradePrompt] = useState<UpgradePrompt | undefined>(undefined);
+  const [planLimitAttemptKey, setPlanLimitAttemptKey] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const shouldStickToBottomRef = useRef(true);
@@ -190,6 +196,10 @@ export function ChatPanel({
     ? "Need 2 or more members"
     : lockedMessage;
   const canUseChatInput = canSendMessage && !needsMoreMembers;
+  const { modalPrompt, closeModal } = usePlanLimitModal(
+    { error, upgradePrompt },
+    { attemptKey: planLimitAttemptKey },
+  );
   const lastMessageKey = useMemo(() => {
     const lastMessage = renderedMessages[renderedMessages.length - 1];
 
@@ -360,6 +370,7 @@ export function ChatPanel({
         },
       });
       setError(undefined);
+      setUpgradePrompt(undefined);
     } catch (nextError) {
       const message =
         nextError instanceof Error
@@ -370,11 +381,13 @@ export function ChatPanel({
         updateMessageStatus(current, optimisticMessage.id, "failed"),
       );
       setError(message);
+      setUpgradePrompt(undefined);
     }
   };
 
-  const handleSubmit = (formData: FormData) => {
+  const handleSubmit = async (formData: FormData) => {
     setError(undefined);
+    setUpgradePrompt(undefined);
 
     const body = readText(formData, "body");
     const files = getValidFiles(formData, "files");
@@ -392,6 +405,21 @@ export function ChatPanel({
     if (!parsed.data.body && files.length === 0) {
       setError("Message cannot be empty.");
       return false;
+    }
+
+    if (files.length > 0) {
+      const additionalBytes = files.reduce((sum, file) => sum + file.size, 0);
+      const limitCheck = await checkWorkOrderAttachmentPlanLimits({
+        spaceId,
+        additionalBytes,
+        userId: actorUserId,
+      });
+      if (!limitCheck.ok) {
+        setPlanLimitAttemptKey((key) => key + 1);
+        setError(limitCheck.message);
+        setUpgradePrompt(limitCheck.upgradePrompt);
+        return false;
+      }
     }
 
     shouldStickToBottomRef.current = true;
@@ -441,6 +469,7 @@ export function ChatPanel({
   };
 
   return (
+    <>
     <section
       className={
         embeddedInWorkOrderShell
@@ -522,5 +551,7 @@ export function ChatPanel({
         disabledReason={needsMoreMembers ? "Need 2 or more members" : undefined}
       />
     </section>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeModal} />
+    </>
   );
 }

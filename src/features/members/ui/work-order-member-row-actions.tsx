@@ -15,6 +15,8 @@ import {
   updateWorkOrderMemberRole,
 } from "@/features/members/actions/member.actions";
 import { initialWorkOrderMemberActionState } from "@/features/members/types/work-order-member-action-state";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import { formatRoleLabel } from "@/lib/utils";
 import type { SpaceMembershipRole } from "@/types/database";
 
@@ -52,6 +54,7 @@ export function WorkOrderMemberRowActions({
     updateWorkOrderMemberRole,
     initialWorkOrderMemberActionState,
   );
+  const { modalPrompt, closeModal } = usePlanLimitModal(state);
 
   useEffect(() => {
     setSelectedRole(currentRole);
@@ -185,6 +188,7 @@ export function WorkOrderMemberRowActions({
           </div>
         </form>
       </Modal>
+      <UpgradeRequiredModal prompt={modalPrompt} onClose={closeModal} />
     </>
   );
 }

@@ -17,7 +17,7 @@ type MentionCandidate = Readonly<{
 }>;
 
 type InputBarProps = Readonly<{
-  onSubmit: (payload: FormData) => boolean;
+  onSubmit: (payload: FormData) => boolean | Promise<boolean>;
   hiddenFields: InputBarHiddenField[];
   inputName: string;
   placeholder: string;
@@ -120,12 +120,15 @@ export function InputBar({
       return;
     }
 
-    const accepted = onSubmit(new FormData(form));
-    if (accepted) {
-      form.reset();
-      setBodyValue("");
-      setCaretPosition(0);
-    }
+    void (async () => {
+      const result = onSubmit(new FormData(form));
+      const accepted = result instanceof Promise ? await result : result;
+      if (accepted) {
+        form.reset();
+        setBodyValue("");
+        setCaretPosition(0);
+      }
+    })();
   };
 
   return (

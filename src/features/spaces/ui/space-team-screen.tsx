@@ -38,6 +38,8 @@ import {
   updateSpaceTeamMemberRole,
 } from "@/features/spaces/actions/space-team-member.actions";
 import { initialInvitationActionState } from "@/features/settings/types/invitation-action-state";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import { formatRoleLabel } from "@/lib/utils";
 import type { SpaceMembershipRole } from "@/types/database";
 import type { Member } from "@/types/member";
@@ -74,6 +76,13 @@ function InviteSpaceTeamModal({
     createSpaceTeamInviteByUserTag,
     initialInvitationActionState,
   );
+  const linkLimit = usePlanLimitModal(linkState);
+  const tagLimit = usePlanLimitModal(tagState);
+  const modalPrompt = method === "link" ? linkLimit.modalPrompt : tagLimit.modalPrompt;
+  const closeUpgradeModal = () => {
+    linkLimit.closeModal();
+    tagLimit.closeModal();
+  };
 
   const inviteLink = useMemo(() => {
     if (!linkState.inviteLink) {
@@ -106,6 +115,7 @@ function InviteSpaceTeamModal({
   }
 
   return (
+    <>
     <Modal
       open={open}
       onClose={handleClose}
@@ -229,6 +239,8 @@ function InviteSpaceTeamModal({
         )}
       </div>
     </Modal>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeUpgradeModal} />
+    </>
   );
 }
 

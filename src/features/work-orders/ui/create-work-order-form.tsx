@@ -19,6 +19,8 @@ import {
   workOrderSubjectTypeOptions,
 } from "@/features/work-orders/lib/work-order-subject-types";
 import { initialWorkOrderActionState } from "@/features/work-orders/types/work-order-action-state";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import { cn } from "@/lib/utils";
 
 const inputSurfaceClass =
@@ -63,6 +65,7 @@ export function CreateWorkOrderForm({
     createWorkOrder,
     initialWorkOrderActionState,
   );
+  const { modalPrompt, closeModal } = usePlanLimitModal(state);
   const today = new Date().toISOString().slice(0, 10);
 
   const step1Valid =
@@ -93,6 +96,7 @@ export function CreateWorkOrderForm({
   }, []);
 
   return (
+    <>
     <form
       action={formAction}
       onSubmit={(event) => {
@@ -420,5 +424,7 @@ export function CreateWorkOrderForm({
         </div>
       </div>
     </form>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeModal} />
+    </>
   );
 }

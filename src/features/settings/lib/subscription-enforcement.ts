@@ -7,7 +7,7 @@ import {
   type BillingPlanDefinition,
 } from "@/features/settings/lib/subscription-plans";
 import { sumPlanStorageBytesForUser } from "@/features/settings/lib/plan-storage-usage";
-import type { UpgradePrompt } from "@/features/settings/types/upgrade-prompt";
+import type { PlanLimitBlock, UpgradePrompt } from "@/features/settings/types/upgrade-prompt";
 
 export function formatUpgradePromptError(prompt: UpgradePrompt): string {
   return `${prompt.title} ${prompt.reason}`;
@@ -133,7 +133,7 @@ async function countSpacesCreatedByUser(ownerUserId: string) {
 }
 
 /** When non-null, creation should be blocked and the string shown to the user. */
-export async function getWorkOrderCreationBlockedMessage(spaceId: string): Promise<string | null> {
+export async function getWorkOrderCreationPlanLimitBlock(spaceId: string): Promise<PlanLimitBlock | null> {
   const { plan, ownerUserId } = await getSpaceOwnerBilling(spaceId);
   const cap = plan.limits.maxActiveWorkOrders;
   if (cap == null) {
@@ -141,14 +141,28 @@ export async function getWorkOrderCreationBlockedMessage(spaceId: string): Promi
   }
 
   const activeCount = await countActiveWorkOrdersForBillingOwner(ownerUserId);
-  if (activeCount >= cap) {
-    return `${plan.label} allows up to ${cap} active work orders at a time (non-archived). Archive a work order to create a new one.`;
+  if (activeCount < cap) {
+    return null;
   }
 
-  return null;
+  const message = `${plan.label} allows up to ${cap} active work orders at a time (non-archived). Archive a work order to create a new one.`;
+  return {
+    message,
+    upgradePrompt: {
+      title: "You have reached your work order limit",
+      reason: message,
+      suggestedAction:
+        "Upgrade your plan for more active work orders, or archive a work order you no longer need to free a slot.",
+    },
+  };
 }
 
-export async function getSpaceCreationBlockedMessage(userId: string): Promise<string | null> {
+export async function getWorkOrderCreationBlockedMessage(spaceId: string): Promise<string | null> {
+  const block = await getWorkOrderCreationPlanLimitBlock(spaceId);
+  return block?.message ?? null;
+}
+
+export async function getSpaceCreationPlanLimitBlock(userId: string): Promise<PlanLimitBlock | null> {
   const adminSupabase = createSupabaseAdminClient();
   const { data: profile, error } = await adminSupabase
     .from("profiles")
@@ -167,11 +181,24 @@ export async function getSpaceCreationBlockedMessage(userId: string): Promise<st
   }
 
   const spaceCount = await countSpacesCreatedByUser(userId);
-  if (spaceCount >= cap) {
-    return `${plan.label} allows up to ${cap} space${cap === 1 ? "" : "s"} you create. Delete a space or upgrade your plan to add another.`;
+  if (spaceCount < cap) {
+    return null;
   }
 
-  return null;
+  const message = `${plan.label} allows up to ${cap} space${cap === 1 ? "" : "s"} you create. Delete a space or upgrade your plan to add another.`;
+  return {
+    message,
+    upgradePrompt: {
+      title: "You have reached your space limit",
+      reason: message,
+      suggestedAction: "Upgrade to add more spaces, or remove a space you no longer use.",
+    },
+  };
+}
+
+export async function getSpaceCreationBlockedMessage(userId: string): Promise<string | null> {
+  const block = await getSpaceCreationPlanLimitBlock(userId);
+  return block?.message ?? null;
 }
 
 /**
@@ -180,11 +207,11 @@ export async function getSpaceCreationBlockedMessage(userId: string): Promise<st
  * members). Collaborators' personal plan storage is not charged for those files. `completed_work_order_history`
  * remains per-user metadata only (no extra blobs).
  */
-export async function getDocumentStorageUploadBlockedMessage(
+export async function getDocumentStorageUploadPlanLimitBlock(
   spaceId: string,
   additionalBytes: number,
-  _uploadingUserId: string,
-): Promise<string | null> {
+  uploadingUserId: string,
+): Promise<PlanLimitBlock | null> {
   if (additionalBytes <= 0) {
     return null;
   }
@@ -192,21 +219,43 @@ export async function getDocumentStorageUploadBlockedMessage(
   const { plan: ownerPlan, ownerUserId } = await getSpaceOwnerBilling(spaceId);
   const ownerCap = ownerPlan.limits.storageBytes;
 
-  if (ownerCap != null) {
-    const ownerUsed = await sumPlanStorageBytesForUser(ownerUserId);
-    if (ownerUsed + additionalBytes > ownerCap) {
-      return `${ownerPlan.label} (this space owner's plan) includes up to ${formatStorageOrBandwidthCapForMessage(ownerCap)} of file storage for workspaces they own. About ${formatStorageOrBandwidthCapForMessage(ownerUsed)} is in use. Permanently delete files to free space, or upgrade, before uploading more.`;
-    }
+  if (ownerCap == null) {
+    return null;
   }
 
-  return null;
+  const ownerUsed = await sumPlanStorageBytesForUser(ownerUserId);
+  if (ownerUsed + additionalBytes <= ownerCap) {
+    return null;
+  }
+
+  const message = `${ownerPlan.label} (this space owner's plan) includes up to ${formatStorageOrBandwidthCapForMessage(ownerCap)} of file storage for workspaces they own. About ${formatStorageOrBandwidthCapForMessage(ownerUsed)} is in use. Permanently delete files to free space, or upgrade, before uploading more.`;
+  const isOwnerUploader = uploadingUserId === ownerUserId;
+  return {
+    message,
+    upgradePrompt: {
+      title: "This workspace is out of storage",
+      reason: message,
+      suggestedAction: isOwnerUploader
+        ? "Open Plans & pricing to move up a tier, or remove files you no longer need."
+        : "The space owner may need to upgrade their plan or free up storage. You can still remove files you uploaded if you have permission.",
+    },
+  };
+}
+
+export async function getDocumentStorageUploadBlockedMessage(
+  spaceId: string,
+  additionalBytes: number,
+  uploadingUserId: string,
+): Promise<string | null> {
+  const block = await getDocumentStorageUploadPlanLimitBlock(spaceId, additionalBytes, uploadingUserId);
+  return block?.message ?? null;
 }
 
 /**
  * Uses `profiles.monthly_bandwidth_used_bytes` for the **space owner** vs plan limit.
  * Nothing in the app currently increments this field; when metering exists, uploads/downloads should update it.
  */
-export async function getBandwidthBlockedMessageForSpace(spaceId: string): Promise<string | null> {
+export async function getBandwidthPlanLimitBlock(spaceId: string): Promise<PlanLimitBlock | null> {
   const { plan, ownerUserId } = await getSpaceOwnerBilling(spaceId);
   const cap = plan.limits.monthlyBandwidthBytes;
   if (cap == null) {
@@ -225,11 +274,24 @@ export async function getBandwidthBlockedMessageForSpace(spaceId: string): Promi
   }
 
   const used = Math.max(0, profile.monthly_bandwidth_used_bytes ?? 0);
-  if (used >= cap) {
-    return `${plan.label} includes up to ${formatStorageOrBandwidthCapForMessage(cap)} of bandwidth per month for this workspace. Usage is at the limit; upgrade your plan or wait for the next reset.`;
+  if (used < cap) {
+    return null;
   }
 
-  return null;
+  const message = `${plan.label} includes up to ${formatStorageOrBandwidthCapForMessage(cap)} of bandwidth per month for this workspace. Usage is at the limit; upgrade your plan or wait for the next reset.`;
+  return {
+    message,
+    upgradePrompt: {
+      title: "Bandwidth limit reached for this workspace",
+      reason: message,
+      suggestedAction: "Upgrade for a higher monthly bandwidth allowance, or try again after the next billing reset.",
+    },
+  };
+}
+
+export async function getBandwidthBlockedMessageForSpace(spaceId: string): Promise<string | null> {
+  const block = await getBandwidthPlanLimitBlock(spaceId);
+  return block?.message ?? null;
 }
 
 async function isAlreadyActiveMember(spaceId: string, userId: string) {

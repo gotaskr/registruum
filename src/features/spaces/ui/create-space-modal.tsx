@@ -11,6 +11,8 @@ import { createPortal } from "react-dom";
 import { Factory, MapPin, X } from "lucide-react";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import { createSpace } from "@/features/spaces/actions/space.actions";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import { spaceTypeOptions } from "@/features/spaces/lib/space-types";
 import { initialSpaceActionState } from "@/features/spaces/types/space-action-state";
 import { SpaceAddressAutocompleteInput } from "@/features/spaces/ui/space-address-autocomplete-input";
@@ -37,6 +39,7 @@ export function CreateSpaceModal({
     createSpace,
     initialSpaceActionState,
   );
+  const { modalPrompt, closeModal } = usePlanLimitModal(state);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragOffsetRef = useRef(0);
   const pointerStartY = useRef(0);
@@ -124,6 +127,7 @@ export function CreateSpaceModal({
   }
 
   return createPortal(
+    <>
     <div
       className={cn(
         "fixed inset-0 z-50 flex bg-slate-950/45 backdrop-blur-[2px]",
@@ -298,7 +302,9 @@ export function CreateSpaceModal({
           </form>
         </div>
       </div>
-    </div>,
+    </div>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeModal} />
+    </>,
     document.body,
   );
 }

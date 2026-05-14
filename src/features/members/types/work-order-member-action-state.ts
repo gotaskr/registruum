@@ -1,7 +1,10 @@
+import type { UpgradePrompt } from "@/features/settings/types/upgrade-prompt";
+
 export type WorkOrderMemberActionState = Readonly<{
   error?: string;
   success?: string;
   inviteLink?: string;
+  upgradePrompt?: UpgradePrompt;
 }>;
 
 export type WorkOrderMemberCodePreview = Readonly<{

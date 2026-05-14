@@ -9,6 +9,8 @@ import { deleteDocumentItem, uploadWorkOrderDocuments } from "@/features/documen
 import { initialDocumentActionState } from "@/features/documents/types/document-action-state";
 import { DocumentFolderList } from "@/features/documents/ui/document-folder-list";
 import { DocumentItemGrid } from "@/features/documents/ui/document-item-grid";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import type {
   SystemDocumentFolderKey,
   WorkOrderDocumentFolder,
@@ -45,10 +47,12 @@ export function DocumentPanel({
     deleteDocumentItem,
     initialDocumentActionState,
   );
+  const { modalPrompt, closeModal } = usePlanLimitModal(uploadState);
   const selectedFolder = folders.find((folder) => folder.systemKey === selectedFolderKey) ?? folders[0];
   const actionMessage = uploadState.error ?? deleteState.error;
 
   return (
+    <>
     <section className="min-h-0">
       <DocumentFolderList
         folders={folders}
@@ -98,5 +102,7 @@ export function DocumentPanel({
         deleteAction={deleteFormAction}
       />
     </section>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeModal} />
+    </>
   );
 }

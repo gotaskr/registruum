@@ -4,6 +4,8 @@ import { useActionState } from "react";
 import { Factory, MapPin } from "lucide-react";
 import { FormMessage } from "@/features/auth/ui/form-message";
 import { createSpace } from "@/features/spaces/actions/space.actions";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import { spaceTypeOptions } from "@/features/spaces/lib/space-types";
 import { initialSpaceActionState } from "@/features/spaces/types/space-action-state";
 import { SpaceAddressAutocompleteInput } from "@/features/spaces/ui/space-address-autocomplete-input";
@@ -14,8 +16,10 @@ export function CreateSpaceForm() {
     createSpace,
     initialSpaceActionState,
   );
+  const { modalPrompt, closeModal } = usePlanLimitModal(state);
 
   return (
+    <>
     <form action={formAction} className="space-y-5 rounded-[1.75rem] border border-[#dbe4f0] bg-white px-6 py-6 shadow-[0_18px_36px_rgba(15,23,42,0.05)]">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8093af]">
@@ -90,5 +94,7 @@ export function CreateSpaceForm() {
         {isPending ? "Creating..." : "Create Space"}
       </button>
     </form>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeModal} />
+    </>
   );
 }

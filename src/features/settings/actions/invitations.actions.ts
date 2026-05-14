@@ -151,7 +151,7 @@ export async function acceptInvitation(
       targetUserId: user.id,
     });
     if (memberLimitPrompt) {
-      return { error: formatUpgradePromptError(memberLimitPrompt) };
+      return { error: formatUpgradePromptError(memberLimitPrompt), upgradePrompt: memberLimitPrompt };
     }
 
     await ensureActiveSpaceMembership({

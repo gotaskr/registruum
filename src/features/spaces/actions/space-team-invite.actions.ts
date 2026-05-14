@@ -113,7 +113,7 @@ export async function createSpaceTeamInviteLink(
     const { user, space } = await ensureSpaceInviteManager(spaceId);
     const memberLimitPrompt = await getMemberLimitUpgradePromptForNewInvite(space.id);
     if (memberLimitPrompt) {
-      return { error: formatUpgradePromptError(memberLimitPrompt) };
+      return { error: formatUpgradePromptError(memberLimitPrompt), upgradePrompt: memberLimitPrompt };
     }
 
     const adminSupabase = createSupabaseAdminClient();
@@ -211,7 +211,7 @@ export async function createSpaceTeamInviteByUserTag(
       targetUserId: profile.id,
     });
     if (memberLimitPrompt) {
-      return { error: formatUpgradePromptError(memberLimitPrompt) };
+      return { error: formatUpgradePromptError(memberLimitPrompt), upgradePrompt: memberLimitPrompt };
     }
 
     await revokeExistingPendingCodeInvites({

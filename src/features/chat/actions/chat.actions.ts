@@ -18,8 +18,8 @@ import {
   collectMentionedUserIdsByName,
 } from "@/features/chat/lib/mentions";
 import {
-  getBandwidthBlockedMessageForSpace,
-  getDocumentStorageUploadBlockedMessage,
+  getBandwidthPlanLimitBlock,
+  getDocumentStorageUploadPlanLimitBlock,
 } from "@/features/settings/lib/subscription-enforcement";
 import {
   getWorkOrderActorContextForAction,
@@ -145,18 +145,18 @@ export async function createWorkOrderMessage(
 
   if (files.length > 0) {
     const additionalBytes = files.reduce((sum, file) => sum + Math.max(0, file.size), 0);
-    const storageMessage = await getDocumentStorageUploadBlockedMessage(
+    const storageBlock = await getDocumentStorageUploadPlanLimitBlock(
       parsed.data.spaceId,
       additionalBytes,
       context.user.id,
     );
-    if (storageMessage) {
-      return { error: storageMessage };
+    if (storageBlock) {
+      return { error: storageBlock.message, upgradePrompt: storageBlock.upgradePrompt };
     }
 
-    const bandwidthMessage = await getBandwidthBlockedMessageForSpace(parsed.data.spaceId);
-    if (bandwidthMessage) {
-      return { error: bandwidthMessage };
+    const bandwidthBlock = await getBandwidthPlanLimitBlock(parsed.data.spaceId);
+    if (bandwidthBlock) {
+      return { error: bandwidthBlock.message, upgradePrompt: bandwidthBlock.upgradePrompt };
     }
   }
 

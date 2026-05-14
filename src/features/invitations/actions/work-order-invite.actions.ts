@@ -101,7 +101,7 @@ export async function acceptWorkOrderInviteLink(
       targetUserId: user.id,
     });
     if (memberLimitPrompt) {
-      return { error: formatUpgradePromptError(memberLimitPrompt) };
+      return { error: formatUpgradePromptError(memberLimitPrompt), upgradePrompt: memberLimitPrompt };
     }
 
     const workOrderId = invite.assigned_work_order_ids[0];

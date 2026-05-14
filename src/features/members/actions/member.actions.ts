@@ -341,7 +341,7 @@ export async function createWorkOrderInvite(
   const { context } = managed;
   const memberLimitPrompt = await getMemberLimitUpgradePromptForNewInvite(parsed.data.spaceId);
   if (memberLimitPrompt) {
-    return { error: formatUpgradePromptError(memberLimitPrompt) };
+    return { error: formatUpgradePromptError(memberLimitPrompt), upgradePrompt: memberLimitPrompt };
   }
 
   const adminSupabase = createSupabaseAdminClient();
@@ -554,7 +554,7 @@ export async function addWorkOrderMemberByCode(
       targetUserId: profile.id,
     });
     if (memberLimitPrompt) {
-      return { error: formatUpgradePromptError(memberLimitPrompt) };
+      return { error: formatUpgradePromptError(memberLimitPrompt), upgradePrompt: memberLimitPrompt };
     }
 
     const { data: existingPendingInvite, error: existingPendingInviteError } =

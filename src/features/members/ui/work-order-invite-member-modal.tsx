@@ -16,6 +16,8 @@ import {
   initialWorkOrderMemberActionState,
 } from "@/features/members/types/work-order-member-action-state";
 import { getDefaultWorkOrderInviteRole } from "@/features/permissions/lib/roles";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import { cn, formatRoleLabel } from "@/lib/utils";
 
 type InviteTab = "link" | "code";
@@ -50,6 +52,13 @@ export function WorkOrderInviteMemberModal({
     addWorkOrderMemberByCode,
     initialWorkOrderMemberActionState,
   );
+  const emailLimit = usePlanLimitModal(emailState);
+  const addLimit = usePlanLimitModal(addState);
+  const modalPrompt = activeTab === "link" ? emailLimit.modalPrompt : addLimit.modalPrompt;
+  const closeUpgradeModal = () => {
+    emailLimit.closeModal();
+    addLimit.closeModal();
+  };
   const resolvedInviteLink = useMemo(() => {
     if (!emailState.inviteLink) {
       return "";
@@ -107,6 +116,7 @@ export function WorkOrderInviteMemberModal({
     "h-12 w-full touch-manipulation rounded-2xl text-[15px] font-semibold shadow-sm sm:h-10 sm:w-auto sm:rounded-xl sm:text-sm sm:font-medium sm:shadow-none lg:min-w-[11rem]";
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -316,5 +326,7 @@ export function WorkOrderInviteMemberModal({
         ) : null}
       </div>
     </Modal>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeUpgradeModal} />
+    </>
   );
 }

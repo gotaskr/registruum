@@ -36,10 +36,11 @@ import {
 import { DEFAULT_MODULE } from "@/lib/constants";
 import { getValidFiles } from "@/lib/supabase/storage";
 import {
-  getBandwidthBlockedMessageForSpace,
-  getDocumentStorageUploadBlockedMessage,
-  getWorkOrderCreationBlockedMessage,
+  getBandwidthPlanLimitBlock,
+  getDocumentStorageUploadPlanLimitBlock,
+  getWorkOrderCreationPlanLimitBlock,
 } from "@/features/settings/lib/subscription-enforcement";
+import type { UpgradePrompt } from "@/features/settings/types/upgrade-prompt";
 
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -104,7 +105,7 @@ function isMissingWorkOrderSettingsColumnError(message: string) {
 
 export type ExecuteCreateWorkOrderResult =
   | { ok: true; spaceId: string; workOrderId: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; upgradePrompt?: UpgradePrompt };
 
 export async function executeCreateWorkOrder(
   formData: FormData,
@@ -160,28 +161,37 @@ export async function executeCreateWorkOrder(
     };
   }
 
-  const workOrderLimitMessage = await getWorkOrderCreationBlockedMessage(parsed.data.spaceId);
-  if (workOrderLimitMessage) {
+  const workOrderLimitBlock = await getWorkOrderCreationPlanLimitBlock(parsed.data.spaceId);
+  if (workOrderLimitBlock) {
     return {
       ok: false,
-      error: workOrderLimitMessage,
+      error: workOrderLimitBlock.message,
+      upgradePrompt: workOrderLimitBlock.upgradePrompt,
     };
   }
 
   if (photoFiles.length > 0) {
     const additionalBytes = photoFiles.reduce((sum, file) => sum + Math.max(0, file.size), 0);
-    const storageMessage = await getDocumentStorageUploadBlockedMessage(
+    const storageBlock = await getDocumentStorageUploadPlanLimitBlock(
       parsed.data.spaceId,
       additionalBytes,
       actor.user.id,
     );
-    if (storageMessage) {
-      return { ok: false, error: storageMessage };
+    if (storageBlock) {
+      return {
+        ok: false,
+        error: storageBlock.message,
+        upgradePrompt: storageBlock.upgradePrompt,
+      };
     }
 
-    const bandwidthMessage = await getBandwidthBlockedMessageForSpace(parsed.data.spaceId);
-    if (bandwidthMessage) {
-      return { ok: false, error: bandwidthMessage };
+    const bandwidthBlock = await getBandwidthPlanLimitBlock(parsed.data.spaceId);
+    if (bandwidthBlock) {
+      return {
+        ok: false,
+        error: bandwidthBlock.message,
+        upgradePrompt: bandwidthBlock.upgradePrompt,
+      };
     }
   }
 
@@ -335,6 +345,7 @@ export async function createWorkOrder(
   if (!result.ok) {
     return {
       error: result.error,
+      ...(result.upgradePrompt ? { upgradePrompt: result.upgradePrompt } : {}),
     };
   }
 

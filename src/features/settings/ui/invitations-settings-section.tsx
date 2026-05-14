@@ -14,6 +14,8 @@ import type { SettingsInvitation } from "@/features/settings/types/invitation";
 import {
   initialInvitationActionState,
 } from "@/features/settings/types/invitation-action-state";
+import { usePlanLimitModal } from "@/features/settings/hooks/use-plan-limit-modal";
+import { UpgradeRequiredModal } from "@/features/settings/ui/upgrade-required-modal";
 import { SettingsCard } from "@/features/settings/ui/settings-card";
 import { formatRoleLabel } from "@/lib/utils";
 import type { Profile } from "@/types/profile";
@@ -113,6 +115,13 @@ function InvitationCard({
     initialInvitationActionState,
   );
   const MethodIcon = methodIconMap[invitation.method];
+  const acceptLimit = usePlanLimitModal(acceptState);
+  const declineLimit = usePlanLimitModal(declineState);
+  const modalPrompt = acceptLimit.modalPrompt ?? declineLimit.modalPrompt;
+  const closeUpgradeModal = () => {
+    acceptLimit.closeModal();
+    declineLimit.closeModal();
+  };
 
   useEffect(() => {
     if (acceptState.success || declineState.success) {
@@ -121,6 +130,7 @@ function InvitationCard({
   }, [acceptState.success, declineState.success, router]);
 
   return (
+    <>
     <article
       id={`invite-${invitation.id}`}
       className="rounded-2xl border border-border bg-panel-muted px-4 py-4 shadow-sm sm:rounded-[1.65rem] sm:px-5 sm:py-5 sm:shadow-[0_12px_24px_rgba(15,23,42,0.04)] dark:shadow-none dark:sm:shadow-none"
@@ -243,5 +253,7 @@ function InvitationCard({
         />
       </div>
     </article>
+    <UpgradeRequiredModal prompt={modalPrompt} onClose={closeUpgradeModal} />
+    </>
   );
 }
