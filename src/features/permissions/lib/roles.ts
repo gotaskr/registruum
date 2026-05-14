@@ -12,6 +12,7 @@ export const workOrderAssignmentRoles = [
   "helper",
   "contractor",
   "worker",
+  "client",
 ] as const satisfies readonly SpaceMembershipRole[];
 
 export const workOrderRoleOptions = [
@@ -24,6 +25,7 @@ export const editableWorkOrderAssignmentRoles = [
   "helper",
   "contractor",
   "worker",
+  "client",
 ] as const satisfies readonly SpaceMembershipRole[];
 
 const primarySpaceRoles = [

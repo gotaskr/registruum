@@ -49,6 +49,8 @@ type ChatPanelProps = Readonly<{
   members: WorkOrderMember[];
   canSendMessage: boolean;
   lockedMessage?: string;
+  /** When false, hide chat file attachments (text-only). */
+  canAttachFiles?: boolean;
   /** When true, skip the in-panel title row (work order shell already shows name + status). */
   embeddedInWorkOrderShell?: boolean;
 }>;
@@ -179,6 +181,7 @@ export function ChatPanel({
   members,
   canSendMessage,
   lockedMessage,
+  canAttachFiles = true,
   embeddedInWorkOrderShell = false,
 }: ChatPanelProps) {
   const [renderedMessages, setRenderedMessages] = useState<Message[]>(() => messages);
@@ -533,7 +536,7 @@ export function ChatPanel({
           { name: "workOrderId", value: workOrderId },
         ]}
         inputName="body"
-        fileInputName="files"
+        fileInputName={canAttachFiles ? "files" : undefined}
         mentionCandidates={members
           .map((member) => ({
             id: member.userId,

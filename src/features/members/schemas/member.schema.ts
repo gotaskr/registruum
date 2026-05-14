@@ -5,6 +5,7 @@ const workOrderMemberRoleSchema = z.enum([
   "helper",
   "contractor",
   "worker",
+  "client",
 ]);
 
 export const assignWorkOrderMemberSchema = z.object({

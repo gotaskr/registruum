@@ -1481,6 +1481,7 @@ export type Database = {
         | "helper"
         | "contractor"
         | "worker"
+        | "client"
       invite_method: "email" | "link" | "code"
       invite_status: "pending" | "accepted" | "revoked" | "expired"
       job_market_post_status: "active" | "closed" | "withdrawn"
@@ -1645,6 +1646,7 @@ export const Constants = {
         "helper",
         "contractor",
         "worker",
+        "client",
       ],
       invite_method: ["email", "link", "code"],
       invite_status: ["pending", "accepted", "revoked", "expired"],

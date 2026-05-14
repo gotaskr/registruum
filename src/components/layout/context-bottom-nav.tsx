@@ -19,6 +19,10 @@ import { BottomNavScrollArea } from "@/components/layout/bottom-nav-scroll-area"
 import { WORK_ORDER_CONTEXT_NAV } from "@/components/layout/context-nav-config";
 import type { ArchiveFolderOption } from "@/features/archive/types/archive";
 import {
+  canAccessWorkOrderModule,
+  getWorkOrderPermissionSet,
+} from "@/features/permissions/lib/work-order-permissions";
+import {
   canAccessSpaceArchive,
   canAccessSpaceSettings,
   canAccessSpaceTeam,
@@ -63,6 +67,16 @@ export function ContextBottomNav({
   }, [currentWorkOrder, route.module]);
 
   if (currentWorkOrder) {
+    const permissions = getWorkOrderPermissionSet({
+      role: currentWorkOrder.actorRole,
+      status: currentWorkOrder.status,
+      isOwner: false,
+      documentRules: {
+        allowDocumentDeletionInProgress: currentWorkOrder.allowDocumentDeletionInProgress,
+        lockDocumentsOnCompleted: currentWorkOrder.lockDocumentsOnCompleted,
+      },
+    });
+
     return (
       <BottomNavScrollArea
         aria-label="Work order navigation"
@@ -80,7 +94,9 @@ export function ContextBottomNav({
           <BottomNavLabel>Back</BottomNavLabel>
         </Link>
         <div className="mx-0.5 h-8 w-px shrink-0 bg-slate-200 dark:bg-white/15" aria-hidden />
-        {WORK_ORDER_CONTEXT_NAV.map((item) => {
+        {WORK_ORDER_CONTEXT_NAV.filter((item) =>
+          canAccessWorkOrderModule(item.slug, permissions),
+        ).map((item) => {
           const href = getWorkOrderModuleHref(space.id, currentWorkOrder.id, item.slug);
           const isActive =
             route.workOrderId === currentWorkOrder.id && route.module === item.slug;

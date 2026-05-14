@@ -14,7 +14,10 @@ import { usePathname } from "next/navigation";
 import { WORK_ORDER_CONTEXT_NAV } from "@/components/layout/context-nav-config";
 import { SidebarItem } from "@/components/ui/sidebar-item";
 import type { ArchiveFolderOption } from "@/features/archive/types/archive";
-import { getWorkOrderPermissionSet } from "@/features/permissions/lib/work-order-permissions";
+import {
+  canAccessWorkOrderModule,
+  getWorkOrderPermissionSet,
+} from "@/features/permissions/lib/work-order-permissions";
 import {
   canAccessSpaceArchive,
   canAccessSpaceSettings,
@@ -140,7 +143,9 @@ export function ContextSidebar({
             </p>
           </div>
           <div className="space-y-2">
-          {WORK_ORDER_CONTEXT_NAV.map((item) => (
+          {WORK_ORDER_CONTEXT_NAV.filter((item) =>
+            canAccessWorkOrderModule(item.slug, permissions),
+          ).map((item) => (
             <span
               key={item.slug}
               className="block"

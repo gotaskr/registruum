@@ -269,6 +269,12 @@ export function getDefaultWorkOrderPermissions(
         delete_own_messages: true,
         view_logs: true,
       });
+    case "client":
+      return createPermissionValues({
+        send_messages: true,
+        edit_own_messages: true,
+        delete_own_messages: true,
+      });
     default:
       return createPermissionValues();
   }
@@ -284,5 +290,6 @@ export function createDefaultWorkOrderPermissionMatrix(): WorkOrderPermissionMat
     helper: getDefaultWorkOrderPermissions("helper"),
     contractor: getDefaultWorkOrderPermissions("contractor"),
     worker: getDefaultWorkOrderPermissions("worker"),
+    client: getDefaultWorkOrderPermissions("client"),
   };
 }

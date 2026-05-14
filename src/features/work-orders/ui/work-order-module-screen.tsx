@@ -114,6 +114,7 @@ export function WorkOrderModuleScreen({
           actorName={actorName}
           members={members}
           canSendMessage={permissions.canSendMessage}
+          canAttachFiles={permissions.canAttachChatFiles}
           lockedMessage={lockedMessage}
           embeddedInWorkOrderShell
         />

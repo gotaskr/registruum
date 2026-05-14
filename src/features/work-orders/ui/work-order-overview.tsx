@@ -135,12 +135,14 @@ export function WorkOrderOverview({
         />
       </div>
 
-      <WorkOrderRecentLogs
-        spaceId={workOrder.spaceId}
-        workOrderId={workOrder.id}
-        logs={overview.recentLogs}
-        totalCount={overview.activityCount}
-      />
+      {permissions.canViewLogs ? (
+        <WorkOrderRecentLogs
+          spaceId={workOrder.spaceId}
+          workOrderId={workOrder.id}
+          logs={overview.recentLogs}
+          totalCount={overview.activityCount}
+        />
+      ) : null}
     </section>
   );
 }

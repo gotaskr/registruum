@@ -9,6 +9,7 @@ const roleLabelByValue: Record<string, string> = {
   helper: "Helper",
   contractor: "Contractor",
   worker: "Worker",
+  client: "Client",
   member: "Member",
   viewer: "Viewer",
   Owner: "Owner",

@@ -41,6 +41,11 @@ export type WorkOrderPermissionSet = Readonly<{
   canViewLogs: boolean;
   canArchiveWorkOrder: boolean;
   canReopenWorkOrder: boolean;
+  /** Documents / Members tabs and document APIs (download or upload capability). */
+  canAccessDocumentsModule: boolean;
+  canAccessMembersModule: boolean;
+  /** Chat file attachments require upload or download permission (text-only otherwise). */
+  canAttachChatFiles: boolean;
   isCompleted: boolean;
   isArchived: boolean;
   isLocked: boolean;
@@ -184,6 +189,17 @@ export function getWorkOrderPermissionSet(
     resolvedRolePermissions.remove_people && !isArchived && !isCompleted;
   const canChangeMemberRoles =
     resolvedRolePermissions.change_member_roles && !isArchived && !isCompleted;
+  const canAccessDocumentsModule =
+    canAccessWorkOrder(context.role) &&
+    (resolvedRolePermissions.upload_files ||
+      resolvedRolePermissions.download_files ||
+      resolvedRolePermissions.delete_own_files ||
+      resolvedRolePermissions.delete_any_files);
+  const canAccessMembersModule =
+    canAccessWorkOrder(context.role) && context.role !== "client";
+  const canAttachChatFiles =
+    resolvedRolePermissions.send_messages &&
+    (resolvedRolePermissions.upload_files || resolvedRolePermissions.download_files);
 
   return {
     canView: canAccessWorkOrder(context.role),
@@ -228,6 +244,9 @@ export function getWorkOrderPermissionSet(
     isLocked: isArchived,
     isOwner,
     resolvedRolePermissions,
+    canAccessDocumentsModule,
+    canAccessMembersModule,
+    canAttachChatFiles,
   };
 }
 
@@ -253,9 +272,9 @@ export function canAccessWorkOrderModule(
     case "chat":
       return permissions.canView;
     case "documents":
-      return permissions.canView;
+      return permissions.canAccessDocumentsModule;
     case "members":
-      return permissions.canView;
+      return permissions.canAccessMembersModule;
     case "logs":
       return permissions.canViewLogs;
     case "settings":
