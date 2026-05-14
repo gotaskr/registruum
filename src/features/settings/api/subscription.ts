@@ -91,16 +91,11 @@ export async function getBillingSnapshotForCurrentUser(): Promise<BillingSnapsho
   const planTier = resolveBillingPlanTier(profile.billingPlanTier);
   const plan = billingPlans[planTier];
 
-  const [spacesResult, memberResult, ownedSpacesResult] = await Promise.all([
+  const [spacesResult, ownedSpacesResult] = await Promise.all([
     supabase
       .from("spaces")
       .select("id", { count: "exact", head: true })
       .eq("created_by_user_id", user.id),
-    supabase
-      .from("space_memberships")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "active"),
     supabase.from("spaces").select("id").eq("created_by_user_id", user.id),
   ]);
 
@@ -108,15 +103,26 @@ export async function getBillingSnapshotForCurrentUser(): Promise<BillingSnapsho
     throw new Error(spacesResult.error.message);
   }
 
-  if (memberResult.error) {
-    throw new Error(memberResult.error.message);
-  }
-
   if (ownedSpacesResult.error) {
     throw new Error(ownedSpacesResult.error.message);
   }
 
   const ownedSpaceIds = (ownedSpacesResult.data ?? []).map((row) => row.id);
+  let activeMembers = 0;
+  if (ownedSpaceIds.length > 0) {
+    const { count: rosterCount, error: rosterCountError } = await supabase
+      .from("space_memberships")
+      .select("id", { count: "exact", head: true })
+      .in("space_id", ownedSpaceIds)
+      .eq("status", "active");
+
+    if (rosterCountError) {
+      throw new Error(rosterCountError.message);
+    }
+
+    activeMembers = rosterCount ?? 0;
+  }
+
   let activeWorkOrders = 0;
   if (ownedSpaceIds.length > 0) {
     const { count, error: workOrderCountError } = await supabase
@@ -132,7 +138,6 @@ export async function getBillingSnapshotForCurrentUser(): Promise<BillingSnapsho
     activeWorkOrders = count ?? 0;
   }
 
-  const activeMembers = memberResult.count ?? 0;
   const usedStorage = await getOwnedSpacesDocumentStorageBytes();
   const usedBandwidth = profile.monthlyBandwidthUsedBytes;
   const storageCap = plan.limits.storageBytes;

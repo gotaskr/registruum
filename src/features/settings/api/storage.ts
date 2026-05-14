@@ -32,7 +32,9 @@ function formatBytes(value: number) {
 
 export async function getStorageSnapshotForCurrentUser(): Promise<StorageSnapshot> {
   const authenticated = await requireAuthenticatedAppUser();
-  const spaces = await getSpacesForUser(authenticated);
+  const spaces = (await getSpacesForUser(authenticated)).filter(
+    (space) => space.createdByUserId === authenticated.user.id,
+  );
 
   if (spaces.length === 0) {
     return {

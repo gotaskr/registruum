@@ -14,7 +14,7 @@ export function StorageSettingsSection({
       id="storage"
       label="Storage"
       title="Storage activity"
-      description="See total storage used across your spaces."
+      description="See total storage used across spaces you create (not other people's spaces you join)."
     >
       <div className="space-y-4">
         <div className="grid gap-3 md:grid-cols-3">

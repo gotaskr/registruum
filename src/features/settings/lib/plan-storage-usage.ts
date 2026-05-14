@@ -43,42 +43,6 @@ async function aggregateDocumentBytesByWorkOrderInSpace(
   return byWo;
 }
 
-async function aggregateDocumentBytesByWorkOrderIdExcludingSpaces(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
-  workOrderIds: string[],
-  excludeSpaceIds: Set<string>,
-): Promise<Map<string, number>> {
-  const byWo = new Map<string, number>();
-  if (workOrderIds.length === 0) {
-    return byWo;
-  }
-
-  for (let i = 0; i < workOrderIds.length; i += DOCUMENT_WORK_ORDER_IN_CHUNK) {
-    const chunk = workOrderIds.slice(i, i + DOCUMENT_WORK_ORDER_IN_CHUNK);
-    const { data: documents, error } = await admin
-      .from("documents")
-      .select("work_order_id, file_size_bytes, space_id")
-      .in("work_order_id", chunk);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    for (const row of documents ?? []) {
-      if (!row.work_order_id || !row.space_id || excludeSpaceIds.has(row.space_id)) {
-        continue;
-      }
-      const add = Math.max(0, row.file_size_bytes ?? 0);
-      if (add === 0) {
-        continue;
-      }
-      byWo.set(row.work_order_id, (byWo.get(row.work_order_id) ?? 0) + add);
-    }
-  }
-
-  return byWo;
-}
-
 async function sumDocumentBytesInSpaces(admin: ReturnType<typeof createSupabaseAdminClient>, spaceIds: string[]) {
   if (spaceIds.length === 0) {
     return 0;
@@ -102,47 +66,11 @@ async function sumDocumentBytesInSpaces(admin: ReturnType<typeof createSupabaseA
   return total;
 }
 
-async function sumDocumentBytesForWorkOrdersExcludingSpaces(
-  admin: ReturnType<typeof createSupabaseAdminClient>,
-  workOrderIds: string[],
-  excludeSpaceIds: string[],
-) {
-  if (workOrderIds.length === 0) {
-    return 0;
-  }
-
-  const exclude = new Set(excludeSpaceIds);
-  let total = 0;
-
-  for (let i = 0; i < workOrderIds.length; i += DOCUMENT_WORK_ORDER_IN_CHUNK) {
-    const chunk = workOrderIds.slice(i, i + DOCUMENT_WORK_ORDER_IN_CHUNK);
-    const { data: documents, error } = await admin
-      .from("documents")
-      .select("file_size_bytes, space_id")
-      .in("work_order_id", chunk);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    for (const row of documents ?? []) {
-      if (!row.space_id || exclude.has(row.space_id)) {
-        continue;
-      }
-      total += Math.max(0, row.file_size_bytes ?? 0);
-    }
-  }
-
-  return total;
-}
-
 /**
- * Plan storage for a user:
- * - All documents (including archived) in spaces they **created** (workspace owner bucket).
- * - Plus documents on work orders they are a **member** of in **other people's** spaces
- *   (participant bucket — avoids double-counting files already in their owned spaces).
- *
- * `completed_work_order_history` rows are metadata only (no file blobs); WO documents carry the bytes.
+ * Plan storage for a user: all documents (including archived) in spaces **they created** only.
+ * Files uploaded by invited collaborators in those spaces count here (they bill the owner).
+ * Work-order files in **someone else’s** space do **not** count toward this user’s plan — they count
+ * toward that space creator’s plan. `completed_work_order_history` is metadata only (no file blobs).
  */
 export async function sumPlanStorageBytesForUser(userId: string): Promise<number> {
   const admin = createSupabaseAdminClient();
@@ -157,37 +85,12 @@ export async function sumPlanStorageBytesForUser(userId: string): Promise<number
   }
 
   const ownedSpaceIds = (ownedSpaces ?? []).map((row) => row.id);
-  const ownedPart = await sumDocumentBytesInSpaces(admin, ownedSpaceIds);
-
-  const { data: memberships, error: membershipError } = await admin
-    .from("work_order_memberships")
-    .select("work_order_id")
-    .eq("user_id", userId);
-
-  if (membershipError) {
-    throw new Error(membershipError.message);
-  }
-
-  const workOrderIds = [
-    ...new Set(
-      (memberships ?? [])
-        .map((row) => row.work_order_id)
-        .filter((id): id is string => typeof id === "string" && id.length > 0),
-    ),
-  ];
-
-  const participantPart = await sumDocumentBytesForWorkOrdersExcludingSpaces(
-    admin,
-    workOrderIds,
-    ownedSpaceIds,
-  );
-
-  return ownedPart + participantPart;
+  return sumDocumentBytesInSpaces(admin, ownedSpaceIds);
 }
 
 /**
- * Spaces you own (per work order + “other” files in that space) and work orders you join elsewhere,
- * sorted by bytes descending. Matches `sumPlanStorageBytesForUser` attribution.
+ * Spaces you own (per work order + “other” files in that space), sorted by bytes descending.
+ * Matches `sumPlanStorageBytesForUser` attribution.
  */
 export async function getPlanStorageBreakdownForUser(userId: string): Promise<PlanStorageBreakdownItem[]> {
   const admin = createSupabaseAdminClient();
@@ -203,9 +106,6 @@ export async function getPlanStorageBreakdownForUser(userId: string): Promise<Pl
   }
 
   const ownedSpaces = ownedSpaceRows ?? [];
-  const ownedSpaceIds = ownedSpaces.map((row) => row.id);
-  const ownedSpaceIdSet = new Set(ownedSpaceIds);
-
   const items: PlanStorageBreakdownItem[] = [];
 
   type OwnedWoEntry = Readonly<{ spaceId: string; spaceName: string; workOrderId: string; usedBytes: number }>;
@@ -273,100 +173,6 @@ export async function getPlanStorageBreakdownForUser(userId: string): Promise<Pl
       usedBytes: u.usedBytes,
       usedLabel: formatBytesLabel(u.usedBytes),
       href: `/space/${u.spaceId}`,
-    });
-  }
-
-  const { data: memberships, error: membershipError } = await admin
-    .from("work_order_memberships")
-    .select("work_order_id")
-    .eq("user_id", userId);
-
-  if (membershipError) {
-    throw new Error(membershipError.message);
-  }
-
-  const membershipWoIds = [
-    ...new Set(
-      (memberships ?? [])
-        .map((row) => row.work_order_id)
-        .filter((id): id is string => typeof id === "string" && id.length > 0),
-    ),
-  ];
-
-  if (membershipWoIds.length === 0) {
-    return items.sort((a, b) => b.usedBytes - a.usedBytes);
-  }
-
-  const workOrderMetaById = new Map<string, { title: string; spaceId: string }>();
-
-  for (let i = 0; i < membershipWoIds.length; i += DOCUMENT_WORK_ORDER_IN_CHUNK) {
-    const chunk = membershipWoIds.slice(i, i + DOCUMENT_WORK_ORDER_IN_CHUNK);
-    const { data: workOrders, error: woError } = await admin
-      .from("work_orders")
-      .select("id, title, space_id")
-      .in("id", chunk);
-
-    if (woError) {
-      throw new Error(woError.message);
-    }
-
-    for (const wo of workOrders ?? []) {
-      if (wo.space_id && !ownedSpaceIdSet.has(wo.space_id)) {
-        workOrderMetaById.set(wo.id, { title: wo.title?.trim() || "Work order", spaceId: wo.space_id });
-      }
-    }
-  }
-
-  const participantWoIds = [...workOrderMetaById.keys()];
-  if (participantWoIds.length === 0) {
-    return items.sort((a, b) => b.usedBytes - a.usedBytes);
-  }
-
-  const bytesByWoId = await aggregateDocumentBytesByWorkOrderIdExcludingSpaces(
-    admin,
-    participantWoIds,
-    ownedSpaceIdSet,
-  );
-
-  const spaceIdsForNames = [
-    ...new Set(participantWoIds.map((woId) => workOrderMetaById.get(woId)?.spaceId).filter(Boolean) as string[]),
-  ];
-  const spaceNameById = new Map<string, string>();
-
-  for (let i = 0; i < spaceIdsForNames.length; i += DOCUMENT_WORK_ORDER_IN_CHUNK) {
-    const chunk = spaceIdsForNames.slice(i, i + DOCUMENT_WORK_ORDER_IN_CHUNK);
-    const { data: spaceRows, error: snError } = await admin.from("spaces").select("id, name").in("id", chunk);
-
-    if (snError) {
-      throw new Error(snError.message);
-    }
-
-    for (const row of spaceRows ?? []) {
-      spaceNameById.set(row.id, row.name?.trim() || "Space");
-    }
-  }
-
-  for (const woId of participantWoIds) {
-    const usedBytes = bytesByWoId.get(woId) ?? 0;
-    if (usedBytes <= 0) {
-      continue;
-    }
-
-    const meta = workOrderMetaById.get(woId);
-    if (!meta) {
-      continue;
-    }
-
-    const spaceName = spaceNameById.get(meta.spaceId) ?? "Space";
-
-    items.push({
-      kind: "work_order",
-      id: woId,
-      primaryLabel: meta.title,
-      secondaryLabel: `Work order · ${spaceName}`,
-      usedBytes,
-      usedLabel: formatBytesLabel(usedBytes),
-      href: `/space/${meta.spaceId}/work-order/${woId}/${DEFAULT_MODULE}`,
     });
   }
 

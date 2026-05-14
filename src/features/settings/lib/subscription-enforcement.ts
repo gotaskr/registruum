@@ -132,21 +132,6 @@ async function countSpacesCreatedByUser(ownerUserId: string) {
   return count ?? 0;
 }
 
-async function getBillingPlanForUser(userId: string): Promise<BillingPlanDefinition> {
-  const adminSupabase = createSupabaseAdminClient();
-  const { data: profile, error } = await adminSupabase
-    .from("profiles")
-    .select("billing_plan_tier")
-    .eq("id", userId)
-    .single();
-
-  if (error || !profile) {
-    throw new Error(error?.message ?? "Profile could not be found.");
-  }
-
-  return billingPlans[resolveBillingPlanTier(profile.billing_plan_tier)];
-}
-
 /** When non-null, creation should be blocked and the string shown to the user. */
 export async function getWorkOrderCreationBlockedMessage(spaceId: string): Promise<string | null> {
   const { plan, ownerUserId } = await getSpaceOwnerBilling(spaceId);
@@ -190,14 +175,15 @@ export async function getSpaceCreationBlockedMessage(userId: string): Promise<st
 }
 
 /**
- * Blocks uploads when the **space owner's** or **uploader's** plan storage would be exceeded.
- * Storage counts all documents (including archived): bytes in spaces you create, plus bytes on
- * work orders you are a member of in other people's spaces (participant bucket — avoids double-counting your own spaces).
+ * Blocks uploads when the **space owner's** plan storage would be exceeded.
+ * All work-order files in a space count toward the **creator's** plan (including uploads by invited
+ * members). Collaborators' personal plan storage is not charged for those files. `completed_work_order_history`
+ * remains per-user metadata only (no extra blobs).
  */
 export async function getDocumentStorageUploadBlockedMessage(
   spaceId: string,
   additionalBytes: number,
-  uploadingUserId: string,
+  _uploadingUserId: string,
 ): Promise<string | null> {
   if (additionalBytes <= 0) {
     return null;
@@ -209,18 +195,7 @@ export async function getDocumentStorageUploadBlockedMessage(
   if (ownerCap != null) {
     const ownerUsed = await sumPlanStorageBytesForUser(ownerUserId);
     if (ownerUsed + additionalBytes > ownerCap) {
-      return `${ownerPlan.label} (this space owner's plan) includes up to ${formatStorageOrBandwidthCapForMessage(ownerCap)} of file storage (spaces they own plus work orders they join elsewhere). About ${formatStorageOrBandwidthCapForMessage(ownerUsed)} is in use. Permanently delete files to free space, or upgrade, before uploading more.`;
-    }
-  }
-
-  if (uploadingUserId !== ownerUserId) {
-    const uploaderPlan = await getBillingPlanForUser(uploadingUserId);
-    const uploaderCap = uploaderPlan.limits.storageBytes;
-    if (uploaderCap != null) {
-      const uploaderUsed = await sumPlanStorageBytesForUser(uploadingUserId);
-      if (uploaderUsed + additionalBytes > uploaderCap) {
-        return `${uploaderPlan.label} on your account includes up to ${formatStorageOrBandwidthCapForMessage(uploaderCap)} of file storage (spaces you own plus files on work orders you participate in). About ${formatStorageOrBandwidthCapForMessage(uploaderUsed)} is in use. Permanently delete files or upgrade before uploading more to this work order.`;
-      }
+      return `${ownerPlan.label} (this space owner's plan) includes up to ${formatStorageOrBandwidthCapForMessage(ownerCap)} of file storage for workspaces they own. About ${formatStorageOrBandwidthCapForMessage(ownerUsed)} is in use. Permanently delete files to free space, or upgrade, before uploading more.`;
     }
   }
 

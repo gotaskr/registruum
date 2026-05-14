@@ -91,7 +91,7 @@ export function PlanStorageUsageCard({ usedStorageLabel, storagePercent }: PlanS
           <p className="py-6 text-center text-sm text-destructive">{error}</p>
         ) : rows && rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">
-            No document storage yet. Files you upload to work orders will appear here.
+            No document storage yet. Files in spaces you create (including collaborators' uploads there) will appear here.
           </p>
         ) : rows ? (
           <ul className="flex max-h-[min(60dvh,28rem)] flex-col gap-1 overflow-y-auto pr-0.5">
