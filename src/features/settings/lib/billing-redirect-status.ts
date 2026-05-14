@@ -28,6 +28,12 @@ export function describeBillingRedirectStatus(
         message:
           "A Stripe Price ID is missing for the plan you chose. Set STRIPE_PRICE_ID_BASIC, STRIPE_PRICE_ID_PRO_TEAM, STRIPE_PRICE_ID_BUSINESS, and STRIPE_PRICE_ID_ENTERPRISE to live price_… values, then redeploy.",
       };
+    case "stripe_price_is_product_id":
+      return {
+        tone: "error",
+        message:
+          "A billing env var looks like a Stripe Product id (prod_…). Checkout needs the recurring subscription Price id (price_…) from Dashboard → Product → Pricing. Fix Vercel Production env and redeploy.",
+      };
     case "checkout_invalid_plan":
       return {
         tone: "error",

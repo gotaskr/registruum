@@ -6,6 +6,7 @@ import {
   parseCheckoutPlan,
   resolveStripePriceIdForTier,
 } from "@/lib/stripe/price-ids";
+import { buildCheckoutSubscriptionLineItem } from "@/lib/stripe/checkout-subscription-line-item";
 import { getStripe } from "@/lib/stripe/server";
 import { getManualSubscriptionTaxRateIds } from "@/lib/stripe/tax-rates";
 
@@ -47,15 +48,27 @@ export async function GET(request: Request) {
     return NextResponse.redirect(missing);
   }
 
+  if (priceId.startsWith("prod_")) {
+    console.error(
+      "[billing checkout] STRIPE_PRICE_ID_* must be a recurring Price id (price_…), not a Product id (prod_…).",
+    );
+    const wrong = new URL("/settings?section=subscription&billingStatus=stripe_price_is_product_id", request.url);
+    wrong.searchParams.set("plan", tier);
+    return NextResponse.redirect(wrong);
+  }
+
   const origin = new URL(request.url).origin;
   const user = authenticated.user;
   const email = user.email ?? undefined;
   const manualTaxRateIds = getManualSubscriptionTaxRateIds();
 
   try {
-    const session = await getStripe().checkout.sessions.create({
+    const stripe = getStripe();
+    const lineItem = await buildCheckoutSubscriptionLineItem(stripe, priceId);
+
+    const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [lineItem],
       payment_method_types: ["card"],
       /** Region-scoped TaxRates (e.g. Ontario) only apply once province/postal is known. */
       ...(manualTaxRateIds.length > 0 ? { billing_address_collection: "required" as const } : {}),
@@ -77,11 +90,6 @@ export async function GET(request: Request) {
           supabase_user_id: user.id,
           billing_plan_tier: tier,
         },
-        /**
-         * Stripe Prices can carry a default trial; a `trial_end` in the past creates the
-         * subscription without a trial so the first invoice is not deferred.
-         */
-        trial_end: Math.floor(Date.now() / 1000) - 120,
         ...(manualTaxRateIds.length > 0 ? { default_tax_rates: manualTaxRateIds } : {}),
       },
       allow_promotion_codes: true,
