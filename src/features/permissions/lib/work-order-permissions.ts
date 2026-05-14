@@ -196,7 +196,9 @@ export function getWorkOrderPermissionSet(
       resolvedRolePermissions.delete_own_files ||
       resolvedRolePermissions.delete_any_files);
   const canAccessMembersModule =
-    canAccessWorkOrder(context.role) && context.role !== "client";
+    canAccessWorkOrder(context.role) &&
+    context.role !== "client" &&
+    context.role !== "worker";
   const canAttachChatFiles =
     resolvedRolePermissions.send_messages &&
     (resolvedRolePermissions.upload_files || resolvedRolePermissions.download_files);

@@ -173,6 +173,13 @@ export function createPermissionValues(
   return Object.fromEntries(entries) as WorkOrderRolePermissionValues;
 }
 
+/** Default work-order permissions for restricted collaborators (worker + client). */
+const clientLikeWorkOrderPermissions = createPermissionValues({
+  send_messages: true,
+  edit_own_messages: true,
+  delete_own_messages: true,
+});
+
 export function getDefaultWorkOrderPermissions(
   role: EditableWorkOrderRole,
 ): WorkOrderRolePermissionValues {
@@ -261,7 +268,6 @@ export function getDefaultWorkOrderPermissions(
         view_logs: true,
       });
     case "helper":
-    case "worker":
       return createPermissionValues({
         download_files: true,
         send_messages: true,
@@ -269,12 +275,9 @@ export function getDefaultWorkOrderPermissions(
         delete_own_messages: true,
         view_logs: true,
       });
+    case "worker":
     case "client":
-      return createPermissionValues({
-        send_messages: true,
-        edit_own_messages: true,
-        delete_own_messages: true,
-      });
+      return clientLikeWorkOrderPermissions;
     default:
       return createPermissionValues();
   }
