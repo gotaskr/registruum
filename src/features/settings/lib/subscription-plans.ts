@@ -55,7 +55,7 @@ export const billingPlans: Readonly<Record<BillingPlanTier, BillingPlanDefinitio
   pro_team: {
     tier: "pro_team",
     label: "Pro Team",
-    priceLabel: "CA$89.99/month",
+    priceLabel: "CA$49.99/month",
     trialLabel: "Billed monthly",
     limits: {
       maxSpaces: 5,
