@@ -9,6 +9,10 @@ import type { Database } from "@/types/database";
 import { isSpaceTeamRole } from "@/features/permissions/lib/roles";
 import { syncSpaceTeamMembershipAcrossExistingWorkOrders } from "@/features/work-orders/lib/space-team-memberships";
 import {
+  formatUpgradePromptError,
+  getMemberLimitUpgradePrompt,
+} from "@/features/settings/lib/subscription-enforcement";
+import {
   initialInvitationActionState,
   type InvitationActionState,
 } from "@/features/settings/types/invitation-action-state";
@@ -141,6 +145,15 @@ export async function acceptInvitation(
   try {
     const { supabase, user, profile, invite } = await getPendingInviteForCurrentUser(inviteId);
     const adminSupabase = createSupabaseAdminClient();
+
+    const memberLimitPrompt = await getMemberLimitUpgradePrompt({
+      spaceId: invite.space_id,
+      targetUserId: user.id,
+    });
+    if (memberLimitPrompt) {
+      return { error: formatUpgradePromptError(memberLimitPrompt) };
+    }
+
     await ensureActiveSpaceMembership({
       supabase: adminSupabase,
       spaceId: invite.space_id,

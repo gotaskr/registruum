@@ -5,6 +5,7 @@ import {
   fetchCurrentPeriodEndIsoFromStripeForSupabaseUser,
   updateProfileBillingFields,
 } from "@/features/settings/api/billing-profile-update";
+import { getOwnedSpacesDocumentStorageBytes } from "@/features/settings/api/storage";
 import {
   billingPlans,
   resolveBillingPlanTier,
@@ -132,7 +133,7 @@ export async function getBillingSnapshotForCurrentUser(): Promise<BillingSnapsho
   }
 
   const activeMembers = memberResult.count ?? 0;
-  const usedStorage = 0;
+  const usedStorage = await getOwnedSpacesDocumentStorageBytes();
   const usedBandwidth = profile.monthlyBandwidthUsedBytes;
   const storageCap = plan.limits.storageBytes;
   const bandwidthCap = plan.limits.monthlyBandwidthBytes;

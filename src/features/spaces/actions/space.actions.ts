@@ -19,6 +19,7 @@ import {
   initialSpaceActionState,
   type SpaceActionState,
 } from "@/features/spaces/types/space-action-state";
+import { getSpaceCreationBlockedMessage } from "@/features/settings/lib/subscription-enforcement";
 
 type SpaceRow = Database["public"]["Tables"]["spaces"]["Row"];
 
@@ -85,6 +86,13 @@ export async function createSpace(
   }
 
   const { supabase, user } = await requireAuthenticatedAppUser();
+  const spaceLimitMessage = await getSpaceCreationBlockedMessage(user.id);
+  if (spaceLimitMessage) {
+    return {
+      error: spaceLimitMessage,
+    };
+  }
+
   const adminSupabase = createSupabaseAdminClient();
 
   const { data: space, error: createSpaceError } = await supabase

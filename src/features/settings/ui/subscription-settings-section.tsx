@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { CheckCircle2, CreditCard, FolderKanban, HardDrive } from "lucide-react";
+import { CheckCircle2, CreditCard, FolderKanban } from "lucide-react";
 import { billingPlans, resolveBillingPlanTier } from "@/features/settings/lib/subscription-plans";
 import type { BillingSnapshot } from "@/features/settings/types/billing-snapshot";
+import { PlanStorageUsageCard } from "@/features/settings/ui/plan-storage-usage-card";
 import { SettingsCard } from "@/features/settings/ui/settings-card";
 import type { Profile } from "@/types/profile";
 
@@ -59,24 +60,10 @@ export function SubscriptionSettingsSection({ profile, billingSnapshot }: Subscr
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-[1.6rem] border border-border bg-panel p-5">
-            <div className="flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-accent" />
-              <p className="text-base font-semibold text-foreground">Storage usage</p>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-sm">
-              <span className="text-muted">Used space</span>
-              <span className="font-medium text-foreground">
-                {usage?.usedStorageLabel ?? "—"}
-              </span>
-            </div>
-            <div className="mt-3 h-2 rounded-full bg-border">
-              <div
-                className="h-2 rounded-full bg-accent"
-                style={{ width: `${usage?.storagePercent ?? 0}%` }}
-              />
-            </div>
-          </div>
+          <PlanStorageUsageCard
+            usedStorageLabel={usage?.usedStorageLabel ?? "—"}
+            storagePercent={usage?.storagePercent ?? 0}
+          />
 
           <div className="rounded-[1.6rem] border border-border bg-panel p-5">
             <div className="flex items-center gap-2">

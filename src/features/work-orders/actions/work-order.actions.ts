@@ -35,6 +35,11 @@ import {
 } from "@/features/work-orders/types/work-order-action-state";
 import { DEFAULT_MODULE } from "@/lib/constants";
 import { getValidFiles } from "@/lib/supabase/storage";
+import {
+  getBandwidthBlockedMessageForSpace,
+  getDocumentStorageUploadBlockedMessage,
+  getWorkOrderCreationBlockedMessage,
+} from "@/features/settings/lib/subscription-enforcement";
 
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -55,11 +60,6 @@ function getAssignedMemberIds(formData: FormData) {
 
 function getSafeReturnTo(returnTo: string, fallback: string) {
   return returnTo.startsWith("/") ? returnTo : fallback;
-}
-
-/** Plan-based work order limits live in subscription code (not in repo yet). Until then, never block creation. */
-async function getWorkOrderCreationBlockedMessage(_spaceId: string): Promise<string | null> {
-  return null;
 }
 
 function formatStatusLabel(value: "open" | "in_progress" | "on_hold" | "completed" | "archived") {
@@ -166,6 +166,23 @@ export async function executeCreateWorkOrder(
       ok: false,
       error: workOrderLimitMessage,
     };
+  }
+
+  if (photoFiles.length > 0) {
+    const additionalBytes = photoFiles.reduce((sum, file) => sum + Math.max(0, file.size), 0);
+    const storageMessage = await getDocumentStorageUploadBlockedMessage(
+      parsed.data.spaceId,
+      additionalBytes,
+      actor.user.id,
+    );
+    if (storageMessage) {
+      return { ok: false, error: storageMessage };
+    }
+
+    const bandwidthMessage = await getBandwidthBlockedMessageForSpace(parsed.data.spaceId);
+    if (bandwidthMessage) {
+      return { ok: false, error: bandwidthMessage };
+    }
   }
 
   const adminSupabase = createSupabaseAdminClient();

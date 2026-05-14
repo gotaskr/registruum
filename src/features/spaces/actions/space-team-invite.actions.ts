@@ -12,6 +12,11 @@ import {
   initialInvitationActionState,
   type InvitationActionState,
 } from "@/features/settings/types/invitation-action-state";
+import {
+  formatUpgradePromptError,
+  getMemberLimitUpgradePrompt,
+  getMemberLimitUpgradePromptForNewInvite,
+} from "@/features/settings/lib/subscription-enforcement";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type ProfileLookupResult = Readonly<{
@@ -106,6 +111,11 @@ export async function createSpaceTeamInviteLink(
 
   try {
     const { user, space } = await ensureSpaceInviteManager(spaceId);
+    const memberLimitPrompt = await getMemberLimitUpgradePromptForNewInvite(space.id);
+    if (memberLimitPrompt) {
+      return { error: formatUpgradePromptError(memberLimitPrompt) };
+    }
+
     const adminSupabase = createSupabaseAdminClient();
     const token = buildInviteToken();
 
@@ -194,6 +204,14 @@ export async function createSpaceTeamInviteByUserTag(
       return {
         error: `${profile.full_name} is already part of this space team.`,
       };
+    }
+
+    const memberLimitPrompt = await getMemberLimitUpgradePrompt({
+      spaceId: space.id,
+      targetUserId: profile.id,
+    });
+    if (memberLimitPrompt) {
+      return { error: formatUpgradePromptError(memberLimitPrompt) };
     }
 
     await revokeExistingPendingCodeInvites({

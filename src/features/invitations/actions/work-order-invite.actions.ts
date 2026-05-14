@@ -18,6 +18,10 @@ import {
 } from "@/features/permissions/lib/roles";
 import { DEFAULT_MODULE } from "@/lib/constants";
 import { syncSpaceTeamMembershipAcrossExistingWorkOrders } from "@/features/work-orders/lib/space-team-memberships";
+import {
+  formatUpgradePromptError,
+  getMemberLimitUpgradePrompt,
+} from "@/features/settings/lib/subscription-enforcement";
 import type { Database } from "@/types/database";
 
 type InviteRow = Database["public"]["Tables"]["invites"]["Row"];
@@ -90,6 +94,14 @@ export async function acceptWorkOrderInviteLink(
 
     if (user.id === invite.invited_by_user_id) {
       return { error: "You cannot accept an invitation you created." };
+    }
+
+    const memberLimitPrompt = await getMemberLimitUpgradePrompt({
+      spaceId: invite.space_id,
+      targetUserId: user.id,
+    });
+    if (memberLimitPrompt) {
+      return { error: formatUpgradePromptError(memberLimitPrompt) };
     }
 
     const workOrderId = invite.assigned_work_order_ids[0];

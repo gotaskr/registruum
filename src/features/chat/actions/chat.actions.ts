@@ -18,6 +18,10 @@ import {
   collectMentionedUserIdsByName,
 } from "@/features/chat/lib/mentions";
 import {
+  getBandwidthBlockedMessageForSpace,
+  getDocumentStorageUploadBlockedMessage,
+} from "@/features/settings/lib/subscription-enforcement";
+import {
   getWorkOrderActorContextForAction,
   getWorkOrderMemberCount,
 } from "@/features/work-orders/api/work-orders";
@@ -137,6 +141,23 @@ export async function createWorkOrderMessage(
         getLockedWorkOrderMessage(context.workOrder.status) ??
         "You cannot send messages in this work order.",
     };
+  }
+
+  if (files.length > 0) {
+    const additionalBytes = files.reduce((sum, file) => sum + Math.max(0, file.size), 0);
+    const storageMessage = await getDocumentStorageUploadBlockedMessage(
+      parsed.data.spaceId,
+      additionalBytes,
+      context.user.id,
+    );
+    if (storageMessage) {
+      return { error: storageMessage };
+    }
+
+    const bandwidthMessage = await getBandwidthBlockedMessageForSpace(parsed.data.spaceId);
+    if (bandwidthMessage) {
+      return { error: bandwidthMessage };
+    }
   }
 
   const memberCount = await getWorkOrderMemberCount(

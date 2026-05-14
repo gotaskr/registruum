@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { describeBillingRedirectStatus } from "@/features/settings/lib/billing-redirect-status";
 import {
   getVisibleSettingsSections,
   SETTINGS_BILLING_SECTION_ENABLED,
@@ -49,6 +50,7 @@ export function SettingsSectionView({
   billingSnapshot,
 }: SettingsSectionViewProps) {
   const searchParams = useSearchParams();
+  const billingStatusAlert = describeBillingRedirectStatus(searchParams.get("billingStatus"));
   const requestedSection = getSectionFromSearchParam(searchParams.get("section"));
   const activeSection =
     requestedSection === "security" && !canManagePassword
@@ -83,6 +85,18 @@ export function SettingsSectionView({
 
   return (
     <section className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+      {billingStatusAlert ? (
+        <div
+          role="alert"
+          className={
+            billingStatusAlert.tone === "error"
+              ? "mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-foreground sm:rounded-[1.25rem] sm:px-5"
+              : "mb-4 rounded-xl border border-border bg-panel-muted px-4 py-3 text-sm text-foreground sm:rounded-[1.25rem] sm:px-5"
+          }
+        >
+          {billingStatusAlert.message}
+        </div>
+      ) : null}
       <div className="mb-4 rounded-xl border border-border bg-panel px-4 py-4 shadow-sm sm:mb-5 sm:rounded-[1.75rem] sm:px-6 sm:py-5 sm:shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted sm:text-[11px] sm:tracking-[0.24em]">
           {activeSectionMeta?.label ?? "Profile"}

@@ -14,6 +14,10 @@ import {
   uploadDocumentFilesSchema,
 } from "@/features/documents/schemas/document.schema";
 import {
+  getBandwidthBlockedMessageForSpace,
+  getDocumentStorageUploadBlockedMessage,
+} from "@/features/settings/lib/subscription-enforcement";
+import {
   initialDocumentActionState,
   type DocumentActionState,
 } from "@/features/documents/types/document-action-state";
@@ -69,6 +73,21 @@ export async function uploadWorkOrderDocuments(
     return {
       error: getDocumentLockedMessage(context.workOrder.status),
     };
+  }
+
+  const additionalBytes = files.reduce((sum, file) => sum + Math.max(0, file.size), 0);
+  const storageMessage = await getDocumentStorageUploadBlockedMessage(
+    parsed.data.spaceId,
+    additionalBytes,
+    context.user.id,
+  );
+  if (storageMessage) {
+    return { error: storageMessage };
+  }
+
+  const bandwidthMessage = await getBandwidthBlockedMessageForSpace(parsed.data.spaceId);
+  if (bandwidthMessage) {
+    return { error: bandwidthMessage };
   }
 
   try {

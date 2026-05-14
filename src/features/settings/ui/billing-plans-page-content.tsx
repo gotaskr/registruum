@@ -9,6 +9,7 @@ import {
   unlimitedWorkOrderMembersLabel,
   workOrdersLabel,
 } from "@/features/settings/lib/plan-card-formatters";
+import { describeBillingRedirectStatus } from "@/features/settings/lib/billing-redirect-status";
 import {
   billingPlans,
   paidCheckoutPlanTiers,
@@ -21,6 +22,7 @@ import type { Profile } from "@/types/profile";
 
 type BillingPlansPageContentProps = Readonly<{
   profile: Profile;
+  billingStatus?: string | null;
 }>;
 
 /** Keeps currency on one line; period + "/month" can wrap without colliding with adjacent cards. */
@@ -36,8 +38,9 @@ function splitPriceLabel(priceLabel: string): { primary: string; suffix: string 
   };
 }
 
-export function BillingPlansPageContent({ profile }: BillingPlansPageContentProps) {
+export function BillingPlansPageContent({ profile, billingStatus }: BillingPlansPageContentProps) {
   const currentTier = resolveBillingPlanTier(profile.billingPlanTier);
+  const billingAlert = describeBillingRedirectStatus(billingStatus ?? null);
 
   return (
     <MainShell
@@ -54,6 +57,18 @@ export function BillingPlansPageContent({ profile }: BillingPlansPageContentProp
       }
     >
       <div className="mx-auto max-w-[90rem] px-4 py-8 sm:px-6 lg:px-10 lg:py-12">
+        {billingAlert ? (
+          <div
+            role="alert"
+            className={
+              billingAlert.tone === "error"
+                ? "mb-6 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-foreground sm:rounded-[1.25rem] sm:px-5"
+                : "mb-6 rounded-xl border border-border bg-panel-muted px-4 py-3 text-sm text-foreground sm:rounded-[1.25rem] sm:px-5"
+            }
+          >
+            {billingAlert.message}
+          </div>
+        ) : null}
         <div className="grid min-w-0 grid-cols-1 gap-6 pt-2 md:grid-cols-2 xl:grid-cols-4 xl:gap-8">
           {paidCheckoutPlanTiers.map((tier) => (
             <LargePlanCard

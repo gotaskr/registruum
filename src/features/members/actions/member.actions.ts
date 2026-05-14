@@ -10,6 +10,11 @@ import {
 } from "@/features/permissions/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getLockedWorkOrderMessage } from "@/features/permissions/lib/work-order-permissions";
+import {
+  formatUpgradePromptError,
+  getMemberLimitUpgradePrompt,
+  getMemberLimitUpgradePromptForNewInvite,
+} from "@/features/settings/lib/subscription-enforcement";
 import { getWorkOrderActorContextForAction } from "@/features/work-orders/api/work-orders";
 import { isMissingSpaceMembershipStatusColumn } from "@/lib/supabase/schema-compat";
 import {
@@ -334,6 +339,11 @@ export async function createWorkOrderInvite(
   }
 
   const { context } = managed;
+  const memberLimitPrompt = await getMemberLimitUpgradePromptForNewInvite(parsed.data.spaceId);
+  if (memberLimitPrompt) {
+    return { error: formatUpgradePromptError(memberLimitPrompt) };
+  }
+
   const adminSupabase = createSupabaseAdminClient();
   const { error: revokeError } = await adminSupabase
     .from("invites")
@@ -538,6 +548,15 @@ export async function addWorkOrderMemberByCode(
       workOrderId: parsed.data.workOrderId,
       userId: profile.id,
     });
+
+    const memberLimitPrompt = await getMemberLimitUpgradePrompt({
+      spaceId: parsed.data.spaceId,
+      targetUserId: profile.id,
+    });
+    if (memberLimitPrompt) {
+      return { error: formatUpgradePromptError(memberLimitPrompt) };
+    }
+
     const { data: existingPendingInvite, error: existingPendingInviteError } =
       await adminSupabase
         .from("invites")

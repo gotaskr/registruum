@@ -39,5 +39,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest).*)",
+    // Refresh Supabase session cookies before Stripe billing routes (Stripe webhooks stay excluded).
+    "/api/billing/checkout",
+    "/api/billing/portal",
+  ],
 };

@@ -6,7 +6,12 @@ import {
   resolveBillingPlanTier,
   type BillingPlanDefinition,
 } from "@/features/settings/lib/subscription-plans";
+import { sumPlanStorageBytesForUser } from "@/features/settings/lib/plan-storage-usage";
 import type { UpgradePrompt } from "@/features/settings/types/upgrade-prompt";
+
+export function formatUpgradePromptError(prompt: UpgradePrompt): string {
+  return `${prompt.title} ${prompt.reason}`;
+}
 
 function buildMemberLimitPrompt(planLabel: string, maxMembers: number): UpgradePrompt {
   return {
@@ -98,6 +103,50 @@ async function countActiveWorkOrdersForBillingOwner(ownerUserId: string) {
   return count ?? 0;
 }
 
+function formatStorageOrBandwidthCapForMessage(bytes: number): string {
+  const gb = 1024 * 1024 * 1024;
+  const tb = 1024 * gb;
+
+  if (bytes >= tb) {
+    return `${Math.round((bytes / tb) * 10) / 10} TB`;
+  }
+
+  if (bytes >= gb) {
+    return `${Math.round((bytes / gb) * 10) / 10} GB`;
+  }
+
+  return `${Math.round(bytes / (1024 * 1024))} MB`;
+}
+
+async function countSpacesCreatedByUser(ownerUserId: string) {
+  const adminSupabase = createSupabaseAdminClient();
+  const { count, error } = await adminSupabase
+    .from("spaces")
+    .select("id", { count: "exact", head: true })
+    .eq("created_by_user_id", ownerUserId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+async function getBillingPlanForUser(userId: string): Promise<BillingPlanDefinition> {
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: profile, error } = await adminSupabase
+    .from("profiles")
+    .select("billing_plan_tier")
+    .eq("id", userId)
+    .single();
+
+  if (error || !profile) {
+    throw new Error(error?.message ?? "Profile could not be found.");
+  }
+
+  return billingPlans[resolveBillingPlanTier(profile.billing_plan_tier)];
+}
+
 /** When non-null, creation should be blocked and the string shown to the user. */
 export async function getWorkOrderCreationBlockedMessage(spaceId: string): Promise<string | null> {
   const { plan, ownerUserId } = await getSpaceOwnerBilling(spaceId);
@@ -109,6 +158,100 @@ export async function getWorkOrderCreationBlockedMessage(spaceId: string): Promi
   const activeCount = await countActiveWorkOrdersForBillingOwner(ownerUserId);
   if (activeCount >= cap) {
     return `${plan.label} allows up to ${cap} active work orders at a time (non-archived). Archive a work order to create a new one.`;
+  }
+
+  return null;
+}
+
+export async function getSpaceCreationBlockedMessage(userId: string): Promise<string | null> {
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: profile, error } = await adminSupabase
+    .from("profiles")
+    .select("billing_plan_tier")
+    .eq("id", userId)
+    .single();
+
+  if (error || !profile) {
+    throw new Error(error?.message ?? "Profile could not be found.");
+  }
+
+  const plan = billingPlans[resolveBillingPlanTier(profile.billing_plan_tier)];
+  const cap = plan.limits.maxSpaces;
+  if (cap == null) {
+    return null;
+  }
+
+  const spaceCount = await countSpacesCreatedByUser(userId);
+  if (spaceCount >= cap) {
+    return `${plan.label} allows up to ${cap} space${cap === 1 ? "" : "s"} you create. Delete a space or upgrade your plan to add another.`;
+  }
+
+  return null;
+}
+
+/**
+ * Blocks uploads when the **space owner's** or **uploader's** plan storage would be exceeded.
+ * Storage counts all documents (including archived): bytes in spaces you create, plus bytes on
+ * work orders you are a member of in other people's spaces (participant bucket — avoids double-counting your own spaces).
+ */
+export async function getDocumentStorageUploadBlockedMessage(
+  spaceId: string,
+  additionalBytes: number,
+  uploadingUserId: string,
+): Promise<string | null> {
+  if (additionalBytes <= 0) {
+    return null;
+  }
+
+  const { plan: ownerPlan, ownerUserId } = await getSpaceOwnerBilling(spaceId);
+  const ownerCap = ownerPlan.limits.storageBytes;
+
+  if (ownerCap != null) {
+    const ownerUsed = await sumPlanStorageBytesForUser(ownerUserId);
+    if (ownerUsed + additionalBytes > ownerCap) {
+      return `${ownerPlan.label} (this space owner's plan) includes up to ${formatStorageOrBandwidthCapForMessage(ownerCap)} of file storage (spaces they own plus work orders they join elsewhere). About ${formatStorageOrBandwidthCapForMessage(ownerUsed)} is in use. Permanently delete files to free space, or upgrade, before uploading more.`;
+    }
+  }
+
+  if (uploadingUserId !== ownerUserId) {
+    const uploaderPlan = await getBillingPlanForUser(uploadingUserId);
+    const uploaderCap = uploaderPlan.limits.storageBytes;
+    if (uploaderCap != null) {
+      const uploaderUsed = await sumPlanStorageBytesForUser(uploadingUserId);
+      if (uploaderUsed + additionalBytes > uploaderCap) {
+        return `${uploaderPlan.label} on your account includes up to ${formatStorageOrBandwidthCapForMessage(uploaderCap)} of file storage (spaces you own plus files on work orders you participate in). About ${formatStorageOrBandwidthCapForMessage(uploaderUsed)} is in use. Permanently delete files or upgrade before uploading more to this work order.`;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Uses `profiles.monthly_bandwidth_used_bytes` for the **space owner** vs plan limit.
+ * Nothing in the app currently increments this field; when metering exists, uploads/downloads should update it.
+ */
+export async function getBandwidthBlockedMessageForSpace(spaceId: string): Promise<string | null> {
+  const { plan, ownerUserId } = await getSpaceOwnerBilling(spaceId);
+  const cap = plan.limits.monthlyBandwidthBytes;
+  if (cap == null) {
+    return null;
+  }
+
+  const adminSupabase = createSupabaseAdminClient();
+  const { data: profile, error } = await adminSupabase
+    .from("profiles")
+    .select("monthly_bandwidth_used_bytes")
+    .eq("id", ownerUserId)
+    .single();
+
+  if (error || !profile) {
+    throw new Error(error?.message ?? "Profile could not be found.");
+  }
+
+  const used = Math.max(0, profile.monthly_bandwidth_used_bytes ?? 0);
+  if (used >= cap) {
+    return `${plan.label} includes up to ${formatStorageOrBandwidthCapForMessage(cap)} of bandwidth per month for this workspace. Usage is at the limit; upgrade your plan or wait for the next reset.`;
   }
 
   return null;

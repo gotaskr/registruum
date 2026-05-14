@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAuthenticatedAppUser } from "@/features/auth/api/profiles";
+import { sumPlanStorageBytesForUser } from "@/features/settings/lib/plan-storage-usage";
 import { getSpacesForUser } from "@/features/spaces/api/spaces";
 
 export type StorageSpaceUsage = Readonly<{
@@ -46,8 +47,7 @@ export async function getStorageSnapshotForCurrentUser(): Promise<StorageSnapsho
   const { data: documents, error } = await authenticated.supabase
     .from("documents")
     .select("space_id, file_size_bytes")
-    .in("space_id", spaceIds)
-    .eq("is_archived", false);
+    .in("space_id", spaceIds);
 
   if (error) {
     throw new Error(error.message);
@@ -82,37 +82,10 @@ export async function getStorageSnapshotForCurrentUser(): Promise<StorageSnapsho
   };
 }
 
-/** Non-archived `documents` bytes in spaces this user created (matches plan storage quota). */
+/** Total plan storage for the current user (see `sumPlanStorageBytesForUser`). */
 export async function getOwnedSpacesDocumentStorageBytes(): Promise<number> {
-  const { supabase, user } = await requireAuthenticatedAppUser();
-  const { data: ownedSpaces, error: spacesError } = await supabase
-    .from("spaces")
-    .select("id")
-    .eq("created_by_user_id", user.id);
-
-  if (spacesError) {
-    throw new Error(spacesError.message);
-  }
-
-  const spaceIds = (ownedSpaces ?? []).map((row) => row.id);
-  if (spaceIds.length === 0) {
-    return 0;
-  }
-
-  const { data: documents, error: documentsError } = await supabase
-    .from("documents")
-    .select("file_size_bytes")
-    .in("space_id", spaceIds)
-    .eq("is_archived", false);
-
-  if (documentsError) {
-    throw new Error(documentsError.message);
-  }
-
-  return (documents ?? []).reduce(
-    (sum, row) => sum + Math.max(0, row.file_size_bytes ?? 0),
-    0,
-  );
+  const { user } = await requireAuthenticatedAppUser();
+  return sumPlanStorageBytesForUser(user.id);
 }
 
 export type WorkOrderStorageBreakdownRow = Readonly<{
@@ -126,7 +99,7 @@ export type WorkOrderStorageBreakdownRow = Readonly<{
 const WORK_ORDER_IN_CHUNK = 120;
 
 /**
- * Non-archived document bytes in spaces you created, grouped by work order (largest first).
+ * Document bytes in spaces you created (archived and active), grouped by work order (largest first).
  * Rows with `workOrderId: null` are documents not linked to a work order.
  */
 export async function getOwnedSpacesWorkOrderStorageBreakdown(): Promise<
@@ -153,8 +126,7 @@ export async function getOwnedSpacesWorkOrderStorageBreakdown(): Promise<
   const { data: documents, error: documentsError } = await supabase
     .from("documents")
     .select("work_order_id, file_size_bytes, space_id")
-    .in("space_id", spaceIds)
-    .eq("is_archived", false);
+    .in("space_id", spaceIds);
 
   if (documentsError) {
     throw new Error(documentsError.message);
